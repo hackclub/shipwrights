@@ -97,7 +97,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
             id: cert.assignments[0].id,
             status: cert.assignments[0].status,
             assignee: cert.assignments[0].assignee?.username || null,
-            createdAt: cert.assignments[0].createdAt.toLocaleString(),
+            createdAt: cert.assignments[0].createdAt.toISOString(),
           }
         : null,
       notes: internalNotes.map((note) => ({
@@ -109,8 +109,8 @@ export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
           avatar: note.avatar,
         },
       })),
-      createdAt: cert.createdAt.toLocaleString(),
-      updatedAt: cert.updatedAt.toLocaleString(),
+      createdAt: cert.createdAt.toISOString(),
+      updatedAt: cert.updatedAt.toISOString(),
     })
   } catch {
     return NextResponse.json({ error: 'shit hit the fan loading ship details' }, { status: 500 })

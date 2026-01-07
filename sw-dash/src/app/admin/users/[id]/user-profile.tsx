@@ -279,7 +279,9 @@ export function UserProfile({ user: init, keys: k, logs: l, stats: s, currentUse
                 {user.role}
               </span>
             </div>
-            <div className="text-amber-300/50 font-mono text-xs">joined {user.createdAt}</div>
+            <div className="text-amber-300/50 font-mono text-xs">
+              joined {new Date(user.createdAt).toLocaleDateString()}
+            </div>
           </div>
         </div>
       </div>

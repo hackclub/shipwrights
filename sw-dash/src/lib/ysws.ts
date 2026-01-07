@@ -150,11 +150,11 @@ async function fetchYsws(filters: Filters = {}) {
         type: r.shipCert.projectType || 'unknown',
         submitter: r.shipCert.ftUsername,
         certifier: r.shipCert.reviewer?.username || '-',
-        certifiedAt: r.shipCert.reviewCompletedAt?.toLocaleDateString() || '-',
+        certifiedAt: r.shipCert.reviewCompletedAt?.toISOString() || '-',
         devlogCount: devlogs.length,
         totalTime: devlogs.reduce((sum, d) => sum + d.origSecs, 0),
         reviewer: r.reviewer?.username || null,
-        createdAt: r.createdAt.toLocaleDateString(),
+        createdAt: r.createdAt.toISOString(),
       }
     }),
     stats: { pending, done, returned, total },

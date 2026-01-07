@@ -45,6 +45,11 @@ const ago = (date: string) => {
   return `${Math.floor(diff / 604800)}w ago`
 }
 
+const fmtDate = (date: string) => {
+  if (!date || date === '-') return '-'
+  return new Date(date).toLocaleDateString()
+}
+
 export function CertsView({ initial }: Props) {
   const params = useSearchParams()
   const [type, setType] = useState('all')
@@ -450,7 +455,7 @@ export function CertsView({ initial }: Props) {
                   <td className="p-4 text-white font-mono text-sm">{c.certifier}</td>
                   <td className="p-4 text-gray-300 font-mono text-sm">{c.submitter}</td>
                   <td className="p-4">
-                    <div className="text-white font-mono text-sm">{c.createdAt}</div>
+                    <div className="text-white font-mono text-sm">{fmtDate(c.createdAt)}</div>
                     <div className="text-gray-500 font-mono text-xs">{ago(c.createdAt)}</div>
                   </td>
                   <td className="p-4 text-white font-mono text-sm">{c.devTime}</td>

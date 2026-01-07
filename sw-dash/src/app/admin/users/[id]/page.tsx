@@ -62,7 +62,7 @@ export default async function Profile({ params }: Params) {
     slackId: user.slackId,
     isActive: user.isActive,
     role: user.role,
-    createdAt: user.createdAt.toLocaleDateString(),
+    createdAt: user.createdAt.toISOString(),
     avatar: user.avatar,
     staffNotes: user.staffNotes,
     skills: (user.skills as string[] | null) || [],

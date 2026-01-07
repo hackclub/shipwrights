@@ -29,7 +29,7 @@ export default async function Users() {
     slackId: u.slackId,
     isActive: u.isActive,
     role: u.role,
-    createdAt: u.createdAt.toLocaleDateString(),
+    createdAt: u.createdAt.toISOString(),
     avatar: u.avatar,
   }))
 

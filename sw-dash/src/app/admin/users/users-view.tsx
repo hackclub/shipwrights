@@ -148,7 +148,9 @@ export function UsersView({ users, canEdit, canAdd, myName, mySlackId }: Props) 
                     {u.isActive ? 'active' : 'inactive'}
                   </span>
                 </td>
-                <td className="text-amber-300/50 font-mono text-sm px-4 py-3">{u.createdAt}</td>
+                <td className="text-amber-300/50 font-mono text-sm px-4 py-3">
+                  {new Date(u.createdAt).toLocaleDateString()}
+                </td>
                 <td className="px-4 py-3">
                   {canEdit ? (
                     <Link
@@ -214,7 +216,9 @@ export function UsersView({ users, canEdit, canAdd, myName, mySlackId }: Props) 
               </div>
               <div className="bg-zinc-900/50 border border-amber-900/30 rounded-xl p-2">
                 <div className="text-amber-300/50 font-mono text-xs mb-1">joined</div>
-                <div className="text-amber-200 font-mono text-xs">{u.createdAt}</div>
+                <div className="text-amber-200 font-mono text-xs">
+                  {new Date(u.createdAt).toLocaleDateString()}
+                </div>
               </div>
             </div>
             <div className="mt-2 text-amber-300/40 font-mono text-xs truncate">{u.slackId}</div>

@@ -64,6 +64,10 @@ export function Form({ shipId }: Props) {
     )
   }
 
+  const fmtDt = (d: string | null) => (d ? new Date(d).toLocaleString() : '-')
+  const created = fmtDt(cert.createdAt)
+  const updated = fmtDt(cert.updatedAt)
+
   return (
     <main
       className="bg-grid min-h-screen w-full p-4 md:p-8"
@@ -376,11 +380,11 @@ export function Form({ shipId }: Props) {
                 </div>
                 <div>
                   <span className="text-gray-400">Created:</span>{' '}
-                  <span className="text-white">{cert.createdAt}</span>
+                  <span className="text-white">{created}</span>
                 </div>
                 <div>
                   <span className="text-gray-400">Last Updated:</span>{' '}
-                  <span className="text-white">{cert.updatedAt}</span>
+                  <span className="text-white">{updated}</span>
                 </div>
                 {cert.assignment && (
                   <div className="pt-2 mt-2 border-t border-gray-700">
