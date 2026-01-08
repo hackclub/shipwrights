@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const cfg: NextConfig = {
   output: 'standalone',
@@ -10,6 +10,6 @@ const cfg: NextConfig = {
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
     ],
   },
-};
+}
 
-export default cfg;
+export default cfg

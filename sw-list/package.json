@@ -20,6 +20,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "prettier": "3.7.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
