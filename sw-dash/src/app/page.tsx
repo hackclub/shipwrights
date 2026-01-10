@@ -17,18 +17,29 @@ export default function Home() {
 
   useEffect(() => {
     const init = async () => {
-      const cached = localStorage.getItem('sw_auth')
+      let cached = null
+      try {
+        cached = localStorage.getItem('sw_auth')
+      } catch {}
 
       try {
         const res = await fetch('/api/admin')
         if (res.ok) {
-          localStorage.setItem('sw_auth', '1')
+          try {
+            localStorage.setItem('sw_auth', '1')
+          } catch {}
           window.location.href = `${process.env.NEXT_PUBLIC_URL}/admin`
           return
         }
-        localStorage.removeItem('sw_auth')
+        try {
+          localStorage.removeItem('sw_auth')
+        } catch {}
       } catch {
-        if (cached) localStorage.removeItem('sw_auth')
+        if (cached) {
+          try {
+            localStorage.removeItem('sw_auth')
+          } catch {}
+        }
       }
       setChecking(false)
     }
@@ -37,7 +48,9 @@ export default function Home() {
     const errorParam = urlParams.get('error')
 
     if (errorParam) {
-      localStorage.removeItem('sw_auth')
+      try {
+        localStorage.removeItem('sw_auth')
+      } catch {}
       setChecking(false)
       switch (errorParam) {
         case 'no_access_get_fucked':

@@ -9,10 +9,10 @@ export function Snow() {
   const path = usePathname()
 
   useEffect(() => {
-    const saved = localStorage.getItem('snow')
-    if (saved !== null) {
-      setOn(saved === 'true')
-    }
+    try {
+      const saved = localStorage.getItem('snow')
+      if (saved !== null) setOn(saved === 'true')
+    } catch {}
   }, [])
 
   if (!on || path === '/') return null
