@@ -1,25 +1,34 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { getRedis } from '@/lib/redis'
 import { cache } from '@/lib/cache'
 import { api } from '@/lib/api'
 
 export const GET = api()(async () => {
   try {
     const data = await cache('cache:online', 30, async () => {
-      const cutoff = new Date(Date.now() - 2 * 60 * 1000)
+      const redis = getRedis()
+      if (!redis) return { crew: [] }
 
-      const crew = await prisma.user.findMany({
-        where: {
-          lastSeen: { gte: cutoff },
-        },
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
-          role: true,
-        },
-        orderBy: { lastSeen: 'desc' },
-      })
+      const cutoff = Date.now() - 180000
+      
+      await redis.zremrangebyscore('crew:online', 0, cutoff)
+      
+      const ids = await redis.zrange('crew:online', 0, -1)
+      if (ids.length === 0) return { crew: [] }
+
+      const keys = ids.map(id => `crew:${id}`)
+      const values = await redis.mget(...keys)
+      
+      const crew = values
+        .filter((v): v is string => typeof v === 'string')
+        .map(v => {
+          try {
+            return JSON.parse(v)
+          } catch {
+            return null
+          }
+        })
+        .filter((u): u is { id: number; username: string; avatar: string | null; role: string } => u !== null)
 
       return { crew }
     })

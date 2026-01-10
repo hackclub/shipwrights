@@ -5,16 +5,34 @@ import { SESSION_TTL } from './utils'
 import { getRedis } from './redis'
 
 const lastSeenCache = new Map<number, number>()
-const LASTSEEN_THROTTLE = 30000
+const ONLINE_THROTTLE = 60000
 
 function checkSeen(userId: number): boolean {
   const last = lastSeenCache.get(userId)
   const now = Date.now()
-  if (!last || now - last > LASTSEEN_THROTTLE) {
+  if (!last || now - last > ONLINE_THROTTLE) {
     lastSeenCache.set(userId, now)
     return true
   }
   return false
+}
+
+async function trackOnline(user: { id: number; username: string; avatar: string | null; role: string }) {
+  const redis = getRedis()
+  if (!redis) return
+  
+  try {
+    const now = Date.now()
+    await Promise.all([
+      redis.zadd('crew:online', { score: now, member: String(user.id) }),
+      redis.setex(`crew:${user.id}`, 180, JSON.stringify({
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        role: user.role,
+      }))
+    ])
+  } catch {}
 }
 
 export async function createSession(userId: number, ua?: string, ip?: string) {
@@ -54,12 +72,7 @@ export async function getSession(token: string) {
         const user = typeof cached === 'string' ? JSON.parse(cached) : cached
         if (user && user.isActive) {
           if (checkSeen(user.id)) {
-            prisma.user
-              .update({
-                where: { id: user.id },
-                data: { lastSeen: new Date() },
-              })
-              .catch(() => {})
+            trackOnline(user)
           }
           return user
         }
@@ -86,12 +99,7 @@ export async function getSession(token: string) {
   }
 
   if (checkSeen(sesh.user.id)) {
-    prisma.user
-      .update({
-        where: { id: sesh.user.id },
-        data: { lastSeen: new Date() },
-      })
-      .catch(() => {})
+    trackOnline(sesh.user)
   }
 
   const timeLeft = sesh.expiresAt.getTime() - Date.now()
