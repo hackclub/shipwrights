@@ -1,30 +1,26 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { cache } from '@/lib/cache'
+import { getRedis } from '@/lib/redis'
 import { api } from '@/lib/api'
+
+type Crew = { id: number; username: string; avatar: string | null; role: string }
 
 export const GET = api()(async () => {
   try {
-    const data = await cache('cache:online', 30, async () => {
-      const cutoff = new Date(Date.now() - 2 * 60 * 1000)
+    const redis = getRedis()
+    if (!redis) return NextResponse.json({ crew: [] })
 
-      const crew = await prisma.user.findMany({
-        where: {
-          lastSeen: { gte: cutoff },
-        },
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
-          role: true,
-        },
-        orderBy: { lastSeen: 'desc' },
-      })
+    const cutoff = Date.now() - 180000
+    await redis.zremrangebyscore('crew:online', 0, cutoff)
 
-      return { crew }
-    })
+    const ids = await redis.zrange('crew:online', 0, -1)
+    if (ids.length === 0) return NextResponse.json({ crew: [] })
 
-    return NextResponse.json(data)
+    const keys = ids.map(id => `crew:${id}`)
+    const values = await redis.mget(...keys)
+
+    const crew = values.filter((v): v is Crew => v !== null && typeof v === 'object')
+
+    return NextResponse.json({ crew })
   } catch {
     return NextResponse.json({ error: 'broke' }, { status: 500 })
   }

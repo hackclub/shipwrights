@@ -29,6 +29,7 @@ export function useShipCert(shipId: string) {
   const [claimAllowsEdit, setClaimAllowsEdit] = useState(false)
   const [isMyClaim, setIsMyClaim] = useState(false)
   const [claimed, setClaimed] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const canEdit = user?.role ? can(user.role, PERMS.certs_edit) : false
   const canOverride = user?.role ? can(user.role, PERMS.certs_override) : false
@@ -55,6 +56,9 @@ export function useShipCert(shipId: string) {
   }
 
   const startReview = async () => {
+    if (submitting) return
+    
+    setSubmitting(true)
     try {
       const res = await fetch(`/api/admin/ship_certifications/${shipId}/claim`, { method: 'POST' })
       const data = await res.json()
@@ -64,13 +68,16 @@ export function useShipCert(shipId: string) {
         setIsMyClaim(true)
         setClaimed(true)
         setTimeout(() => setClaimed(false), 3000)
+        setSubmitting(false)
       } else {
         setErr(data.error || 'someone already claimed this')
         setTimeout(() => setErr(null), 3000)
+        setSubmitting(false)
       }
     } catch {
       setErr('claim shit broke')
       setTimeout(() => setErr(null), 3000)
+      setSubmitting(false)
     }
   }
 
@@ -115,6 +122,8 @@ export function useShipCert(shipId: string) {
   }, [cert?.submitter?.slackId, user?.role])
 
   const update = async (newVerdict: string) => {
+    if (submitting) return
+    
     try {
       if (!claimAllowsEdit && !canOverride) {
         setErr("it's already claimed!")
@@ -138,6 +147,7 @@ export function useShipCert(shipId: string) {
         return
       }
 
+      setSubmitting(true)
       const res = await fetch(`/api/admin/ship_certifications/${shipId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -151,11 +161,14 @@ export function useShipCert(shipId: string) {
         const e = await res.json()
         setErr(e.error || 'u cant do that')
         setTimeout(() => setErr(null), 3000)
+        setSubmitting(false)
         return
       }
       if (!res.ok) throw new Error('update fucked up')
       router.push('/admin/ship_certifications?success=true')
-    } catch {}
+    } catch {
+      setSubmitting(false)
+    }
   }
 
   const save = async () => {
@@ -302,6 +315,7 @@ export function useShipCert(shipId: string) {
     canEdit,
     canOverride,
     isViewOnly,
+    submitting,
     startReview,
     update,
     save,

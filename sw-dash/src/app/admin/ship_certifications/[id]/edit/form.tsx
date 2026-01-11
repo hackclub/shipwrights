@@ -37,6 +37,7 @@ export function Form({ shipId }: Props) {
     canEdit,
     canOverride,
     isViewOnly,
+    submitting,
     startReview,
     update,
     save,
@@ -536,21 +537,22 @@ export function Form({ shipId }: Props) {
             {cert.status === 'pending' && !isMyClaim && canEdit && (
               <button
                 onClick={startReview}
-                className="bg-blue-900/30 text-blue-400 border-2 border-blue-700/60 hover:bg-blue-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all shadow-lg shadow-blue-950/20 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={submitting}
+                className="bg-blue-900/30 text-blue-400 border-2 border-blue-700/60 hover:bg-blue-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-950/20 hover:scale-[1.02] active:scale-[0.98]"
               >
-                Start Review
+                Claim cert
               </button>
             )}
             <button
               onClick={() => update('approved')}
-              disabled={isViewOnly}
+              disabled={isViewOnly || submitting}
               className="bg-green-950/30 text-green-400 border-2 border-green-700/60 hover:bg-green-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-950/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               Approve
             </button>
             <button
               onClick={() => update('rejected')}
-              disabled={isViewOnly}
+              disabled={isViewOnly || submitting}
               className="bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-950/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               Reject
@@ -558,7 +560,7 @@ export function Form({ shipId }: Props) {
             {(cert.status === 'approved' || cert.status === 'rejected') && (
               <button
                 onClick={() => update('pending')}
-                disabled={isViewOnly}
+                disabled={isViewOnly || submitting}
                 className="bg-yellow-950/30 text-yellow-400 border-2 border-yellow-700/60 hover:bg-yellow-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-yellow-950/20 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Uncert

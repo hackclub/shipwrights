@@ -101,8 +101,10 @@ export default function Profile() {
 
   useEffect(() => {
     load()
-    const saved = localStorage.getItem('snow')
-    if (saved !== null) setSnow(saved === 'true')
+    try {
+      const saved = localStorage.getItem('snow')
+      if (saved !== null) setSnow(saved === 'true')
+    } catch {}
   }, [id, load])
 
   const add = async () => {
@@ -350,7 +352,9 @@ export default function Profile() {
                     onClick={() => {
                       const next = !snow
                       setSnow(next)
-                      localStorage.setItem('snow', String(next))
+                      try {
+                        localStorage.setItem('snow', String(next))
+                      } catch {}
                       window.location.reload()
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
