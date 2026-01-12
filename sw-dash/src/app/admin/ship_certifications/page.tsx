@@ -10,7 +10,7 @@ export default async function Ships() {
   if (!user) redirect('/')
   if (!can(user.role, PERMS.certs_view)) redirect('/admin')
 
-  const data = await getCerts({ status: 'pending', lbMode: 'weekly' })
+  const data = await getCerts({ status: 'pending', lbMode: 'weekly', sortBy: 'oldest' })
 
   return (
     <main className="bg-grid min-h-screen w-full p-4 md:p-8" role="main">
