@@ -51,13 +51,13 @@ export const PATCH = withParams(PERMS.users_edit)(async ({ user, req, params, ip
     const { role } = body
 
     const validRoles = [
-      'trainee',
       'megawright',
       'hq',
       'captain',
       'shipwright',
       'observer',
       'fraudster',
+      'ysws_reviewer',
     ]
     if (role && !validRoles.includes(role)) {
       return NextResponse.json({ error: 'role is fucked up' }, { status: 400 })

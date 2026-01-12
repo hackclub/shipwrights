@@ -15,7 +15,7 @@ model User {
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   isActive         Boolean               @default(true)
-  role             String                @default("trainee")
+  role             String                @default("observer")
   sessionExpires   DateTime?
   sessionToken     String?
   currentChallenge String?

@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { ROLES } from '@/lib/perms'
 
-const ROLES_LIST = Object.keys(ROLES).filter(
-  (r) => !['captain', 'megawright', 'shipwright'].includes(r)
-)
+const ROLES_LIST = Object.keys(ROLES).filter((r) => !['captain', 'megawright'].includes(r))
 const SOURCES = ['slack application', 'direct invite', 'referral', 'other']
 
 interface Preview {
@@ -25,7 +23,7 @@ interface Props {
 export function AddUser({ open, onClose, myName, mySlackId }: Props) {
   const [slackId, setSlackId] = useState('')
   const [username, setUsername] = useState('')
-  const [role, setRole] = useState('trainee')
+  const [role, setRole] = useState('shipwright')
   const [source, setSource] = useState('')
   const [fraudDone, setFraudDone] = useState(false)
   const [fraudById, setFraudById] = useState('')
@@ -127,7 +125,7 @@ export function AddUser({ open, onClose, myName, mySlackId }: Props) {
   const reset = () => {
     setSlackId('')
     setUsername('')
-    setRole('trainee')
+    setRole('shipwright')
     setSource('')
     setFraudDone(false)
     setFraudById('')

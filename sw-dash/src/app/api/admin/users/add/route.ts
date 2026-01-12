@@ -36,7 +36,6 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
     avatar = slack.profile?.image_512 || slack.profile?.image_192 || null
   } catch {}
 
-  const finalRole = role === 'trainee' ? 'shipwright' : role
   const isActive = role !== 'observer' && fraudDone
 
   const newUser = await prisma.user.create({
@@ -44,7 +43,7 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
       slackId,
       username,
       avatar,
-      role: finalRole,
+      role,
       isActive,
       staffNotes: notes || null,
     },
@@ -54,7 +53,7 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
     'user_added',
     200,
     user,
-    `added ${username} (${slackId}) as ${finalRole} via ${source}${fraudDone ? ` - fraud by ${fraudById}` : ''}`,
+    `added ${username} (${slackId}) as ${role} via ${source}${fraudDone ? ` - fraud by ${fraudById}` : ''}`,
     { ip, userAgent: ua }
   )
 
@@ -63,7 +62,7 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
       userId: newUser.id,
       adminId: user.id,
       action: 'user created',
-      details: `added as ${finalRole} via ${source}${fraudDone ? ` - fraud checked by ${fraudById}` : ''}`,
+      details: `added as ${role} via ${source}${fraudDone ? ` - fraud checked by ${fraudById}` : ''}`,
     },
   })
 

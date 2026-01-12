@@ -75,11 +75,6 @@ export const ROLES = {
       //PERMS.assign_view,
     ],
   },
-  trainee: {
-    value: 'trainee',
-    label: 'Trainee',
-    perms: [PERMS.certs_view],
-  },
   fraudster: {
     value: 'fraudster',
     label: 'Fraudster',
