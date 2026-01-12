@@ -343,6 +343,11 @@ export function CertsView({ initial }: Props) {
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1 ml-2">
+                {c.customBounty && (
+                  <span className="bg-orange-900/30 text-orange-300 px-2 py-0.5 rounded font-mono text-xs border border-orange-700">
+                    +{c.customBounty} 🍪
+                  </span>
+                )}
                 {c.yswsReturned ? (
                   <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
                     RETURNED
@@ -418,6 +423,13 @@ export function CertsView({ initial }: Props) {
                     </Link>
                     <div className="text-gray-500 font-mono text-xs">FT #{c.ftProjectId}</div>
                     <div className="text-gray-500 font-mono text-xs">Type: {c.type}</div>
+                    {c.customBounty && (
+                      <div className="mt-1">
+                        <span className="bg-orange-900/30 text-orange-300 px-2 py-0.5 rounded font-mono text-xs border border-orange-700">
+                          +{c.customBounty} 🍪
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="p-4">
                     {c.yswsReturned ? (

@@ -30,6 +30,8 @@ export function useShipCert(shipId: string) {
   const [isMyClaim, setIsMyClaim] = useState(false)
   const [claimed, setClaimed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [bounty, setBounty] = useState('')
+  const [bountySaved, setBountySaved] = useState(false)
 
   const canEdit = user?.role ? can(user.role, PERMS.certs_edit) : false
   const canOverride = user?.role ? can(user.role, PERMS.certs_override) : false
@@ -100,6 +102,12 @@ export function useShipCert(shipId: string) {
   useEffect(() => {
     if (cert?.feedback && !reason) setReason(cert.feedback)
   }, [cert?.feedback, reason])
+
+  useEffect(() => {
+    if (cert?.customBounty !== undefined && !bounty) {
+      setBounty(cert.customBounty?.toString() || '')
+    }
+  }, [cert?.customBounty, bounty])
 
   useEffect(() => {
     if (user && cert) checkClaim()
@@ -287,6 +295,25 @@ export function useShipCert(shipId: string) {
     })
   }
 
+  const updateBounty = (b: string) => {
+    const val = b === '' ? null : parseFloat(b)
+    if (b !== '' && (isNaN(val!) || val! < 0)) return
+    setBounty(b)
+  }
+
+  const saveBounty = async () => {
+    const val = bounty === '' ? null : parseFloat(bounty)
+    if (bounty !== '' && (isNaN(val!) || val! < 0)) return
+    setCert((prev) => (prev ? { ...prev, customBounty: val } : prev))
+    await fetch(`/api/admin/ship_certifications/${shipId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customBounty: val }),
+    })
+    setBountySaved(true)
+    setTimeout(() => setBountySaved(false), 2000)
+  }
+
   return {
     cert,
     setCert,
@@ -325,5 +352,9 @@ export function useShipCert(shipId: string) {
     fmt,
     upload,
     updateType,
+    bounty,
+    updateBounty,
+    saveBounty,
+    bountySaved,
   }
 }

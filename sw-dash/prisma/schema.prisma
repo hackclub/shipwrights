@@ -168,6 +168,7 @@ model ShipCert {
   syncedToFt          Boolean   @default(false)
   cookiesEarned       Float?
   payoutMulti         Float?
+  customBounty        Float?
   
   yswsReturnReason    String?   @db.Text
   yswsReturnedBy      String?

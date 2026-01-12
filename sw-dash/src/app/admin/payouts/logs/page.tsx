@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getUser } from '@/lib/server-auth'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
+import { RATES } from '@/lib/payouts'
 
 export default async function Logs() {
   const user = await getUser()
@@ -34,24 +35,6 @@ export default async function Logs() {
     if (diff < 3600) return `${Math.floor(diff / 60)}m`
     if (diff < 86400) return `${Math.floor(diff / 3600)}h`
     return `${Math.floor(diff / 86400)}d`
-  }
-
-  const RATES: Record<string, number> = {
-    'Web App': 0.5,
-    'Chat Bot': 0.5,
-    Extension: 0.7,
-    CLI: 0.75,
-    Cargo: 0.75,
-    'Desktop App (Windows)': 0.75,
-    'Minecraft Mods': 0.75,
-    'Android App': 0.75,
-    'iOS App': 0.75,
-    'Steam Games': 0.75,
-    PyPI: 0.75,
-    'Desktop App (Linux)': 1,
-    'Desktop App (macOS)': 1,
-    Hardware: 1,
-    Other: 1,
   }
 
   const getRate = (type: string | null) => (type ? (RATES[type] ?? 1) : 1)

@@ -13,6 +13,7 @@ export interface Cert {
   yswsReturned?: boolean
   yswsReturnReason?: string | null
   yswsReturnedBy?: string | null
+  customBounty?: number | null
 }
 
 export interface Stats {
@@ -77,6 +78,7 @@ export interface ShipCert {
   } | null
   createdAt: string
   updatedAt: string
+  customBounty?: number | null
 }
 
 export interface UserData {

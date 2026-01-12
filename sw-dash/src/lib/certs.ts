@@ -147,6 +147,7 @@ async function fetchCerts(filters: Filters = {}) {
         yswsReturned: !!c.yswsReturnedAt,
         yswsReturnReason: c.yswsReturnReason,
         yswsReturnedBy: c.yswsReturnedBy,
+        customBounty: c.customBounty,
       }
     }),
     stats: {
@@ -217,6 +218,7 @@ export async function searchCerts(q: string) {
         yswsReturned: !!c.yswsReturnedAt,
         yswsReturnReason: c.yswsReturnReason,
         yswsReturnedBy: c.yswsReturnedBy,
+        customBounty: c.customBounty,
       }
     }),
   }

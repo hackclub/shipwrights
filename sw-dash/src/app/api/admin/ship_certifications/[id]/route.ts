@@ -111,6 +111,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
       })),
       createdAt: cert.createdAt.toISOString(),
       updatedAt: cert.updatedAt.toISOString(),
+      customBounty: cert.customBounty,
     })
   } catch {
     return NextResponse.json({ error: 'shit hit the fan loading ship details' }, { status: 500 })
@@ -126,7 +127,7 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       return idErr('ship ID')
     }
 
-    const { verdict, certifierId, proofVideoUrl, reviewFeedback, projectType } = body
+    const { verdict, certifierId, proofVideoUrl, reviewFeedback, projectType, customBounty } = body
 
     const updateData: {
       status?: string
@@ -140,6 +141,7 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       cookiesEarned?: number
       payoutMulti?: number
       projectType?: string
+      customBounty?: number | null
     } = {}
 
     const cert = await prisma.shipCert.findUnique({
@@ -185,7 +187,7 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       }
 
       if (verdict.toLowerCase() === 'approved' || verdict.toLowerCase() === 'rejected') {
-        const payout = await calc(user.id, cert.projectType)
+        const payout = await calc(user.id, cert.projectType, cert.customBounty)
         updateData.cookiesEarned = payout.cookies
         updateData.payoutMulti = payout.multi
       }
@@ -213,6 +215,13 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
         { ip, userAgent: ua },
         { targetId: shipId, targetType: 'ship_cert' }
       )
+    }
+
+    if (customBounty !== undefined) {
+      if (!can(user.role, PERMS.certs_bounty)) {
+        return NextResponse.json({ error: 'u aint got bounty perms' }, { status: 403 })
+      }
+      updateData.customBounty = customBounty
     }
 
     const updated = await prisma.shipCert.update({

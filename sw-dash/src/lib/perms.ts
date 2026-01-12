@@ -3,6 +3,7 @@ export const PERMS = {
   certs_edit: 'certs_edit',
   certs_admin: 'certs_admin',
   certs_override: 'certs_override',
+  certs_bounty: 'certs_bounty',
 
   users_view: 'users_view',
   users_add: 'users_add',

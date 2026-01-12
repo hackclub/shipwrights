@@ -1,21 +1,21 @@
 import { prisma } from './db'
 
 const RATES: Record<string, number> = {
-  'Web App': 0.5,
-  'Chat Bot': 0.5,
-  Extension: 0.7,
-  CLI: 0.75,
-  Cargo: 0.75,
-  'Desktop App (Windows)': 0.75,
-  'Minecraft Mods': 0.75,
-  'Android App': 0.75,
-  'iOS App': 0.75,
-  'Steam Games': 0.75,
-  PyPI: 0.75,
-  'Desktop App (Linux)': 1,
-  'Desktop App (macOS)': 1,
-  Hardware: 1,
-  Other: 1,
+  'Web App': 0.6,
+  'Chat Bot': 0.6,
+  Extension: 0.75,
+  CLI: 0.8,
+  Cargo: 0.8,
+  'Desktop App (Windows)': 1,
+  'Minecraft Mods': 0.8,
+  'Android App': 0.8,
+  'iOS App': 0.8,
+  'Steam Games': 0.8,
+  PyPI: 0.8,
+  'Desktop App (Linux)': 1.1,
+  'Desktop App (macOS)': 1.1,
+  Hardware: 1.1,
+  Other: 1.1,
 }
 
 const MULTI = [1.75, 1.5, 1.25]
@@ -60,10 +60,12 @@ export async function getMulti(userId: number): Promise<number> {
   return 1
 }
 
-export async function calc(userId: number, type: string | null) {
+export async function calc(userId: number, type: string | null, customBounty?: number | null) {
   const bounty = getBounty(type)
   const multi = await getMulti(userId)
-  return { cookies: bounty * multi, multi, bounty }
+  const base = bounty * multi
+  const total = customBounty ? base + customBounty : base
+  return { cookies: total, multi, bounty, customBounty: customBounty || 0 }
 }
 
 export { RATES }

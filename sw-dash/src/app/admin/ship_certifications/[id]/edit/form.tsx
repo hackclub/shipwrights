@@ -47,6 +47,10 @@ export function Form({ shipId }: Props) {
     fmt,
     upload,
     updateType,
+    bounty,
+    updateBounty,
+    saveBounty,
+    bountySaved,
   } = useShipCert(shipId)
 
   if (loading) {
@@ -379,6 +383,26 @@ export function Form({ shipId }: Props) {
                   <span className="text-gray-400">Dev Time:</span>{' '}
                   <span className="text-white">{cert.devTime || '-'}</span>
                 </div>
+                {user?.role && can(user.role, PERMS.certs_bounty) && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">Bounty:</span>
+                    <input
+                      type="number"
+                      value={bounty}
+                      onChange={(e) => updateBounty(e.target.value)}
+                      placeholder="cookies"
+                      step="0.25"
+                      min="0"
+                      className="bg-zinc-950/50 border border-amber-900/30 text-white font-mono text-sm px-2 py-0.5 rounded w-24 focus:outline-none focus:border-amber-600/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      onClick={saveBounty}
+                      className="bg-amber-900/30 text-amber-300 px-2 py-0.5 font-mono text-xs hover:bg-amber-900/50 transition-all border border-amber-700/60 rounded"
+                    >
+                      set
+                    </button>
+                  </div>
+                )}
                 <div>
                   <span className="text-gray-400">Created:</span>{' '}
                   <span className="text-white">{created}</span>
@@ -579,6 +603,12 @@ export function Form({ shipId }: Props) {
       {claimed && (
         <div className="fixed top-4 left-4 right-4 md:left-auto md:right-6 md:max-w-sm bg-green-950/90 border-2 border-green-700/60 text-green-300 font-mono text-sm px-4 py-3 rounded-2xl shadow-2xl shadow-green-950/30 z-50">
           I've locked it to you for 30 min!
+        </div>
+      )}
+
+      {bountySaved && (
+        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-6 md:max-w-sm bg-green-950/90 border-2 border-green-700/60 text-green-300 font-mono text-sm px-4 py-3 rounded-2xl shadow-2xl shadow-green-950/30 z-50">
+          bounty set!
         </div>
       )}
     </main>
