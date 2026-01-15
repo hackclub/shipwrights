@@ -115,6 +115,7 @@ async function fetchCerts(filters: Filters = {}) {
       name: reviewerMap.get(r.reviewerId!) || 'unknown',
       count: r._count,
     }))
+    .filter((r) => lbMode !== 'weekly' || r.name !== 'System')
     .sort((a, b) => b.count - a.count)
 
   const typeCounts = typeGroups.map((g) => ({ type: g.projectType || 'unknown', count: g._count }))
