@@ -1,5 +1,5 @@
-import os, threading, json, requests
-import db, helpers, api, home
+import os, threading, json
+import db, helpers, api, home, relay
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
@@ -44,150 +44,14 @@ def msg(event, client):
     if subtype and subtype not in ["file_share"]:
         return
     channel = event["channel"]
+
     if channel == USER_CHANNEL:
-        if event.get("thread_ts"):
-            user_id = event["user"]
-            text = event.get("text", "")
-            files = event.get("files", [])
-            
-            if not text and not files:
-                return
-            
-            ticket = db.find_ticket(event["thread_ts"])
-            if ticket:
-                user_info = client.users_info(user=user_id)
-                user_name = user_info["user"]["profile"].get("display_name") or user_info["user"]["profile"].get("real_name")
-                user_avatar = user_info["user"]["profile"]["image_48"]
-                
-                file_info = []
-                if files:
-                    for f in files:
-                        file_info.append({
-                            'name': f.get('name'),
-                            'url': f.get('url_private'),
-                            'mimetype': f.get('mimetype'),
-                            'size': f.get('size')
-                        })
-                
-                db.save_message(ticket["id"], user_id, user_name, user_avatar, text or "", False, file_info if file_info else None, event.get("ts"))
-                
-                if text:
-                    client.chat_postMessage(
-                        channel=STAFF_CHANNEL,
-                        thread_ts=ticket["staffThreadTs"],
-                        text=text,
-                        username=user_name,
-                        icon_url=user_avatar
-                    )
-                
-                if files:
-                    helpers.send_files(event, client, STAFF_CHANNEL, ticket["staffThreadTs"], BOT_TOKEN)
-                
-                try:
-                    port = os.getenv('PORT', '45100')
-                    requests.post(f'http://localhost:{port}/ws/notify', json={'ticketId': ticket["id"]}, timeout=0.5)
-                except:
-                    pass
+        if relay.handle_client_reply(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL):
+            pass
         else:
-            user_id = event["user"]
-            text = event.get("text", "")
-            files = event.get("files", [])
-            
-            if not text and not files:
-                return
-            
-            user_info = client.users_info(user=user_id)
-            user_name = user_info["user"]["profile"].get("display_name") or user_info["user"]["profile"].get("real_name")
-            user_avatar = user_info["user"]["profile"]["image_48"]
-            
-            user_thread_link_resp = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=event["ts"])
-            user_thread_link = user_thread_link_resp["permalink"]
-
-            staff_msg = client.chat_postMessage(
-                channel=STAFF_CHANNEL,
-                text=text,
-                username=user_name,
-                icon_url=user_avatar,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {"type": "mrkdwn", "text": text}
-                    },
-                    {
-                        "type": "context",
-                        "elements": [
-                            {"type": "mrkdwn", "text": f"<@{user_id}> | <{user_thread_link}|thread>"}
-                        ]
-                    }
-                ]
-            )
-            
-            if files:
-                helpers.send_files(event, client, STAFF_CHANNEL, staff_msg["ts"], BOT_TOKEN)
-            
-            staff_link_resp = client.chat_getPermalink(channel=STAFF_CHANNEL, message_ts=staff_msg["ts"])
-            staff_link = staff_link_resp["permalink"]
-            
-            ticket_id = db.save_ticket(user_id, user_name, user_avatar, text or "📎 attachment", event["ts"], staff_msg["ts"])
-
-            if ticket_id:
-                dash_url = os.getenv("DASHBOARD_URL")
-                dash_link = f"{dash_url}/admin/tickets/sw-{ticket_id}"
-                
-                client.chat_postMessage(
-                    channel=STAFF_CHANNEL,
-                    thread_ts=staff_msg["ts"],
-                    text="New ticket!",
-                    blocks=[
-                        {
-                            "type": "section",
-                            "text": {"type": "mrkdwn", "text": "New ticket!"},
-                            "accessory": {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "Resolve Ticket"},
-                                "style": "primary",
-                                "value": str(ticket_id),
-                                "action_id": "resolve_ticket"
-                            }
-                        },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {"type": "mrkdwn", "text": f"#sw-{ticket_id} | <{dash_link}|view on dash>"}
-                            ]
-                        },
-                    ]
-                )
-                
-                client.chat_postMessage(
-                    channel=USER_CHANNEL,
-                    thread_ts=event["ts"],
-                    text=f"Hey there! We have received your question, and someone from Shipwrights Team will get back to you shortly!",
-                    unfurl_links=False,
-                    unfurl_media=False,
-                    blocks=[
-                        {
-                            "type": "section",
-                            "text": {"type": "mrkdwn", "text": "Hey there! We have received your question, and someone from Shipwrights Team will get back to you shortly!"},
-                            "accessory": {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "Resolve Ticket"},
-                                "style": "primary",
-                                "value": str(ticket_id),
-                                "action_id": "resolve_ticket"
-                            }
-                        },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {"type": "mrkdwn", "text": f"ticket sw-{ticket_id} • <{staff_link}|staff link>"}
-                            ]
-                        }
-                    ]
-                )
-    
+            relay.create_ticket(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL)
     elif channel == STAFF_CHANNEL:
-        helpers.handle_staff_reply(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL)
+        relay.handle_staff_reply(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL)
 
 @slack_app.event("app_home_opened")
 def render_app_home(event, client):
@@ -218,7 +82,7 @@ def edit_message(ack, body, client):
     helpers.show_edit_modal(client, body, message_ts)
 
 @slack_app.action("resolve_ticket")
-def resolve_ticket(ack, body, client, respond):
+def resolve_ticket(ack, body, client):
     ack()
     ticket_id = json.loads(body["actions"][0]["value"])
     ticket = db.get_ticket(ticket_id)
@@ -233,7 +97,7 @@ def resolve_ticket(ack, body, client, respond):
         client.chat_postMessage(
             channel=USER_CHANNEL,
             thread_ts=ticket["userThreadTs"],
-            text=f"Hey! Would you look at that, This ticket was marked as resolved!",
+            text=f"Hey! Would you look at that, This ticket was marked as resolved! Shipwrights will no longer receive your messages. If you still have a question, please feel free to open a new ticket.",
         )
         client.reactions_add(
             channel=STAFF_CHANNEL,
