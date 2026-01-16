@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-REMINDERS_CHANNEL = os.getenv("REMINDER_CHANNEL_ID")
+REMINDERS_CHANNEL = os.getenv("REMINDER_CHANNEL_ID", "C09TTRZH94Z")
 client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
 
 def message_blocks():
