@@ -44,11 +44,17 @@ export async function getMulti(userId: number): Promise<number> {
 
   if (myCount === 0) return 1
 
+  const sysUser = await prisma.user.findFirst({
+    where: { username: 'System' },
+    select: { id: true },
+  })
+
   const lb = await prisma.shipCert.groupBy({
     by: ['reviewerId'],
     where: {
       status: { in: ['approved', 'rejected'] },
       reviewCompletedAt: { gte: weekStart, lt: nextSunday },
+      reviewerId: sysUser ? { not: sysUser.id } : undefined,
     },
     _count: true,
     orderBy: { _count: { reviewerId: 'desc' } },

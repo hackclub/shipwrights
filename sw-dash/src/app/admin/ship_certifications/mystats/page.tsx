@@ -26,6 +26,7 @@ export default async function Stats() {
     approved,
     rejected,
     types,
+    sysUser,
     global,
     userData,
     weeklyCount,
@@ -37,6 +38,10 @@ export default async function Stats() {
     prisma.shipCert.count({ where: { reviewerId: uid, status: 'approved' } }),
     prisma.shipCert.count({ where: { reviewerId: uid, status: 'rejected' } }),
     prisma.shipCert.groupBy({ by: ['projectType'], where: { reviewerId: uid }, _count: true }),
+    prisma.user.findFirst({
+      where: { username: 'System' },
+      select: { id: true },
+    }),
     prisma.shipCert.groupBy({
       by: ['reviewerId'],
       where: {
@@ -117,7 +122,8 @@ export default async function Stats() {
   }
 
   const rate = total > 0 ? Math.round((approved / total) * 100) : 0
-  const weeklyRank = global.findIndex((s) => s.reviewerId === uid) + 1
+  const filteredLb = global.filter((s) => s.reviewerId !== sysUser?.id)
+  const weeklyRank = filteredLb.findIndex((s) => s.reviewerId === uid) + 1
   const maxT = Math.max(...types.map((t) => t._count), 1)
 
   return (

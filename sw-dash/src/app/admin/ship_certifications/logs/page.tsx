@@ -93,64 +93,54 @@ export default function Logs() {
     <main className="bg-grid min-h-screen w-full p-4 md:p-8" role="main">
       <div className="w-full">
         <div className="h-4 w-24 bg-zinc-800/40 rounded mb-4 md:mb-6"></div>
-        <div className="flex justify-between items-center mb-6 md:mb-8 min-h-[48px]">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 md:mb-8">
           <div className="h-8 w-32 bg-zinc-800/50 rounded"></div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="lg:col-span-3">
-            <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl overflow-hidden shadow-2xl shadow-amber-950/30">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-amber-900/30">
-                    {['ship id', 'project', 'verdict', 'certifier', 'decision made', 'notes'].map(
-                      (h) => (
-                        <th key={h} className="text-left p-4 text-amber-400 font-mono text-sm">
-                          {h}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...Array(5)].map((_, i) => (
-                    <tr key={i} className="border-b border-amber-900/20">
-                      <td className="p-4">
-                        <div className="h-4 w-8 bg-zinc-800/40 rounded"></div>
-                      </td>
-                      <td className="p-4">
-                        <div className="h-4 w-28 bg-zinc-800/40 rounded mb-1"></div>
-                        <div className="h-3 w-20 bg-zinc-800/30 rounded"></div>
-                      </td>
-                      <td className="p-4">
-                        <div className="h-5 w-16 bg-zinc-800/40 rounded"></div>
-                      </td>
-                      <td className="p-4">
-                        <div className="h-4 w-20 bg-zinc-800/40 rounded"></div>
-                      </td>
-                      <td className="p-4">
-                        <div className="h-4 w-24 bg-zinc-800/30 rounded"></div>
-                      </td>
-                      <td className="p-4">
-                        <div className="h-4 w-32 bg-zinc-800/30 rounded"></div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="flex gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-4 w-20 bg-zinc-800/40 rounded"></div>
+            ))}
           </div>
-          <div className="hidden lg:block">
-            <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-6 shadow-xl shadow-amber-950/20 min-h-[200px]">
-              <div className="h-5 w-16 bg-zinc-800/50 rounded mb-4"></div>
-              <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex justify-between">
-                    <div className="h-4 w-20 bg-zinc-800/30 rounded"></div>
-                    <div className="h-4 w-12 bg-zinc-800/40 rounded"></div>
-                  </div>
+        </div>
+        <div className="mb-6 md:mb-8">
+          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl overflow-hidden shadow-2xl shadow-amber-950/30">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-amber-900/30">
+                  {['ship id', 'project', 'verdict', 'certifier', 'decision made', 'notes'].map(
+                    (h) => (
+                      <th key={h} className="text-left p-4 text-amber-400 font-mono text-sm">
+                        {h}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-amber-900/20">
+                    <td className="p-4">
+                      <div className="h-4 w-8 bg-zinc-800/40 rounded"></div>
+                    </td>
+                    <td className="p-4">
+                      <div className="h-4 w-28 bg-zinc-800/40 rounded mb-1"></div>
+                      <div className="h-3 w-20 bg-zinc-800/30 rounded"></div>
+                    </td>
+                    <td className="p-4">
+                      <div className="h-5 w-16 bg-zinc-800/40 rounded"></div>
+                    </td>
+                    <td className="p-4">
+                      <div className="h-4 w-20 bg-zinc-800/40 rounded"></div>
+                    </td>
+                    <td className="p-4">
+                      <div className="h-4 w-24 bg-zinc-800/30 rounded"></div>
+                    </td>
+                    <td className="p-4">
+                      <div className="h-4 w-32 bg-zinc-800/30 rounded"></div>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -168,36 +158,30 @@ export default function Logs() {
         >
           ← back to certs
         </Link>
-        <div className="flex justify-between items-center mb-6 md:mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 md:mb-8">
           <h1 className="text-2xl md:text-4xl font-mono text-amber-400">Cert Logs</h1>
-        </div>
-
-        <div className="lg:hidden mb-4">
-          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 shadow-xl shadow-amber-950/20">
-            <h2 className="text-amber-400 font-mono text-sm mb-3">Stats</h2>
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Judged:</span>
-                <span className="text-white font-bold">{stats?.totalJudged || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Rate:</span>
-                <span className="text-white font-bold">{stats?.approvalRate || 0}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Approved:</span>
-                <span className="text-green-400">{stats?.approved || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Rejected:</span>
-                <span className="text-red-400">{stats?.rejected || 0}</span>
-              </div>
+          <div className="flex flex-wrap gap-3 md:gap-6 font-mono text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">Judged:</span>
+              <span className="text-white font-bold">{stats?.totalJudged || 0}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">Approved:</span>
+              <span className="text-green-400 font-bold">{stats?.approved || 0}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">Rejected:</span>
+              <span className="text-red-400 font-bold">{stats?.rejected || 0}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">Rate:</span>
+              <span className="text-amber-400 font-bold">{stats?.approvalRate || 0}%</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="lg:col-span-3">
+        <div className="mb-6 md:mb-8">
+          <div className="">
             <div className="md:hidden space-y-3">
               {logs.map((l) => (
                 <Link
@@ -298,39 +282,13 @@ export default function Logs() {
                             {ago(l.decisionMade)}
                           </div>
                         </td>
-                        <td className="p-4 text-gray-300 font-mono text-sm max-w-md">{l.notes}</td>
+                        <td className="p-4 text-gray-300 font-mono text-sm max-w-md break-words">
+                          {l.notes}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden lg:block space-y-6">
-            <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-6 shadow-xl shadow-amber-950/20">
-              <h2 className="text-amber-400 font-mono text-lg mb-4">Stats</h2>
-              <div className="space-y-3 text-sm font-mono">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Total Judged:</span>
-                  <span className="text-white font-bold">{stats?.totalJudged || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Approved:</span>
-                  <span className="bg-green-900/30 text-green-400 px-2 py-1 rounded">
-                    {stats?.approved || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Rejected:</span>
-                  <span className="bg-red-900/30 text-red-400 px-2 py-1 rounded">
-                    {stats?.rejected || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-gray-700">
-                  <span className="text-gray-400">Approval Rate:</span>
-                  <span className="text-white font-bold">{stats?.approvalRate || 0}%</span>
-                </div>
               </div>
             </div>
           </div>
