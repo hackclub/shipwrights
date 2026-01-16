@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.bg-grid {
+  background-color: #000000;
+  background-image:
+    linear-gradient(#1a1a1a 1px, transparent 1px),
+    linear-gradient(90deg, #1a1a1a 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.bg-grid > * {
+  pointer-events: auto;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #78350f;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #92400e;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #78350f transparent;
+}
+
+.markdown-preview {
+  @apply font-sans text-sm;
+}
+
+.markdown-preview code:not(pre code) {
+  @apply bg-gray-800 px-1.5 py-0.5 rounded text-xs text-gray-200 font-mono;
+}
+
+.markdown-preview pre {
+  @apply rounded-md overflow-hidden my-4;
+}
+
+.markdown-preview pre code {
+  @apply text-xs leading-relaxed;
+}
+
+.markdown-preview ul.contains-task-list {
+  @apply list-none;
+}
+
+.markdown-preview ul.contains-task-list li {
+  @apply flex items-start gap-2;
+}
+
+.markdown-preview ul.contains-task-list li input[type='checkbox'] {
+  @apply mt-1 cursor-default;
+}
+
+.markdown-preview table {
+  @apply w-full border-collapse;
+}
+
+.markdown-preview img {
+  @apply rounded-lg border border-gray-700;
+}
+
+.markdown-preview a {
+  @apply break-words;
+}
+
+.markdown-preview blockquote p:last-child {
+  @apply mb-0;
+}

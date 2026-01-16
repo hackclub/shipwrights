@@ -17,3 +17,15 @@ model User {
 
   @@map("users")
 }
+
+model ShipCert {
+  id                  Int       @id @default(autoincrement())
+  projectType         String?
+  status              String    @default("pending")
+  createdAt           DateTime  @default(now())
+  reviewCompletedAt   DateTime?
+
+  @@index([status])
+  @@index([projectType])
+  @@map("ship_certs")
+}

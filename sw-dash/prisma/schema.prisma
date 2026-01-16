@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "mysql"
+  url       = env("DATABASE_URL")
+}
+
+model User {
+  id               Int                   @id @default(autoincrement())
+  slackId          String                @unique
+  username         String
+  avatar           String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  isActive         Boolean               @default(true)
+  role             String                @default("observer")
+  sessionExpires   DateTime?
+  sessionToken     String?
+  currentChallenge String?
+  staffNotes       String?               @db.Text
+  skills           Json?
+  lastSeen         DateTime?
+  auditLogs        AuditLog[]
+  subscriptions    AssignSubsc[]
+  assignedReviews  Assignment[]          @relation("AssignedTo")
+  createdReviews   Assignment[]          @relation("CreatedBy")
+  yubikeys         Yubikey[]
+  shipCerts          ShipCert[]
+  claimedShipCerts   ShipCert[]          @relation("ClaimedBy")
+  sessions           Session[]
+  pushSubs           PushSub[]
+  ticketNotes        TicketNote[]
+
+  cookieBalance      Float                 @default(0)
+  cookiesEarned      Float                 @default(0)
+  payoutReqs         PayoutReq[]           @relation("PayoutReqs")
+  payoutApprovals    PayoutReq[]           @relation("PayoutApprovals")
+  yswsReviews        YswsReview[]          @relation("YswsReviewer")
+
+  @@map("users")
+}
+
+model PayoutReq {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  amount      Float
+  bonus       Float     @default(0)
+  bonusReason String?
+  finalAmount Float?
+  balBefore   Float
+  balAfter    Float?
+  status      String    @default("pending")
+  adminId     Int?
+  proofUrl    String?
+  createdAt   DateTime  @default(now())
+  approvedAt  DateTime?
+  
+  user        User      @relation("PayoutReqs", fields: [userId], references: [id])
+  admin       User?     @relation("PayoutApprovals", fields: [adminId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("payout_reqs")
+}
+
+model PushSub {
+  id        String   @id @default(cuid())
+  userId    Int
+  endpoint  String   @unique @db.VarChar(1000)
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subs")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device    String?
+  ip        String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@map("sessions")
+}
+
+model LoginLog {
+  id        String   @id @default(cuid())
+  slackId   String?
+  username  String?
+  success   Boolean
+  ip        String
+  userAgent String
+  createdAt DateTime @default(now())
+
+  @@map("login_logs")
+}
+
+model Assignment {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  repoUrl       String
+  description   String?
+  status        String        @default("pending")
+  comments      String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  assigneeId    Int?
+  projectName   String?
+  demoUrl       String?
+  shipCertId    Int?          @unique
+  subscriptions AssignSubsc[]
+  assignee      User?         @relation("AssignedTo", fields: [assigneeId], references: [id])
+  author        User          @relation("CreatedBy", fields: [userId], references: [id])
+  shipCert      ShipCert?     @relation(fields: [shipCertId], references: [id])
+
+  @@index([assigneeId])
+  @@index([userId])
+  @@index([shipCertId])
+  @@map("assignments")
+}
+
+model AssignSubsc {
+  id           String     @id @default(cuid())
+  userId       Int
+  assignmentId Int
+  isSubscribed Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assignmentId])
+  @@index([assignmentId])
+  @@map("assign_subsc")
+}
+
+model ShipCert {
+  id                  Int       @id @default(autoincrement())
+  ftProjectId         String?
+  ftSlackId           String?
+  ftUsername          String?
+  
+  projectName         String?
+  projectType         String?
+  description         String?   @db.Text
+  demoUrl             String?
+  repoUrl             String?
+  readmeUrl           String?
+  devTime             String?
+  
+  status              String    @default("pending")
+  reviewerId          Int?
+  claimerId           Int?
+  internalNotes       String?   @db.Text
+  reviewFeedback      String?   @db.Text
+  proofVideoUrl       String?
+  reviewStartedAt     DateTime?
+  reviewCompletedAt   DateTime?
+  syncedToFt          Boolean   @default(false)
+  cookiesEarned       Float?
+  payoutMulti         Float?
+  customBounty        Float?
+  
+  yswsReturnReason    String?   @db.Text
+  yswsReturnedBy      String?
+  yswsReturnedAt      DateTime?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  reviewer            User?     @relation(fields: [reviewerId], references: [id])
+  claimer             User?     @relation("ClaimedBy", fields: [claimerId], references: [id])
+  assignments         Assignment[]
+  yswsReviews         YswsReview[]
+
+  @@index([reviewerId])
+  @@index([status])
+  @@index([ftSlackId])
+  @@index([projectType])
+  @@map("ship_certs")
+}
+
+model YswsReview {
+  id            Int       @id @default(autoincrement())
+  shipCertId    Int
+  status        String    @default("pending")
+  reviewerId    Int?
+  returnReason  String?   @db.Text
+  devlogs       Json?
+  commits       Json?
+  decisions     Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  shipCert      ShipCert  @relation(fields: [shipCertId], references: [id])
+  reviewer      User?     @relation("YswsReviewer", fields: [reviewerId], references: [id])
+
+  @@index([shipCertId])
+  @@index([status])
+  @@index([reviewerId])
+  @@map("ysws_reviews")
+}
+
+
+model Yubikey {
+  id           String    @id @default(cuid())
+  userId       Int
+  credentialId String    @unique
+  publicKey    Bytes
+  counter      BigInt
+  transports   String?
+  name         String
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("yubikeys")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  adminId   Int
+  action    String
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+  admin     User     @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@map("audit_logs")
+}
+
+model Ticket {
+  id            Int            @id @default(autoincrement())
+  userId        String         @db.VarChar(50)
+  userName      String         @db.VarChar(255)
+  question      String         @db.Text
+  userThreadTs  String         @db.VarChar(50)
+  staffThreadTs String         @db.VarChar(50)
+  status        Ticket_status? @default(open)
+  createdAt     DateTime?      @default(now()) @db.Timestamp(0)
+  closedAt      DateTime?      @db.Timestamp(0)
+  userAvatar    String?        @db.VarChar(500)
+  assignees     String?        @db.Text
+  messages      TicketMsg[]
+  notes         TicketNote[]
+
+  @@index([staffThreadTs])
+  @@index([userThreadTs])
+  @@map("tickets")
+}
+
+model TicketMsg {
+  id           Int      @id @default(autoincrement())
+  ticketId     Int
+  senderId     String   @db.VarChar(50)
+  senderName   String   @db.VarChar(255)
+  msg          String   @db.Text
+  files        String?  @db.LongText
+  isStaff      Boolean? @default(false)
+  createdAt    DateTime? @default(now()) @db.Timestamp(0)
+  senderAvatar String?  @db.VarChar(500)
+  messageTs    String?  @db.VarChar(50)
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([ticketId])
+  @@map("ticket_msgs")
+}
+
+model TicketNote {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  authorId  Int
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_notes")
+}
+
+enum Ticket_status {
+  open
+  closed
+}
+
+model SysLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  slackId    String?
+  username   String?
+  role       String?
+  action     String
+  context    String?  @db.Text
+  statusCode Int
+  ip         String?
+  userAgent  String?  @db.Text
+  email      String?
+  avatar     String?
+  targetId   Int?
+  targetType String?
+  metadata   Json?
+  severity   String?  @default("info")
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([ip])
+  @@index([severity])
+  @@index([targetType])
+  @@map("sys_logs")
+}
+
+
