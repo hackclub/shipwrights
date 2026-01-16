@@ -8,7 +8,7 @@ client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
 
 def message_blocks():
 	reviews_done = db.recent_reviews()
-	relative_performance = 1-(reviews_done["yesterday"]/(reviews_done["day_before"] if reviews_done["day_before"] != 0 else 1))
+	relative_performance = ((reviews_done["yesterday"] - reviews_done["day_before"]) / (reviews_done["day_before"] if reviews_done["day_before"] != 0 else 1)) * 100
 	projects_shipped = db.shipped_yesterday()
 	relative_number_of_reviews = reviews_done["yesterday"]-projects_shipped
 	top_reviewer = db.top_reviewer_yesterday()
@@ -28,7 +28,7 @@ def message_blocks():
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"Today a total of {reviews_done['yesterday']} reviews have been done that's {abs(relative_performance*100)}% {'more' if relative_performance >= 1 else 'less'} than yesterday! {'Great job team!!' if relative_performance >= 1 else ':(('} a total of {db.shipped_yesterday()} new ships have been sent that's {abs(relative_number_of_reviews)} {'less' if relative_number_of_reviews >= 0 else 'more'} than number of projects we reviewed {':)' if relative_number_of_reviews >= 0 else ':('} today's biggest contributor is <@{top_reviewer['slack_id']}> with a total of {top_reviewer['count']} reviews :cat-heart:\n _ps remember to do your daily reviews if you haven't already :c3:_"
+				"text": f"Today a total of {reviews_done['yesterday']} reviews have been done that's {abs(relative_performance):.0f}% {'more' if relative_performance >= 1 else 'less'} than yesterday! {'Great job team!!' if relative_performance >= 1 else ':(('} a total of {db.shipped_yesterday()} new ships have been sent that's {abs(relative_number_of_reviews)} {'less' if relative_number_of_reviews >= 0 else 'more'} than number of projects we reviewed {':)' if relative_number_of_reviews >= 0 else ':('} today's biggest contributor is <@{top_reviewer['slack_id']}> with a total of {top_reviewer['count']} reviews :cat-heart:\n _ps remember to do your daily reviews if you haven't already :c3:_"
 			}
 		},
 		{
@@ -51,13 +51,13 @@ def message_blocks():
 	]
 
 def send_reminder():
-    client.chat_postMessage(
+	client.chat_postMessage(
         channel=REMINDERS_CHANNEL,
         text="Daily summary",
         blocks=message_blocks(),
     )
 
 def reminders_loop():
-    while True:
-        send_reminder()
-        time.sleep(60*60*24)
+	while True:
+		send_reminder()
+		time.sleep(60*60*24)
