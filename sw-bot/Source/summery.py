@@ -2,6 +2,9 @@ import os
 import time
 import db
 from slack_sdk import WebClient
+from dotenv import load_dotenv
+
+load_dotenv()
 
 REMINDERS_CHANNEL = os.getenv("REMINDER_CHANNEL_ID")
 client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
