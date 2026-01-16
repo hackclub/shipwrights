@@ -124,7 +124,7 @@ def msg(event, client, respond):
                     {
                         "type": "context",
                         "elements": [
-                            {"type": "mrkdwn", "text": f"<@{user_id}> | <{user_thread_link}|thread>"}
+                            {"type": "mrkdwn", "text": f"<@{user_id}> `{user_id}` | <{user_thread_link}|thread>"}
                         ]
                     }
                 ]
