@@ -348,7 +348,7 @@ def create_ticket(event, client, bot_token, staff_channel, user_channel):
                 {
                     "type": "context",
                     "elements": [
-                        {"type": "mrkdwn", "text": f"#sw-{ticket_id} | <{dash_link}|view on dash> | <{dash_url + "/admin/ship_certifications?search=" + user_id}| user projects (search)>"}
+                        {"type": "mrkdwn", "text": f"#sw-{ticket_id} | <{dash_link}|view on dash> | <{dash_url + '/admin/ship_certifications?search=' + user_id}| user projects (search)>"}
                     ]
                 },
             ]
