@@ -72,20 +72,22 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
 
     user_id = event["user"]
 
-    if ticket.get("status") == "closed":
-        client.chat_postEphemeral(
-            channel=staff_channel,
-            thread_ts=ticket["staffThreadTs"],
-            user=user_id,
-            text="Hey there! Looks like this ticket was resolved. The user did not receive your response."
-        )
-        return
 
     user_info = client.users_info(user=user_id)
     staff_name = user_info["user"]["profile"].get("display_name") or user_info["user"]["profile"].get("real_name")
     staff_avatar = user_info["user"]["profile"]["image_48"]
 
     if text.startswith("?"):
+
+        if ticket.get("status") == "closed":
+            client.chat_postEphemeral(
+                channel=staff_channel,
+                thread_ts=ticket["staffThreadTs"],
+                user=user_id,
+                text="Hey there! Looks like this ticket was resolved. The user did not receive your response."
+            )
+            return
+
         clean_text = text[1:].strip()
 
         file_info = []
