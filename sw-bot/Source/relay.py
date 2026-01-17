@@ -1,6 +1,14 @@
 import json, os, requests, tempfile, time
 import db
 
+MACROS = {
+    "fraud": "Hey there! The shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",
+    "fthelp": "Hey there! The shipwrights team cannot help you with this query. Please forward related questions to <#C09MATKQM8C>.",
+    "faq": "Hey there! Please have a look at our FAQ <https://us.review.hackclub.com/faq | here>",
+    "queue": "Hey there! we currently have a backlog of projects waiting to be certified. Please be patient.\n\n*You can keep track of the queue <https://us.review.hackclub.com/queue | here>!*",
+}
+
+
 def send_files(event, client, dest_channel, dest_ts, bot_token):
     files = event.get("files") or []
     results = []
@@ -106,8 +114,7 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
             )
             dest_ts = resp["ts"]
 
-        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, file_info if file_info else None,
-                        dest_ts)
+        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, file_info if file_info else None, dest_ts)
         ping_ws(ticket["id"])
 
         if not files:
@@ -165,6 +172,81 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
                     }
                 ]
             )
+    elif text.strip().lower().startswith('!'):
+        if ticket.get("status") == "closed":
+            client.chat_postEphemeral(
+                channel=staff_channel,
+                thread_ts=ticket["staffThreadTs"],
+                user=user_id,
+                text="Hey there! Looks like this ticket was resolved. The user did not receive your response."
+            )
+            return
+        clean_text = text[1:].strip().lower()
+        if clean_text in MACROS:
+            resp = client.chat_postMessage(
+                channel=user_channel,
+                thread_ts=ticket["userThreadTs"],
+                text=MACROS[clean_text],
+                username=f"{staff_name} | Shipwrights Team",
+                icon_url=staff_avatar
+            )
+            dest_ts = resp["ts"]
+            db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts)
+            ping_ws(ticket["id"])
+            client.chat_postEphemeral(
+                channel=staff_channel,
+                user=user_id,
+                thread_ts=thread,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Message sent."
+                        }
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "Delete message"},
+                                "style": "danger",
+                                "value": json.dumps({"ts": dest_ts}),
+                                "action_id": "delete_message"
+                            },
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "Edit message"},
+                                "value": json.dumps({"ts": dest_ts}),
+                                "action_id": "edit_message"
+                            }
+                        ]
+                    }
+                ]
+            )
+            if ticket["status"] == "open":
+                db.close_ticket(ticket["id"])
+                client.chat_postMessage(
+                    channel=staff_channel,
+                    thread_ts=ticket["staffThreadTs"],
+                    text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
+                )
+                client.chat_postMessage(
+                    channel=user_channel,
+                    thread_ts=ticket["userThreadTs"],
+                    text=f"Hey! Would you look at that, This ticket was marked as resolved! Shipwrights will no longer receive your messages. If you still have a question, please feel free to open a new ticket.",
+                )
+                client.reactions_add(
+                    channel=staff_channel,
+                    timestamp=ticket["staffThreadTs"],
+                    name="checks-passed-octicon"
+                )
+                client.reactions_add(
+                    channel=staff_channel,
+                    timestamp=ticket["userThreadTs"],
+                    name="checks-passed-octicon"
+                )
     elif text.strip() == ".resolve":
         if not db.can_close(user_id):
             client.chat_postEphemeral(
