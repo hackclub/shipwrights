@@ -1,4 +1,5 @@
 import { redirect, notFound } from 'next/navigation'
+import { Metadata } from 'next'
 import { getUser } from '@/lib/server-auth'
 import { can, PERMS } from '@/lib/perms'
 import { getOne } from '@/lib/ysws'
@@ -6,6 +7,12 @@ import { Review } from './review'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params
+  const r = await getOne(parseInt(id, 10))
+  return { title: r?.shipCert?.projectName || 'YSWS' }
 }
 
 export default async function YswsPage({ params }: Props) {

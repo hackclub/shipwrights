@@ -249,6 +249,8 @@ export function YswsView({ initial }: Props) {
           <div className="flex flex-wrap gap-2">
             <FilterBtn val="oldest" cur={sortBy} set={setSortBy} label="Oldest" />
             <FilterBtn val="newest" cur={sortBy} set={setSortBy} label="Newest" />
+            <FilterBtn val="devlogs" cur={sortBy} set={setSortBy} label="Devlogs" />
+            <FilterBtn val="time" cur={sortBy} set={setSortBy} label="Time" />
           </div>
         </div>
       </div>

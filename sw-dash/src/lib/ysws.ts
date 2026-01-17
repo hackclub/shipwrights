@@ -143,24 +143,29 @@ async function fetchYsws(filters: Filters = {}) {
     }))
     .sort((a, b) => b.count - a.count)
 
+  const mapped = reviews.map((r) => {
+    const devlogs = (r.devlogs as FtDevlogData[] | null) || []
+    return {
+      id: r.id,
+      shipCertId: r.shipCertId,
+      status: r.status,
+      project: r.shipCert.projectName,
+      type: r.shipCert.projectType || 'unknown',
+      submitter: r.shipCert.ftUsername,
+      certifier: r.shipCert.reviewer?.username || '-',
+      certifiedAt: r.shipCert.reviewCompletedAt?.toISOString() || '-',
+      devlogCount: devlogs.length,
+      totalTime: devlogs.reduce((sum, d) => sum + d.origSecs, 0),
+      reviewer: r.reviewer?.username || null,
+      createdAt: r.createdAt.toISOString(),
+    }
+  })
+
+  if (sortBy === 'devlogs') mapped.sort((a, b) => b.devlogCount - a.devlogCount)
+  if (sortBy === 'time') mapped.sort((a, b) => b.totalTime - a.totalTime)
+
   return {
-    reviews: reviews.map((r) => {
-      const devlogs = (r.devlogs as FtDevlogData[] | null) || []
-      return {
-        id: r.id,
-        shipCertId: r.shipCertId,
-        status: r.status,
-        project: r.shipCert.projectName,
-        type: r.shipCert.projectType || 'unknown',
-        submitter: r.shipCert.ftUsername,
-        certifier: r.shipCert.reviewer?.username || '-',
-        certifiedAt: r.shipCert.reviewCompletedAt?.toISOString() || '-',
-        devlogCount: devlogs.length,
-        totalTime: devlogs.reduce((sum, d) => sum + d.origSecs, 0),
-        reviewer: r.reviewer?.username || null,
-        createdAt: r.createdAt.toISOString(),
-      }
-    }),
+    reviews: mapped,
     stats: { pending, done, returned, total },
     leaderboard,
   }
