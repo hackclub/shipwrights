@@ -320,8 +320,8 @@ def recent_reviews():
     try:
         cursor.execute("""
             SELECT 
-                SUM(CASE WHEN DATE(reviewCompletedAt) = DATE(NOW() - INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS yesterday,
-                SUM(CASE WHEN DATE(reviewCompletedAt) = DATE(NOW() - INTERVAL 2 DAY) THEN 1 ELSE 0 END) AS day_before
+                SUM(CASE WHEN reviewCompletedAt >= (NOW() - INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS yesterday,
+                SUM(CASE WHEN reviewCompletedAt >= (NOW() - INTERVAL 48 HOUR) AND reviewCompletedAt < (NOW() - INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS day_before
             FROM ship_certs
             WHERE reviewCompletedAt IS NOT NULL
         """)
@@ -337,6 +337,7 @@ def recent_reviews():
         cursor.close()
         db.close()
 
+
 def shipped_yesterday():
     db = get_db()
     if not db:
@@ -346,16 +347,17 @@ def shipped_yesterday():
         cursor.execute("""
             SELECT COUNT(*)
             FROM ship_certs
-            WHERE DATE(createdAt) = DATE(NOW() - INTERVAL 1 DAY)
+            WHERE createdAt >= (NOW() - INTERVAL 24 HOUR)
         """)
         row = cursor.fetchone()
         return int(row[0] or 0)
     except Exception as e:
-        print(f"Error fetching ships created yesterday: {e}")
+        print(f"Error fetching ships created in last 24h: {e}")
         return 0
     finally:
         cursor.close()
         db.close()
+
 
 def top_reviewer_yesterday():
     db = get_db()
@@ -367,7 +369,7 @@ def top_reviewer_yesterday():
             SELECT u.slackId, COUNT(*) AS review_count
             FROM ship_certs s
             JOIN users u ON s.reviewerId = u.id
-            WHERE DATE(s.reviewCompletedAt) = DATE(NOW() - INTERVAL 1 DAY)
+            WHERE s.reviewCompletedAt >= (NOW() - INTERVAL 24 HOUR)
               AND s.reviewCompletedAt IS NOT NULL
               AND s.reviewerId IS NOT NULL
             GROUP BY s.reviewerId

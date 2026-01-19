@@ -1,5 +1,6 @@
 import os
 import time
+import schedule
 import db
 from slack_sdk import WebClient
 from dotenv import load_dotenv
@@ -60,7 +61,9 @@ def send_reminder():
         blocks=message_blocks(),
     )
 
+
 def reminders_loop():
+	schedule.every().day.at("20:00", "America/New_York").do(send_reminder)
 	while True:
-		send_reminder()
-		time.sleep(60*60*24)
+		schedule.run_pending()
+		time.sleep(240)
