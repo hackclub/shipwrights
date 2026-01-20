@@ -2,6 +2,7 @@ import os, threading, json, summery, threading
 import db, helpers, api, home, relay
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from summery import send_reminder
 
 DASH_URL = os.getenv("DASHBOARD_URL", "http://localhost:3000")
 API_KEY = os.getenv("API_KEY")
@@ -113,7 +114,10 @@ def resolve_ticket(ack, body, client):
     else:
         helpers.show_unauthorized_close(client, body)
 
-
+@slack_app.command("/swsummery")
+def trigger_summery(command):
+    if command.get("user_id") == "U092F9A8VMY":
+        send_reminder()
 @slack_app.view("edited_message")
 def edited_message(ack, client, view):
     ack()
