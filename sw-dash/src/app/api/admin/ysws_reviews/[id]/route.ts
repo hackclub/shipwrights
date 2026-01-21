@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withParams } from '@/lib/api'
+import { yswsApiWithParams } from '@/lib/api'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { bust } from '@/lib/cache'
@@ -15,7 +15,7 @@ interface Decision {
   notes: string | null
 }
 
-export const GET = withParams(PERMS.ysws_view)(async ({ params }) => {
+export const GET = yswsApiWithParams(PERMS.ysws_view)(async ({ params }) => {
   const yswsId = parseId(params.id, 'ysws')
   if (!yswsId) return idErr('ysws')
 
@@ -25,7 +25,7 @@ export const GET = withParams(PERMS.ysws_view)(async ({ params }) => {
   return NextResponse.json(review)
 })
 
-export const PATCH = withParams(PERMS.ysws_edit)(async ({ user, req, params, ip, ua }) => {
+export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({ user, req, params, ip, ua }) => {
   const yswsId = parseId(params.id, 'ysws')
   if (!yswsId) return idErr('ysws')
 

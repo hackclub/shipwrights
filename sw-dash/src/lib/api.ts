@@ -95,3 +95,40 @@ export function yswsApi(handler: (req: NextRequest) => Promise<NextResponse>) {
     return handler(req)
   }
 }
+
+export function yswsApiWithParams<P = { id: string }>(perm?: string) {
+  return (handler: HandlerWithParams<P>) =>
+    async (req: NextRequest, { params }: { params: Promise<P> }) => {
+      const key = req.headers.get('x-api-key')
+      const p = await params
+
+      if (key && key === process.env.YSWS_API_KEY) {
+        const { ip, ua } = getMeta(req)
+        return handler({
+          user: { id: 0, username: 'api', role: 'admin', slackId: '', isActive: true },
+          req,
+          ip,
+          ua,
+          params: p,
+        })
+      }
+
+      const { user, error } = await needAuth(req)
+
+      if (error || !user) {
+        return NextResponse.json({ error: 'who tf are you?' }, { status: 401 })
+      }
+
+      if (!user.isActive) {
+        return NextResponse.json({ error: 'ur banned lol' }, { status: 403 })
+      }
+
+      if (perm && !can(user.role, perm)) {
+        return NextResponse.json({ error: 'nice try bozo' }, { status: 403 })
+      }
+
+      const { ip, ua } = getMeta(req)
+
+      return handler({ user: user as User, req, ip, ua, params: p })
+    }
+}
