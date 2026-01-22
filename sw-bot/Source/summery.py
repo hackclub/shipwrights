@@ -32,7 +32,7 @@ def message_blocks():
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"Today a total of {reviews_done['yesterday']} reviews have been done that's {abs(relative_performance):.0f}% {'more' if relative_performance >= 1 else 'less'} than yesterday! {'Great job team!!' if relative_performance >= 1 else ':(('} a total of {db.shipped_yesterday()} new ships have been sent that's {abs(relative_number_of_reviews)} {'less' if relative_number_of_reviews >= 0 else 'more'} than number of projects we reviewed {':)' if relative_number_of_reviews >= 0 else ':('} today's biggest contributor is <@{top_reviewer['slack_id']}> with a total of {top_reviewer['count']} reviews :cat-heart:\n _ps remember to do your daily reviews if you haven't already :c3:_"
+				"text": f"Today a total of {reviews_done['yesterday']} reviews have been done that's {abs(relative_performance):.0f}% {'more' if relative_performance >= 1 else 'less'} than yesterday! {'Great job team!!' if relative_performance >= 1 else ':(('} a total of {db.shipped_yesterday()} new ships have been sent that's {abs(relative_number_of_reviews)} {'less' if relative_number_of_reviews >= 0 else 'more'} than number of projects we reviewed {':)' if relative_number_of_reviews >= 0 else ':('} today's biggest contributor is <@{top_reviewer['slack_ids'][0]}> with a total of {top_reviewer['counts'][0]} reviews and second place <@{top_reviewer['slack_ids'][1]}> with {top_reviewer['counts'][1]} and last but not least.. <@{top_reviewer['slack_ids'][2]}> in third place with {top_reviewer['counts'][2]} :cat-heart:\n_ps remember to do your daily reviews if you haven't already :c3:_"
 			}
 		},
 		{

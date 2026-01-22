@@ -362,7 +362,7 @@ def shipped_yesterday():
 def top_reviewer_yesterday():
     db = get_db()
     if not db:
-        return {"slack_id": None, "count": 0}
+        return {"slack_ids": [], "counts": []}
     cursor = db.cursor()
     try:
         cursor.execute("""
@@ -374,15 +374,15 @@ def top_reviewer_yesterday():
               AND s.reviewerId IS NOT NULL
             GROUP BY s.reviewerId
             ORDER BY review_count DESC
-            LIMIT 1
+            LIMIT 3
         """)
-        row = cursor.fetchone()
-        if row:
-            return {"slack_id": row[0], "count": int(row[1])}
-        return {"slack_id": None, "count": 0}
+        rows = cursor.fetchall()
+        slack_ids = [row[0] for row in rows]
+        counts = [row[1] for row in rows]
+        return {"slack_ids": slack_ids, "counts": counts}
     except Exception as e:
         print(f"Error fetching top reviewer: {e}")
-        return {"slack_id": None, "count": 0}
+        return {"slack_ids": [], "counts": []}
     finally:
         cursor.close()
         db.close()
