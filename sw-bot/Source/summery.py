@@ -63,7 +63,7 @@ def send_reminder():
 
 
 def reminders_loop():
-	schedule.every().day.at("20:00", "America/New_York").do(send_reminder)
+	schedule.every().day.at("13:00", "Europe/Bucharest").do(send_reminder)
 	while True:
 		schedule.run_pending()
-		time.sleep(240)
+		time.sleep(30)
