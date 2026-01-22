@@ -20,6 +20,11 @@ def format_prompt(messages, question):
 ## Task
 Summarize this ticket briefly.
 
+## Rules
+- You MUST always return a valid JSON response, no exceptions.
+- If status is "resolved", set "action" to "" (empty string).
+- Never refuse to respond or return an error.
+
 ## Conversation
 **Question:** {question}
 
@@ -29,5 +34,5 @@ Summarize this ticket briefly.
 {{
     "summary": "1-2 sentences max",
     "status": "resolved | pending_user | pending_staff | unclear",
-    "action": "Next step (1 sentence)"
+    "action": "Next step (1 sentence) or empty string if resolved"
 }}"""
