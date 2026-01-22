@@ -1,5 +1,5 @@
 import json, os, requests, tempfile, time
-import db
+import db, ai
 
 MACROS = {
     "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",
@@ -172,7 +172,7 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
                     }
                 ]
             )
-    elif text.strip().lower().startswith('!'):
+    elif text.strip().lower().startswith('!') and text.strip('!') in MACROS:
         if ticket.get("status") == "closed":
             client.chat_postEphemeral(
                 channel=staff_channel,
@@ -247,6 +247,8 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
                 timestamp=ticket["userThreadTs"],
                 name="checks-passed-octicon"
             )
+    elif text.strip().lower().startswith('!summarize'):
+        ai.summarize_ticket(ticket["id"])
     elif text.strip() == ".resolve":
         if not db.can_close(user_id):
             client.chat_postEphemeral(
