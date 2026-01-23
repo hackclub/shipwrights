@@ -1,4 +1,4 @@
-import os, requests, json
+import os, requests, json, logging
 import db, helpers
 import flask
 from flask import jsonify, request
@@ -10,6 +10,12 @@ PORT = 45200
 SW_API_KEY = os.environ.get("SW_API_KEY")
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY")
 AI_MODEL = "google/gemini-3-flash-preview"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = flask.Flask(__name__)
 
@@ -26,8 +32,11 @@ def health():
 @app.get("/tickets/summery")
 def ticket_summery():
     ticket_id = request.json.get("ticket_id")
+    logger.info(f"Processing ticket_id: {ticket_id}")
     ticket_messages = db.get_ticket_messages(ticket_id)
     ticket_question = db.get_ticket_question(ticket_id)
+    logger.info(f"Ticket messages count: {len(ticket_messages) if ticket_messages else 0}")
+    logger.info(f"Ticket question: {ticket_question}")
 
     try:
         response = requests.post(
@@ -47,30 +56,45 @@ def ticket_summery():
             },
             timeout=30
         )
+        logger.info(f"OpenRouter status code: {response.status_code}")
+        logger.info(f"OpenRouter response headers: {dict(response.headers)}")
+        logger.info(f"OpenRouter raw response: {response.text[:1000]}")  # First 1000 chars
         response.raise_for_status()
         result = response.json()
     except requests.exceptions.RequestException as e:
+        logger.error(f"API request failed: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
         return jsonify({"error": f"API request failed: {str(e)}"}), 500
 
     if "error" in result:
+        logger.error(f"OpenRouter returned error: {result['error']}")
         return jsonify({"error": result["error"]}), 500
 
     if "choices" not in result or not result["choices"]:
+        logger.error(f"Unexpected API response structure: {result}")
         return jsonify({"error": "Unexpected API response", "response": result}), 500
 
     content = result["choices"][0]["message"]["content"]
+    logger.info(f"AI content received: {content[:500] if content else 'EMPTY'}")
 
     if not content or not content.strip():
+        logger.error("Empty response from AI")
         return jsonify({"error": "Empty response from AI"}), 500
 
     try:
         ai_response = json.loads(content)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        logger.error(f"Raw content that failed to parse: {content}")
         return jsonify({"error": "AI returned invalid JSON", "raw_content": content}), 500
 
     if not all(key in ai_response for key in ['action', 'status', 'summary']):
+        logger.error(f"Missing required fields. Got: {ai_response.keys()}")
         return jsonify({"error": "Missing required fields in AI response", "raw_content": content}), 500
 
+    logger.info(f"Successfully processed ticket {ticket_id}")
     return jsonify({
         "suggested_action": ai_response['action'],
         "status": ai_response['status'],
