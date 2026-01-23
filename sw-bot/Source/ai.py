@@ -37,7 +37,7 @@ def summarize_ticket(ticket_id):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"_Status: {summary.get('status', 'Unknown')}_ :rac_info:\n\n*Summery*: {summary.get('summary', 'AI decided you dont deserve a summary :rac_ded:')}\n*Recommended Action*: {summary.get('suggested_action', 'idk bro :rac_ded:')}"
+                    "text": f"_Status: {summary.get('status', 'Unknown')}_ :rac_info:\n\n*Summery*: {summary.get('summary', 'AI decided you dont deserve a summary :rac_ded:')}\n*Recommended Action*: {summary.get('suggested_action') if summary.get('suggested_action').strip() else 'idk bro'}"
                 }
             },
             {
