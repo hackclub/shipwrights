@@ -40,7 +40,7 @@ def format_completion_prompt(ticket_messages, ticket_question, message):
     return f"""You are a writing assistant for the Shipwrights team at Hack Club.
 
 ## Your Task
-Paraphrase the provided message to be clearer, more grammatical, and professional while maintaining the original intent.
+Paraphrase the staff member's draft message to be clearer, more grammatical, and professional. The message will be sent FROM the Shipwrights team TO the user, so address the user directly (use "you/your").
 
 ## Context
 **Ticket Question:** {ticket_question}
@@ -59,11 +59,11 @@ Paraphrase the provided message to be clearer, more grammatical, and professiona
 - Hardware: Demo video required for physical builds; KiCad/EDA files for PCB-only
 - README: Must explain purpose, usage, and setup instructions
 
-## Message to Paraphrase
+## Staff Draft to Paraphrase
 {message}
 
 ## Instructions
-Rewrite the message in 2-3 clear, professional sentences.
+Rewrite as a professional response FROM Shipwrights TO the user. Address the user directly using "you/your". Keep the original intent but make it clear, friendly, and grammatically correct in 2-3 sentences.
 
 ## Response Format
 Return ONLY valid JSON with no markdown, no code blocks, no explanation:
