@@ -105,6 +105,7 @@ async function fetchYsws(filters: Filters = {}) {
   let hoursApproved = 0
   let hoursRejected = 0
   let hoursReduced = 0
+  let hoursToReview = 0
   let totalHang = 0
   let hangCount = 0
   for (const r of allReviews) {
@@ -119,6 +120,8 @@ async function fetchYsws(filters: Filters = {}) {
       } else if (d.status === 'approved') {
         hoursApproved += approvedHrs
         if (approvedHrs < origHrs) hoursReduced += origHrs - approvedHrs
+      } else if (d.status === 'pending') {
+        hoursToReview += origHrs
       }
     }
     if (r.status !== 'pending') {
@@ -204,6 +207,7 @@ async function fetchYsws(filters: Filters = {}) {
       hoursApproved: Math.round(hoursApproved),
       hoursRejected: Math.round(hoursRejected),
       hoursReduced: Math.round(hoursReduced),
+      hoursToReview: Math.round(hoursToReview),
       avgHangHrs,
     },
     leaderboard,
