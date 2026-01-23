@@ -86,17 +86,47 @@ async function fetchYsws(filters: Filters = {}) {
     },
   })
 
-  let allReviews = reviews
-  if (status && status !== 'all') {
-    allReviews = (await prisma.yswsReview.findMany({
-      select: { id: true, status: true },
-    })) as typeof reviews
-  }
+  const allReviews = await prisma.yswsReview.findMany({
+    select: {
+      id: true,
+      status: true,
+      devlogs: true,
+      decisions: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  })
 
   const pending = allReviews.filter((r) => r.status === 'pending').length
   const done = allReviews.filter((r) => r.status === 'done').length
   const returned = allReviews.filter((r) => r.status === 'returned').length
   const total = allReviews.length
+
+  let hoursApproved = 0
+  let hoursRejected = 0
+  let hoursReduced = 0
+  let totalHang = 0
+  let hangCount = 0
+  for (const r of allReviews) {
+    const devs = (r.devlogs as FtDevlogData[] | null) || []
+    const decs = (r.decisions as Decision[] | null) || []
+    for (const d of decs) {
+      const dev = devs.find((x) => x.ftDevlogId === d.ftDevlogId)
+      const origHrs = dev ? dev.origSecs / 60 / 60 : 0
+      const approvedHrs = (d.approvedMins || 0) / 60
+      if (d.status === 'rejected') {
+        hoursRejected += origHrs
+      } else if (d.status === 'approved') {
+        hoursApproved += approvedHrs
+        if (approvedHrs < origHrs) hoursReduced += origHrs - approvedHrs
+      }
+    }
+    if (r.status !== 'pending') {
+      totalHang += new Date(r.updatedAt).getTime() - new Date(r.createdAt).getTime()
+      hangCount++
+    }
+  }
+  const avgHangHrs = hangCount > 0 ? Math.round(totalHang / hangCount / 1000 / 60 / 60) : 0
 
   const lbMode = filters.lbMode || 'weekly'
   let lbWhere: { status: { in: string[] }; updatedAt?: { gte: Date; lt: Date } } = {
@@ -166,7 +196,16 @@ async function fetchYsws(filters: Filters = {}) {
 
   return {
     reviews: mapped,
-    stats: { pending, done, returned, total },
+    stats: {
+      pending,
+      done,
+      returned,
+      total,
+      hoursApproved: Math.round(hoursApproved),
+      hoursRejected: Math.round(hoursRejected),
+      hoursReduced: Math.round(hoursReduced),
+      avgHangHrs,
+    },
     leaderboard,
   }
 }

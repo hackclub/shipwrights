@@ -13,27 +13,58 @@ interface Commit {
 
 interface Props {
   commits: Commit[]
+  repoUrl?: string
 }
 
-export function CommitChart({ commits }: Props) {
+export function CommitChart({ commits, repoUrl }: Props) {
   if (!commits.length) {
     return <div className="text-gray-500 font-mono text-xs">no commits</div>
   }
 
   const sorted = [...commits].sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
 
-  const grouped = sorted.reduce(
-    (acc, c) => {
-      const day = new Date(c.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      if (!acc[day]) acc[day] = { adds: 0, dels: 0 }
-      acc[day].adds += c.adds
-      acc[day].dels += c.dels
-      return acc
-    },
-    {} as Record<string, { adds: number; dels: number }>
-  )
+  const parseRepo = (url: string) => {
+    const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/)
+    return match ? { owner: match[1], repo: match[2].replace(/\.git$/, '') } : null
+  }
 
-  const data = Object.entries(grouped).map(([name, { adds, dels }]) => ({ name, adds, dels }))
+  const repo = repoUrl ? parseRepo(repoUrl) : null
+
+  const data = sorted.map((c) => ({
+    name: c.sha.slice(0, 7),
+    adds: c.adds,
+    dels: c.dels,
+    sha: c.sha,
+  }))
+
+  const CustomTick = (props: any) => {
+    const { x, y, payload } = props
+    const commit = data.find((d) => d.name === payload.value)
+    if (!commit || !repo) {
+      return (
+        <text x={x} y={y + 10} textAnchor="middle" fill="#fff" fontSize={14} fontFamily="monospace">
+          {payload.value}
+        </text>
+      )
+    }
+    const url = `https://github.com/${repo.owner}/${repo.repo}/commit/${commit.sha}`
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        <text
+          x={x}
+          y={y + 10}
+          textAnchor="middle"
+          fill="#22c55e"
+          fontSize={14}
+          fontFamily="monospace"
+          className="cursor-pointer hover:fill-green-300"
+          style={{ textDecoration: 'underline', cursor: 'pointer' }}
+        >
+          {payload.value}
+        </text>
+      </a>
+    )
+  }
 
   const totalAdds = commits.reduce((s, c) => s + c.adds, 0)
   const totalDels = commits.reduce((s, c) => s + c.dels, 0)
@@ -69,8 +100,8 @@ export function CommitChart({ commits }: Props) {
       <div className="h-32 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#888' }} />
-            <YAxis tick={{ fontSize: 10, fill: '#888' }} width={35} />
+            <XAxis dataKey="name" tick={<CustomTick />} />
+            <YAxis tick={{ fontSize: 14, fill: '#fff' }} width={45} />
             <Tooltip
               contentStyle={{
                 background: '#18181b',
@@ -82,20 +113,18 @@ export function CommitChart({ commits }: Props) {
               isAnimationActive={false}
             />
             <Line
-              type="monotone"
               dataKey="adds"
               stroke="#22c55e"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5, strokeWidth: 2 }}
+              strokeWidth={0}
+              dot={{ r: 5, fill: '#22c55e' }}
+              activeDot={{ r: 7, fill: '#22c55e' }}
             />
             <Line
-              type="monotone"
               dataKey="dels"
               stroke="#ef4444"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5, strokeWidth: 2 }}
+              strokeWidth={0}
+              dot={{ r: 5, fill: '#ef4444' }}
+              activeDot={{ r: 7, fill: '#ef4444' }}
             />
           </LineChart>
         </ResponsiveContainer>

@@ -88,6 +88,8 @@ export function Review({ data, canEdit }: Props) {
   const [busy, setBusy] = useState(false)
   const [showReturn, setShowReturn] = useState(false)
   const [returnReasons, setReturnReasons] = useState<string[]>([])
+  const [demoOpened, setDemoOpened] = useState(false)
+  const [repoOpened, setRepoOpened] = useState(false)
 
   const [local, setLocal] = useState<LocalDevlog[]>(
     data.devlogs.map((d) => ({
@@ -253,6 +255,7 @@ export function Review({ data, canEdit }: Props) {
                   href={data.shipCert.repoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setRepoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Repo
@@ -263,6 +266,7 @@ export function Review({ data, canEdit }: Props) {
                   href={data.shipCert.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => setDemoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Demo
@@ -301,6 +305,26 @@ export function Review({ data, canEdit }: Props) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-red-950/30 to-black/90 border-4 border-red-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-red-950/20 mb-4 md:mb-6">
+        <h3 className="text-red-400 font-mono text-sm font-bold mb-3">
+          Note from da boss of YSWS - Alex (aka AVD)
+        </h3>
+        <div className="bg-zinc-950/50 border-2 border-red-900/30 rounded-2xl p-4">
+          <div className="text-red-300 font-mono text-sm mb-2 font-bold">Reject if:</div>
+          <ul className="space-y-1.5 text-gray-300 font-mono text-sm list-disc list-inside">
+            <li>
+              low quality to the point it doesn't do what it says it does (shipwrights messed up -
+              return to them)
+            </li>
+            <li>Looks like ai, but undeclared</li>
+            <li>Looks like over 30% ai</li>
+            <li>Looks like it isn't shipped (shipwrights messed up)</li>
+            <li>last project edit was before the event launch</li>
+            <li>project was previously put into the ysws db</li>
+          </ul>
         </div>
       </div>
 
@@ -380,6 +404,7 @@ export function Review({ data, canEdit }: Props) {
                           <div className="text-gray-400 font-mono text-xs mb-2">Git Activity</div>
                           <CommitChart
                             commits={d.commits.map((c) => ({ ...c, ts: new Date(c.ts) }))}
+                            repoUrl={data.shipCert.repoUrl ?? undefined}
                           />
                         </div>
                       )}
@@ -485,6 +510,21 @@ export function Review({ data, canEdit }: Props) {
 
       {canEdit && (
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-2xl shadow-amber-950/30">
+          {(!demoOpened || !repoOpened) && (
+            <div className="bg-red-950/30 border-2 border-red-700/60 rounded-xl p-3 mb-4">
+              <div className="text-red-400 font-mono text-sm font-bold mb-1">
+                Checklist (do this if u don't wanna Alex to get mad..)
+              </div>
+              <div className="text-red-300 font-mono text-xs space-y-1">
+                {data.shipCert.demoUrl && !demoOpened && (
+                  <div>• Check the Demo link (cuz u didn't..)</div>
+                )}
+                {data.shipCert.repoUrl && !repoOpened && (
+                  <div>• Check the Repo link (cuz u didn't..)</div>
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
             <button
               onClick={cap600}
@@ -513,7 +553,11 @@ export function Review({ data, canEdit }: Props) {
             <button
               onClick={() => submit('complete')}
               className="bg-cyan-950/30 text-cyan-400 border-2 border-cyan-700/60 hover:bg-cyan-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={busy}
+              disabled={
+                busy ||
+                (!!data.shipCert.demoUrl && !demoOpened) ||
+                (!!data.shipCert.repoUrl && !repoOpened)
+              }
             >
               Complete Review
             </button>
@@ -549,16 +593,17 @@ export function Review({ data, canEdit }: Props) {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowReturn(false)}
-                className="bg-gray-700 text-gray-300 px-4 py-2 rounded-xl font-mono text-sm"
+                className="bg-gray-700 text-gray-300 px-4 py-2 rounded-xl font-mono text-sm disabled:opacity-50"
+                disabled={busy}
               >
                 nvm
               </button>
               <button
                 onClick={() => submit('return', { returnReason: returnReasons.join(', ') })}
-                className="bg-orange-700 text-white px-4 py-2 rounded-xl font-mono text-sm"
+                className="bg-orange-700 text-white px-4 py-2 rounded-xl font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={busy || returnReasons.length === 0}
               >
-                yeet it back
+                {busy ? 'returning...' : 'yeet it back'}
               </button>
             </div>
           </div>
