@@ -55,3 +55,69 @@ def summarize_ticket(ticket_id):
             }
         ]
     )
+
+def get_message_completion(ticket_id, message):
+    return json.loads(requests.get(
+        url="https://ai.review.hackclub.com/tickets/complete",
+        headers={"X-API-Key": SWAI_KEY},
+        json={
+            "ticket_id": str(ticket_id),
+            "message": message,
+        }
+    ).text)
+
+def paraphrase_message(ticket_id, message):
+    paraphrased = get_message_completion(ticket_id=ticket_id, message=message).get('paraphrased')
+    ticket = db.get_ticket(ticket_id)
+    client.chat_postMessage(
+        channel=os.getenv('STAFF_CHANNEL_ID'),
+        thread_ts=ticket['staffThreadTs'],
+        text="",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*AI Suggestion:*\n{paraphrased}"
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Send AI Completion"},
+                    "style": "primary",
+                    "value": json.dumps({"paraphrased": paraphrased, "ticket_id": ticket_id}),
+                    "action_id": "send_paraphrased"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "plain_text",
+                        "text": "Please remember to review this before sending.",
+                        "emoji": True
+                    }
+                ]
+            }
+        ]
+    )
+
+
+    """
+    blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Attachments sent."
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "Delete Attachments"},
+                            "style": "danger",
+                            "value": json.dumps({"ts": uploaded}),
+                            "action_id": "delete_message"
+                        }
+                    }
+                ]
+            )
+    """

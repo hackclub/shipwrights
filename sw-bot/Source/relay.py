@@ -249,6 +249,11 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
             )
     elif text.strip().lower().startswith('!summarize'):
         ai.summarize_ticket(ticket["id"])
+    elif text.strip().lower().startswith('!ai'):
+        clean_text = text[1:].lstrip('!ai')
+        ai.paraphrase_message(ticket["id"], clean_text)
+
+
     elif text.strip() == ".resolve":
         if not db.can_close(user_id):
             client.chat_postEphemeral(

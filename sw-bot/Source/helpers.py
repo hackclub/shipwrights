@@ -36,3 +36,14 @@ def show_unauthorized_close(client, body):
         view=views.show_unauthorized()
     )
 
+def get_user_info(client, user_id):
+    result = client.users_info(user=user_id)
+    if result["ok"]:
+        user = result["user"]
+        profile = user["profile"]
+        username = profile.get("display_name") or profile.get("real_name") or user.get("name")
+        pfp = profile.get("image_192")
+        return {"username": username, "pfp": pfp}
+    return None
+
+

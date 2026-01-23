@@ -62,7 +62,22 @@ def render_app_home(event, client):
         return
     home.publish_home(client, user_id, home.not_user())
 
-
+@slack_app.action("send_paraphrased")
+def send_paraphrased(client, body, ack):
+    ack()
+    payload = json.loads(body["actions"][0]["value"])
+    user_id = body["user"]["id"]
+    user_info = helpers.get_user_info(client, user_id)
+    ticket_id = payload["ticket_id"]
+    paraphrased = payload["paraphrased"]
+    ticket = db.get_ticket(ticket_id)
+    client.chat_postMessage(
+        channel=USER_CHANNEL,
+        text=f"{paraphrased}",
+        thread_ts=ticket["userThreadTs"],
+        username=user_info["username"],
+        icon_url=user_info["pfp"],
+    )
 @slack_app.action("delete_message")
 def delete_message(ack, body, client, respond):
     ack()

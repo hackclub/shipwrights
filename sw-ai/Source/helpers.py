@@ -63,7 +63,7 @@ Paraphrase the staff member's draft message to be clearer, more grammatical, and
 {message}
 
 ## Instructions
-Rewrite as a professional response FROM Shipwrights TO the user. Address the user directly using "you/your". Keep the original intent but make it clear, friendly, and grammatically correct in 2-3 sentences.
+Rewrite as a professional response FROM Shipwrights TO the user. Address the user directly using "you/your". Keep the original intent but make it clear, friendly, and grammatically correct in 1-2 sentences.
 
 ## Response Format
 Return ONLY valid JSON with no markdown, no code blocks, no explanation:
