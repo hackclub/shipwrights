@@ -29,33 +29,53 @@ def ticket_summery():
     ticket_messages = db.get_ticket_messages(ticket_id)
     ticket_question = db.get_ticket_question(ticket_id)
 
-    response = requests.post(
-        url="https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": AI_MODEL,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": helpers.format_prompt(ticket_messages, ticket_question)
-                }
-            ]
-        }
-    )
-
-    result = response.json()
+    try:
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": AI_MODEL,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": helpers.format_prompt(ticket_messages, ticket_question)
+                    }
+                ]
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"API request failed: {str(e)}"}), 500
 
     if "error" in result:
         return jsonify({"error": result["error"]}), 500
 
-    if "choices" not in result:
+    if "choices" not in result or not result["choices"]:
         return jsonify({"error": "Unexpected API response", "response": result}), 500
 
-    ai_response = json.loads(result["choices"][0]["message"]["content"])
-    return jsonify({"suggested_action": ai_response['action'], "status": ai_response['status'], "summary": ai_response['summary']}), 200
+    content = result["choices"][0]["message"]["content"]
+
+    if not content or not content.strip():
+        return jsonify({"error": "Empty response from AI"}), 500
+
+    try:
+        ai_response = json.loads(content)
+    except json.JSONDecodeError:
+        return jsonify({"error": "AI returned invalid JSON", "raw_content": content}), 500
+
+    if not all(key in ai_response for key in ['action', 'status', 'summary']):
+        return jsonify({"error": "Missing required fields in AI response", "raw_content": content}), 500
+
+    return jsonify({
+        "suggested_action": ai_response['action'],
+        "status": ai_response['status'],
+        "summary": ai_response['summary']
+    }), 200
 
 
 if __name__ == "__main__":
