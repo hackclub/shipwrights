@@ -24,6 +24,11 @@ interface Stats {
   done: number
   returned: number
   total: number
+  hoursApproved: number
+  hoursRejected: number
+  hoursReduced: number
+  hoursToReview: number
+  avgHangHrs: number
 }
 
 interface Reviewer {
@@ -172,6 +177,26 @@ export function YswsView({ initial }: Props) {
             <div className="flex justify-between pt-2 border-t border-gray-700">
               <span className="text-gray-400 font-mono text-sm">Total:</span>
               <span className="text-white font-mono font-bold">{stats.total}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400 font-mono text-sm">Hours Approved:</span>
+              <span className="text-cyan-400 font-mono font-bold">{stats.hoursApproved}h</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400 font-mono text-sm">Hours Rejected:</span>
+              <span className="text-orange-400 font-mono font-bold">{stats.hoursRejected}h</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400 font-mono text-sm">Hours Reduced:</span>
+              <span className="text-red-400 font-mono font-bold">{stats.hoursReduced}h</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400 font-mono text-sm">Avg Hang Time:</span>
+              <span className="text-purple-400 font-mono font-bold">{stats.avgHangHrs}h</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400 font-mono text-sm">Hours to Review:</span>
+              <span className="text-yellow-400 font-mono font-bold">{stats.hoursToReview}h</span>
             </div>
           </div>
         </div>
