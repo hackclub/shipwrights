@@ -36,3 +36,13 @@ Summarize this ticket briefly.
     "status": "resolved | pending_user | pending_staff | unclear",
     "action": "Next step (1 sentence) or empty string if resolved"
 }}"""
+
+def clean_json_response(content: str) -> str:
+    content = content.strip()
+    if content.startswith("```json"):
+        content = content[7:]
+    elif content.startswith("```"):
+        content = content[3:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()

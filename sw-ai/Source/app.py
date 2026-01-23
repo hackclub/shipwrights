@@ -58,7 +58,7 @@ def ticket_summery():
         )
         logger.info(f"OpenRouter status code: {response.status_code}")
         logger.info(f"OpenRouter response headers: {dict(response.headers)}")
-        logger.info(f"OpenRouter raw response: {response.text[:1000]}")  # First 1000 chars
+        logger.info(f"OpenRouter raw response: {response.text[:1000]}")
         response.raise_for_status()
         result = response.json()
     except requests.exceptions.RequestException as e:
@@ -84,7 +84,8 @@ def ticket_summery():
         return jsonify({"error": "Empty response from AI"}), 500
 
     try:
-        ai_response = json.loads(content)
+        cleaned_content = helpers.clean_json_response(content)
+        ai_response = json.loads(cleaned_content)
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {e}")
         logger.error(f"Raw content that failed to parse: {content}")
