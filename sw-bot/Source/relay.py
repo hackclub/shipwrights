@@ -248,10 +248,10 @@ def handle_staff_reply(event, client, bot_token, staff_channel, user_channel):
                 name="checks-passed-octicon"
             )
 
-    elif text.strip().lower().startswith('!summarize'):
+    elif text.strip().lower().startswith('!tldr'):
         ai.summarize_ticket(ticket["id"])
 
-    elif text.strip().lower().startswith('!tldr'):
+    elif text.strip().lower().startswith('!ai'):
         clean_text = text[1:].lstrip('!ai')
         ai.paraphrase_message(ticket["id"], clean_text)
 
