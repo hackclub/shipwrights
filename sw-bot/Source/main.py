@@ -71,11 +71,26 @@ def send_paraphrased(client, body, ack):
     ticket_id = payload["ticket_id"]
     paraphrased = payload["paraphrased"]
     ticket = db.get_ticket(ticket_id)
+    if ticket.get("status") == "closed":
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            user=user_id,
+            text="Hey there! Looks like this ticket was resolved. The user did not receive your response."
+        )
+        return
     client.chat_postMessage(
         channel=USER_CHANNEL,
         text=f"{paraphrased}",
         thread_ts=ticket["userThreadTs"],
         username=user_info["username"],
+        icon_url=user_info["pfp"],
+    )
+    client.chat_postMessage(
+        channel=STAFF_CHANNEL,
+        text=f"{paraphrased}",
+        thread_ts=ticket["staffThreadTs"],
+        username=f"{user_info["username"]} | AI Paraphrased",
         icon_url=user_info["pfp"],
     )
 @slack_app.action("delete_message")

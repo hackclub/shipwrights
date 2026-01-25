@@ -70,6 +70,38 @@ Return ONLY valid JSON with no markdown, no code blocks, no explanation:
 {{"paraphrased": "Your rewritten message here"}}"""
 
 
+def format_detection_prompt(ticket_messages, ticket_question):
+    return f"""You are a ticket classifier for the Shipwrights team at Hack Club.
+
+## Shipwrights Scope
+The Shipwrights team reviews project submissions for quality and completeness. They handle:
+- Project certification/rejection appeals
+- Submission guidance and fixes
+- Review status inquiries
+
+They CANNOT help with:
+- Cookie (currency) payouts or deductions
+- Prize fulfillment
+- User bans
+
+## Classification Categories
+Return exactly ONE of these:
+- **fraud**: Cookie deductions OR user bans (outside Shipwrights scope)
+- **fthelp**: Non-project issues unrelated to certification/submission
+- **queue**: Complaints about project waiting time in review queue
+- **ship**: Project submission help, review requests, or rejection appeals
+
+## Ticket Data
+**Question:** {ticket_question}
+
+**Conversation:**
+{format_messages(ticket_messages)}
+
+## Response Format
+Return ONLY valid JSON with no markdown, no code blocks:
+{{"detection": "fraud|fthelp|queue|ship"}}"""
+
+
 def clean_json_response(content: str) -> str:
     content = content.strip()
     if content.startswith("```json"):
