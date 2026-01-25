@@ -83,7 +83,7 @@ def send_paraphrased(client, body, ack):
         channel=USER_CHANNEL,
         text=f"{paraphrased}",
         thread_ts=ticket["userThreadTs"],
-        username=user_info["username"],
+        username=f"{user_info['username']} | Shipwrights Team",
         icon_url=user_info["pfp"],
     )
     client.chat_postMessage(
