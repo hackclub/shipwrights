@@ -90,7 +90,7 @@ def send_paraphrased(client, body, ack):
         channel=STAFF_CHANNEL,
         text=f"{paraphrased}",
         thread_ts=ticket["staffThreadTs"],
-        username=f"{user_info["username"]} | AI Paraphrased",
+        username=f"{user_info['username']} | AI Paraphrased",
         icon_url=user_info["pfp"],
     )
 @slack_app.action("delete_message")
