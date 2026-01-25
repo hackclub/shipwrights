@@ -474,6 +474,7 @@ def create_ticket(event, client, bot_token, staff_channel, user_channel):
                 }
             ]
         )
+        ai.detect_ticket(ticket_id)
 
 
 def ping_ws(ticket_id):

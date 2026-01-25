@@ -113,6 +113,48 @@ def edit_message(ack, body, client):
     message_ts = payload["ts"]
     helpers.show_edit_modal(client, body, message_ts)
 
+@slack_app.action("resolve_detected")
+def resolve_detected(ack, body, client):
+    ack()
+    payload = json.loads(body["actions"][0]["value"])
+    ticket_id = payload["ticket_id"]
+    reply = payload["reply"]
+    user_id = body["user"]["id"]
+    ticket = db.get_ticket(ticket_id)
+    user_info = helpers.get_user_info(client, user_id)
+    if ticket["status"] == "open":
+        db.close_ticket(ticket_id, user_id)
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
+        )
+        client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["userThreadTs"],
+            text=reply,
+            username=f"{user_info['username']} | Shipwrights Team",
+            icon_url=user_info["pfp"],
+        )
+        client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["userThreadTs"],
+            text=f"Hey! Would you look at that, This ticket was marked as resolved! Shipwrights will no longer receive your messages. If you still have a question, please feel free to open a new ticket.",
+        )
+        client.reactions_add(
+            channel=STAFF_CHANNEL,
+            timestamp=ticket["staffThreadTs"],
+            name="checks-passed-octicon"
+        )
+        client.reactions_add(
+            channel=USER_CHANNEL,
+            timestamp=ticket["userThreadTs"],
+            name="checks-passed-octicon"
+        )
+        ai.summarize_ticket(ticket_id)
+    else:
+        helpers.show_unauthorized_close(client, body)
+
 @slack_app.action("resolve_ticket")
 def resolve_ticket(ack, body, client):
     ack()
