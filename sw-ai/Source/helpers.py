@@ -86,7 +86,7 @@ They CANNOT help with:
 
 ## Classification Categories
 Return exactly ONE of these:
-- **fraud**: Cookie deductions OR user bans (outside Shipwrights scope)
+- **fraud**: user bans (outside Shipwrights scope)
 - **fthelp**: Non-project issues unrelated to certification/submission
 - **queue**: Complaints about project waiting time in review queue
 - **ship**: Project submission help, review requests, or rejection appeals
