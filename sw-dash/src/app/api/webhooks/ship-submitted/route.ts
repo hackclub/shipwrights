@@ -117,13 +117,15 @@ export async function POST(request: NextRequest) {
     if (recent) {
       await syslog(
         'ft_dup_blocked',
-        200,
+        403,
         null,
         `dup blocked: ${projectName} (ft#${ftProjectId})`,
         { ip, userAgent },
         { metadata: { ftProjectId, existingCertId: recent.id } }
       )
-      return NextResponse.json({ status: 'ok' })
+      return NextResponse.json(
+        { error: 'duplicate ship, already in the queue!' },
+        { status: 403 })
     }
 
     const cert = await prisma.shipCert.create({
