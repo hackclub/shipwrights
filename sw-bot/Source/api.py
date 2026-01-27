@@ -149,6 +149,18 @@ def notify():
     return jsonify({'ok': True})
 
 
+@app.post('/ws/note_added')
+def note_added():
+    data = request.json
+    ship_id = data.get('shipId')
+
+    if ship_id:
+        socketio.emit('note_added', {'shipId': ship_id})
+
+    return jsonify({'ok': True})
+
+
+
 @app.post('/bridge/staff-note')
 def staff_note():
     ip = request.remote_addr
@@ -235,6 +247,15 @@ def join_ticket(data):
     if ticket_id:
         join_room(f'ticket_{ticket_id}')
         emit('joined', {'ticketId': ticket_id})
+
+
+@socketio.on('join_ship')
+def join_ship(data):
+    ship_id = data.get('shipId')
+    if ship_id:
+        join_room(f'ship_{ship_id}')
+        emit('joined_ship', {'shipId': ship_id})
+
 
 
 def run_server():
