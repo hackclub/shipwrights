@@ -18,7 +18,7 @@ interface InternalNote {
   createdAt: string
 }
 
-export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
+export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
   try {
     const shipId = parseId(params.id, 'ship ID')
 
@@ -34,6 +34,12 @@ export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
             id: true,
             username: true,
             avatar: true,
+          },
+        },
+        claimer: {
+          select: {
+            id: true,
+            username: true,
           },
         },
         assignments: {
@@ -63,6 +69,18 @@ export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
         internalNotes = JSON.parse(cert.internalNotes)
       } catch {
         internalNotes = []
+      }
+    }
+
+    let claimedBy: string | null = null
+    let canEditClaim = true
+
+    if (cert.status === 'pending' && cert.reviewStartedAt && cert.claimerId) {
+      const now = new Date()
+      const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000)
+      if (cert.reviewStartedAt > thirtyMinsAgo) {
+        claimedBy = cert.claimer?.username || 'someone'
+        canEditClaim = cert.claimerId === user.id || user.role === 'megawright'
       }
     }
 
@@ -112,6 +130,9 @@ export const GET = withParams(PERMS.certs_view)(async ({ params }) => {
       createdAt: cert.createdAt.toISOString(),
       updatedAt: cert.updatedAt.toISOString(),
       customBounty: cert.customBounty,
+      claimedBy,
+      claimedAt: cert.reviewStartedAt?.toISOString() || null,
+      canEditClaim,
     })
   } catch {
     return NextResponse.json({ error: 'shit hit the fan loading ship details' }, { status: 500 })

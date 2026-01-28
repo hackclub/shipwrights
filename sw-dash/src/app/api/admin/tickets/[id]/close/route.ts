@@ -66,7 +66,7 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, params, ip, ua
     }
   )
 
-  const botUrl = process.env.BOT_URL
+  const botUrl = process.env.NEXT_PUBLIC_BOT_URL
   const botKey = process.env.SW_BOT_KEY || ''
   if (!botUrl) {
     return NextResponse.json({ ok: true })

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { can, PERMS } from '@/lib/perms'
 
-interface InternalNote {
+interface Note {
   id: string
   userId: number
   username: string
@@ -11,7 +12,7 @@ interface InternalNote {
 }
 
 export async function DELETE(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; noteId: string }> }
 ) {
   try {
@@ -22,59 +23,47 @@ export async function DELETE(
       return NextResponse.json({ error: 'ship id is fucked' }, { status: 400 })
     }
 
-    const sessionToken = request.cookies.get('session_token')?.value
-
-    if (!sessionToken) {
-      return NextResponse.json({ error: 'who tf are you?' }, { status: 401 })
+    const token = req.cookies.get('session_token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'not logged in' }, { status: 401 })
     }
 
     const user = await prisma.user.findFirst({
       where: {
-        sessionToken,
+        sessionToken: token,
         sessionExpires: { gte: new Date() },
-        role: 'megawright',
       },
     })
 
-    if (!user || !user.isActive) {
-      return NextResponse.json({ error: 'only megawrights can delete notes' }, { status: 403 })
+    if (!user || !user.isActive || !can(user.role, PERMS.certs_admin)) {
+      return NextResponse.json({ error: 'no perms' }, { status: 403 })
     }
 
-    const shipCert = await prisma.shipCert.findUnique({
+    const cert = await prisma.shipCert.findUnique({
       where: { id: shipId },
       select: { internalNotes: true },
     })
 
-    if (!shipCert) {
-      return NextResponse.json({ error: 'ship cert not found' }, { status: 404 })
+    if (!cert) {
+      return NextResponse.json({ error: 'cert not found' }, { status: 404 })
     }
 
-    let notes: InternalNote[] = []
-    if (shipCert.internalNotes) {
+    let notes: Note[] = []
+    if (cert.internalNotes) {
       try {
-        notes = JSON.parse(shipCert.internalNotes)
-      } catch {
-        notes = []
-      }
+        notes = JSON.parse(cert.internalNotes)
+      } catch {}
     }
 
-    const initialLength = notes.length
     notes = notes.filter((n) => n.id !== noteId)
-
-    if (notes.length === initialLength) {
-    }
 
     await prisma.shipCert.update({
       where: { id: shipId },
-      data: {
-        internalNotes: JSON.stringify(notes),
-      },
+      data: { internalNotes: JSON.stringify(notes) },
     })
 
-    return NextResponse.json({
-      success: true,
-    })
+    return NextResponse.json({ ok: true })
   } catch {
-    return NextResponse.json({ error: 'shit hit the fan deleting note' }, { status: 500 })
+    return NextResponse.json({ error: 'delete broke' }, { status: 500 })
   }
 }

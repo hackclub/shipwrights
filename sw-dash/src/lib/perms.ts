@@ -78,7 +78,15 @@ export const ROLES = {
   fraudster: {
     value: 'fraudster',
     label: 'Fraudster',
-    perms: [PERMS.certs_view, PERMS.certs_edit, PERMS.support_view, PERMS.ysws_view, PERMS.ysws_edit, PERMS.billy_btn, PERMS.joe_btn],
+    perms: [
+      PERMS.certs_view,
+      PERMS.certs_edit,
+      PERMS.support_view,
+      PERMS.ysws_view,
+      PERMS.ysws_edit,
+      PERMS.billy_btn,
+      PERMS.joe_btn,
+    ],
   },
   ysws_reviewer: {
     value: 'ysws_reviewer',

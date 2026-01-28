@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { showError } from '@/lib/client-errors'
 import { can, PERMS } from '@/lib/perms'
 import { useUser } from '@/lib/user-context'
 import { ShipCert, UserData } from '@/types'
+import { io } from 'socket.io-client'
 
 export function useShipCert(shipId: string) {
   const router = useRouter()
@@ -25,9 +25,6 @@ export function useShipCert(shipId: string) {
   const [users, setUsers] = useState<UserData[]>([])
   const [picks, setPicks] = useState<UserData[]>([])
   const [fraudUrls, setFraudUrls] = useState<{ billy: string; joe: string } | null>(null)
-  const [claimedBy, setClaimedBy] = useState<string | null>(null)
-  const [claimAllowsEdit, setClaimAllowsEdit] = useState(false)
-  const [isMyClaim, setIsMyClaim] = useState(false)
   const [claimed, setClaimed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [bounty, setBounty] = useState('')
@@ -45,40 +42,48 @@ export function useShipCert(shipId: string) {
     } catch {}
   }
 
-  const checkClaim = async () => {
-    try {
-      const res = await fetch(`/api/admin/ship_certifications/${shipId}/claim`)
-      const data = await res.json()
-      if (res.ok || res.status === 423) {
-        setClaimedBy(data.claimedBy)
-        setClaimAllowsEdit(data.canEdit)
-        setIsMyClaim(data.claimedBy === user?.username)
-      }
-    } catch {}
-  }
-
   const startReview = async () => {
-    if (submitting) return
+    if (submitting || !user) return
 
     setSubmitting(true)
     try {
       const res = await fetch(`/api/admin/ship_certifications/${shipId}/claim`, { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
-        setClaimedBy(data.claimedBy)
-        setClaimAllowsEdit(data.canEdit)
-        setIsMyClaim(true)
+        load()
         setClaimed(true)
         setTimeout(() => setClaimed(false), 3000)
-        setSubmitting(false)
       } else {
-        setErr(data.error || 'someone already claimed this')
+        setErr(data.error || 'claim failed')
         setTimeout(() => setErr(null), 3000)
-        setSubmitting(false)
       }
     } catch {
-      setErr('claim shit broke')
+      setErr('claim broke')
       setTimeout(() => setErr(null), 3000)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const unclaim = async () => {
+    if (submitting) return
+
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/admin/ship_certifications/${shipId}/claim`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        load()
+      } else {
+        const data = await res.json()
+        setErr(data.error || 'unclaim failed')
+        setTimeout(() => setErr(null), 3000)
+      }
+    } catch {
+      setErr('unclaim broke')
+      setTimeout(() => setErr(null), 3000)
+    } finally {
       setSubmitting(false)
     }
   }
@@ -100,6 +105,29 @@ export function useShipCert(shipId: string) {
   }, [shipId, load])
 
   useEffect(() => {
+    const botUrl = process.env.NEXT_PUBLIC_BOT_URL || 'http://localhost:45100'
+
+    const socket = io(botUrl, {
+      path: '/ws/socket.io',
+      transports: ['websocket', 'polling'],
+    })
+
+    socket.on('connect', () => {
+      socket.emit('join_ship', { shipId })
+    })
+
+    socket.on('note_added', (data) => {
+      if (data.shipId === parseInt(shipId)) {
+        load()
+      }
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [shipId, load])
+
+  useEffect(() => {
     if (cert?.feedback && !reason) setReason(cert.feedback)
   }, [cert?.feedback, reason])
 
@@ -108,10 +136,6 @@ export function useShipCert(shipId: string) {
       setBounty(cert.customBounty?.toString() || '')
     }
   }, [cert?.customBounty, bounty])
-
-  useEffect(() => {
-    if (user && cert) checkClaim()
-  }, [user, cert?.id])
 
   useEffect(() => {
     if (
@@ -133,7 +157,7 @@ export function useShipCert(shipId: string) {
     if (submitting) return
 
     try {
-      if (!claimAllowsEdit && !canOverride) {
+      if (cert?.canEditClaim === false && !canOverride) {
         setErr("it's already claimed!")
         setTimeout(() => setErr(null), 3000)
         return
@@ -180,17 +204,75 @@ export function useShipCert(shipId: string) {
   }
 
   const save = async () => {
-    if (!note.trim()) return
+    if (!note.trim() || !user) return
+
+    const tempId = `temp-${Date.now()}`
+    const optimistic = {
+      id: tempId,
+      text: note.trim(),
+      author: {
+        username: user.username,
+        avatar: user.avatar || undefined,
+      },
+      createdAt: new Date().toISOString(),
+    }
+
+    setCert((prev) =>
+      prev
+        ? {
+            ...prev,
+            notes: [...(prev.notes || []), optimistic],
+          }
+        : prev
+    )
+
+    const noteText = note
+    setNote('')
+
     try {
       const res = await fetch(`/api/admin/ship_certifications/${shipId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note }),
+        body: JSON.stringify({ note: noteText }),
       })
-      if (!res.ok) throw new Error('shit broke')
-      setNote('')
-      await load()
-    } catch {}
+
+      if (!res.ok) throw new Error('api fucked up')
+
+      const data = await res.json()
+
+      setCert((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes:
+                prev.notes?.map((n) =>
+                  n.id === tempId
+                    ? {
+                        id: data.note.id,
+                        text: data.note.note,
+                        author: {
+                          username: data.note.username,
+                          avatar: data.note.avatar || undefined,
+                        },
+                        createdAt: data.note.createdAt,
+                      }
+                    : n
+                ) || [],
+            }
+          : prev
+      )
+    } catch {
+      setCert((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: prev.notes?.filter((n) => n.id !== tempId) || [],
+            }
+          : prev
+      )
+      setErr('failed to post note')
+      setTimeout(() => setErr(null), 3000)
+    }
   }
 
   const del = async (noteId: string) => {
@@ -279,7 +361,8 @@ export function useShipCert(shipId: string) {
       if (!uploadRes.ok) throw new Error('direct upload failed')
       setUrl(publicUrl)
     } catch (e) {
-      showError('upload broke, try again', e as Error)
+      setErr('upload broke, try again')
+      setTimeout(() => setErr(null), 3000)
       setFile(null)
     } finally {
       setUploading(false)
@@ -335,15 +418,16 @@ export function useShipCert(shipId: string) {
     showPick,
     picks,
     fraudUrls,
-    claimedBy,
-    claimAllowsEdit,
-    isMyClaim,
+    claimedBy: cert?.claimedBy || null,
+    canEditClaim: cert?.canEditClaim !== false,
+    isMyClaim: cert?.claimedBy === user?.username,
     claimed,
     canEdit,
     canOverride,
     isViewOnly,
     submitting,
     startReview,
+    unclaim,
     update,
     save,
     del,

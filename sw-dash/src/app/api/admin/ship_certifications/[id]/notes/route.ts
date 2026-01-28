@@ -105,6 +105,18 @@ export const POST = withParams(PERMS.certs_edit)(async ({ user, req, params, ip,
       }
     }
 
+    try {
+      const botUrl = process.env.NEXT_PUBLIC_BOT_URL || 'http://localhost:45100'
+      await fetch(`${botUrl}/ws/note_added`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': process.env.API_KEY || '',
+        },
+        body: JSON.stringify({ shipId }),
+      }).catch(() => {})
+    } catch {}
+
     return NextResponse.json({
       success: true,
       note: newNote,

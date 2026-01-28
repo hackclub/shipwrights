@@ -56,7 +56,7 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, req, params })
       true
     )
 
-    const botUrl = process.env.BOT_URL || 'http://localhost:45100'
+    const botUrl = process.env.NEXT_PUBLIC_BOT_URL || 'http://localhost:45100'
     const botKey = process.env.SW_BOT_KEY || ''
     const botResp = await fetch(`${botUrl}/bridge/send-reply`, {
       method: 'POST',

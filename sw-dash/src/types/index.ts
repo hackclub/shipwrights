@@ -79,6 +79,9 @@ export interface ShipCert {
   createdAt: string
   updatedAt: string
   customBounty?: number | null
+  claimedBy?: string | null
+  claimedAt?: string | null
+  canEditClaim?: boolean
 }
 
 export interface UserData {

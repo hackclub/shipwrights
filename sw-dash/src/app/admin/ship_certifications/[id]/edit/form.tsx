@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
@@ -31,7 +32,7 @@ export function Form({ shipId }: Props) {
     picks,
     fraudUrls,
     claimedBy,
-    claimAllowsEdit,
+    canEditClaim,
     isMyClaim,
     claimed,
     canEdit,
@@ -39,6 +40,7 @@ export function Form({ shipId }: Props) {
     isViewOnly,
     submitting,
     startReview,
+    unclaim,
     update,
     save,
     del,
@@ -52,6 +54,27 @@ export function Form({ shipId }: Props) {
     saveBounty,
     bountySaved,
   } = useShipCert(shipId)
+
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null)
+
+  useEffect(() => {
+    if (!cert?.claimedAt) {
+      setTimeLeft(null)
+      return
+    }
+
+    const calc = () => {
+      const claimed = new Date(cert.claimedAt!).getTime()
+      const now = Date.now()
+      const remaining = Math.max(0, 30 * 60 * 1000 - (now - claimed))
+      setTimeLeft(Math.floor(remaining / 1000))
+    }
+
+    calc()
+    const iv = setInterval(calc, 1000)
+    return () => clearInterval(iv)
+  }, [cert?.claimedAt])
 
   if (loading) {
     return (
@@ -111,24 +134,6 @@ export function Form({ shipId }: Props) {
         <h2 className="text-lg md:text-2xl font-mono text-amber-300 mb-4 md:mb-8 truncate">
           {cert.project}
         </h2>
-
-        {claimedBy && claimedBy !== user?.username && (
-          <div className="bg-orange-950/40 border-2 border-orange-600/60 rounded-2xl p-4 mb-4 md:mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🔒</span>
-              <div>
-                <div className="text-orange-300 font-mono text-sm font-bold">
-                  @{claimedBy} is reviewing this rn
-                </div>
-                <div className="text-orange-400/80 font-mono text-xs">
-                  {canOverride
-                    ? 'but u got override so u can do whatever'
-                    : 'if this isnt finished within 30 mins, u can claim it'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
@@ -411,6 +416,42 @@ export function Form({ shipId }: Props) {
                   <span className="text-gray-400">Last Updated:</span>{' '}
                   <span className="text-white">{updated}</span>
                 </div>
+                {claimedBy && cert.status === 'pending' && (
+                  <div className="pt-2 mt-2 border-t border-orange-700/60">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-orange-400 font-bold">
+                        {timeLeft && timeLeft > 0 ? '🔒 Claimed' : '⏰ Claim expired'}
+                      </span>
+                      {timeLeft !== null && (
+                        <span
+                          className={`font-mono text-xs ${timeLeft > 0 ? 'text-orange-300' : 'text-red-400'}`}
+                        >
+                          {timeLeft > 0
+                            ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`
+                            : '0:00'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs">
+                      <span className="text-gray-400">by:</span>{' '}
+                      <span className="text-white">@{claimedBy}</span>
+                    </div>
+                    {cert.claimedAt && (
+                      <div className="text-xs text-gray-500">
+                        {new Date(cert.claimedAt).toLocaleString()}
+                      </div>
+                    )}
+                    {isMyClaim && (
+                      <button
+                        onClick={unclaim}
+                        disabled={submitting}
+                        className="mt-2 bg-red-900/30 text-red-400 px-3 py-1 font-mono text-xs hover:bg-red-900/50 transition-all border border-red-700/60 rounded disabled:opacity-50"
+                      >
+                        unclaim
+                      </button>
+                    )}
+                  </div>
+                )}
                 {cert.assignment && (
                   <div className="pt-2 mt-2 border-t border-gray-700">
                     <div>
@@ -557,26 +598,45 @@ export function Form({ shipId }: Props) {
         </div>
 
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-2xl shadow-amber-950/30">
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-            {cert.status === 'pending' && !isMyClaim && canEdit && (
-              <button
-                onClick={startReview}
-                disabled={submitting}
-                className="bg-blue-900/30 text-blue-400 border-2 border-blue-700/60 hover:bg-blue-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-950/20 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Claim cert
-              </button>
-            )}
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center">
+            {cert.status === 'pending' &&
+              !isMyClaim &&
+              (!claimedBy || (timeLeft !== null && timeLeft <= 0)) &&
+              canEdit && (
+                <button
+                  onClick={startReview}
+                  disabled={submitting}
+                  className="bg-blue-900/30 text-blue-400 border-2 border-blue-700/60 hover:bg-blue-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-950/20 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Claim cert
+                </button>
+              )}
             <button
-              onClick={() => update('approved')}
-              disabled={isViewOnly || submitting}
+              onClick={() => setConfirmAction('approve')}
+              disabled={
+                isViewOnly ||
+                submitting ||
+                (claimedBy !== null &&
+                  timeLeft !== null &&
+                  timeLeft > 0 &&
+                  !isMyClaim &&
+                  !canOverride)
+              }
               className="bg-green-950/30 text-green-400 border-2 border-green-700/60 hover:bg-green-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-950/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               Approve
             </button>
             <button
-              onClick={() => update('rejected')}
-              disabled={isViewOnly || submitting}
+              onClick={() => setConfirmAction('reject')}
+              disabled={
+                isViewOnly ||
+                submitting ||
+                (claimedBy !== null &&
+                  timeLeft !== null &&
+                  timeLeft > 0 &&
+                  !isMyClaim &&
+                  !canOverride)
+              }
               className="bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-950/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               Reject
@@ -609,6 +669,39 @@ export function Form({ shipId }: Props) {
       {bountySaved && (
         <div className="fixed top-4 left-4 right-4 md:left-auto md:right-6 md:max-w-sm bg-green-950/90 border-2 border-green-700/60 text-green-300 font-mono text-sm px-4 py-3 rounded-2xl shadow-2xl shadow-green-950/30 z-50">
           bounty set!
+        </div>
+      )}
+
+      {confirmAction && (
+        <div className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-zinc-900 to-black border-4 border-amber-900/60 rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-amber-400 font-mono text-xl font-bold mb-4">
+              {confirmAction === 'approve'
+                ? 'you sure u want to APPROVE!?!?!?!?'
+                : 'you sure u want to REJECT!?!?!?!?'}
+            </h3>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  update(confirmAction === 'approve' ? 'approved' : 'rejected')
+                  setConfirmAction(null)
+                }}
+                className={`flex-1 font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                  confirmAction === 'approve'
+                    ? 'bg-green-600 text-white border-2 border-green-500 hover:bg-green-500'
+                    : 'bg-red-600 text-white border-2 border-red-500 hover:bg-red-500'
+                }`}
+              >
+                YES
+              </button>
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 bg-zinc-800 text-gray-300 border-2 border-zinc-700 hover:bg-zinc-700 font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                NOOOOOOOOOOOOOO
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>
