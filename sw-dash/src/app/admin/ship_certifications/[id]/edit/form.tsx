@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
 import { useShipCert } from '@/hooks/useShipCert'
-import { AiSummary } from './ai_summary'
+import { AiSummary } from './ai-summary'
 
 interface Props {
   shipId: string

@@ -103,25 +103,23 @@ Return ONLY valid JSON with no markdown, no code blocks:
 
 
 def format_project_summary_prompt(project_name, project_type, readme_content, demo_url, repo_url):
-    return f"""Hey you are a project taster, the all what you care about is making sure that good projects only exist
+    return f"""
+Hey you are a project review assistant, 
+You need to help the reviewer to make an accurate decision by checking the project, you need to explain to them what's the project how to test it, is it fine from the first look or not
+They are requied to make a video testing the project but may need more explanation about how to run it and what is it ?
+You need to provide helpful things to make it as easy as possible to get the project up and test it well or reject it from the first look because of a reamde or a bad demo
 
-so you need to check 2 things
-README.md is it just 2 lines -> reject
-is it empty or have no info -> reject
-
-is the demo not working or there's not a gh release for desktop apps which requires it -> reject
-
-if you are not sure and you should be, you should actually be saying what will make you lean to a decesion over another
 
 you should get all the info and if you not sure just say this pls
 
-here's the shipwrights guidelines 
+here's the shipwrights guidelines - but don't follow it word for word, just use it as a reference
 
 Rules for shipping 
 
 Web Apps:
 
-Web apps must have a live demo, this could be GitHub pages, Vercel, Netlify, etc. Cannot be only local hosting instructions or an ngrok link.
+Web apps must have a live demo, this could be GitHub pages, Vercel, Netlify, etc. 
+Cannot be only local hosting instructions or an ngrok link.
 
 Executable Files:
 
@@ -141,8 +139,9 @@ Games must either be a web build and be on something like itch.io or be in a Git
 
 Bots:
 
-Bots need to be hosted and online in order to test it out. Shipwright should never host it themselves. Demo link should be to the channel or server with proper documentation on each command.
-
+Bots need to be hosted and online in order to test it out.
+Shipwright should never host it themselves. Demo link should be to the channel or server with proper documentation on each command.
+If you find anything wierd please note it!
 This maybe>?
 
 Extensions:
@@ -166,11 +165,6 @@ Optional:
 * Firmware
 * Case
 
-Not allowed
-
-* Lapse of messing with breadboards
-* Simulations of hardware (unless the project is just firmware for something like an esp32, then the demo would be something like wokwi etc)
-
 Demo
 
 * If no physical, github release with kicad/eda files
@@ -187,14 +181,17 @@ some sort of playground is preferred, but otherwise, detailed installation + syn
 
 CLI Tools:
 
-Should be an executable file with instructions on how to use and set it up.
+Should be an executable file with instructions on how to use and set it up OR a demo links to a package manager, not everything needs a gh release just if there's some way to take it
+
 
 Game Mods:
 Mods should be uploaded to platforms like Modrinth & CurseForge. Avoid GitHub Releases.
 
 README Guidelines:
 
-No matter the project type, the README should explain how to use the project and what it’s for. This looks different for different projects though! For a portfolio site, it could just be a little bit about the development, and the features. But for a CLIO tool, there needs to be detailed install instructions and how to use each feature. It should never just be one line saying “this is a ____” or similar, it always needs to include some info about the project and for more complicated projects, it needs to include download, and feature instructions. The README also must be raw :cut_of_meat:.
+the README should explain how to use the project and what it’s for. it can't be just “this is a ____” or similar, 
+it always needs to include some info about the project like a minimum readme - give a note to reviewer if they need to look for this!
+The README also must be raw!
 
 Open-source:
 
@@ -209,8 +206,11 @@ Repo URL: {repo_url}
 ## README Content
 {readme_content}
 
+You need to be helpufl and provide as much "unnoticable info" or hard ones, don't try to give a reject or accept, just your thoughts
+But try to lean towards a one, like if it's really obvious just say it and try to be really concise but detailed for hard/wierd projects
+
 ## Response Format
-Return ONLY valid JSON with no markdown, no code blocks:
+Return ONLY valid JSON with no markdown, no code blocks and try to be concise:
 {{"summary": "Your analysis and decision"}}"""
 
 

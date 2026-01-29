@@ -8,9 +8,9 @@ export async function generateProjectSummary(
     projectDetails: {
         projectName: string
         projectType: string
-        readmeUrl: string
-        demoUrl: string
-        repoUrl: string
+        readmeUrl?: string
+        demoUrl?: string
+        repoUrl?: string
     }
 ) {
     try {
@@ -26,7 +26,7 @@ export async function generateProjectSummary(
             }
         }
 
-        const response = await fetch('http://localhost:45200/projects/summary', {
+        const response = await fetch(process.env.SW_AI_URL + '/projects/summary', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -23,7 +23,22 @@ async function main() {
         },
     })
 
-    console.log('Created project:', { project1 })
+    const project2 = await prisma.shipCert.create({
+        data: {
+            projectName: 'Asseto Corsa Reinforcement Learning',
+            ftProjectId: '3102',
+            ftSlackId: 'U07QKHJKLN6',
+            ftUsername: 'ved patel',
+            projectType: 'Other',
+            devTime: '2h 15m',
+            description: 'A reinforcement learning agent (using the SAC algorithm) learns to drive a Formula 1 car around the Monaco GP circuit in Assetto Corsa. The agent controls steering, acceleration, and braking by interacting with the track, receiving feedback, and improving over time.',
+            demoUrl: 'https://assettocorsarl.github.io/AssettoCorsaRL-DOCS/install',
+            repoUrl: 'https://github.com/ved-patel226/AssetoCorsaRL',
+            readmeUrl: 'https://raw.githubusercontent.com/ved-patel226/AssetoCorsaRL/main/README.md',
+            status: 'pending',
+        },
+    })
+
     console.log('Seeding finished.')
 }
 
