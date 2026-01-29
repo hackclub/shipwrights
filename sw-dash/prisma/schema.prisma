@@ -68,7 +68,7 @@ model PayoutReq {
 model PushSub {
   id        String   @id @default(cuid())
   userId    Int
-  endpoint  String   @unique @db.VarChar(1000)
+  endpoint  String   @unique @db.VarChar(750)
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
@@ -169,6 +169,7 @@ model ShipCert {
   cookiesEarned     Float?
   payoutMulti       Float?
   customBounty      Float?
+  aiSummary         String?   @db.Text
 
   yswsReturnReason String?   @db.Text
   yswsReturnedBy   String?

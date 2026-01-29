@@ -102,6 +102,118 @@ Return ONLY valid JSON with no markdown, no code blocks:
 {{"detection": "fraud|fthelp|queue|ship"}}"""
 
 
+def format_project_summary_prompt(project_name, project_type, readme_content, demo_url, repo_url):
+    return f"""Hey you are a project taster, the all what you care about is making sure that good projects only exist
+
+so you need to check 2 things
+README.md is it just 2 lines -> reject
+is it empty or have no info -> reject
+
+is the demo not working or there's not a gh release for desktop apps which requires it -> reject
+
+if you are not sure and you should be, you should actually be saying what will make you lean to a decesion over another
+
+you should get all the info and if you not sure just say this pls
+
+here's the shipwrights guidelines 
+
+Rules for shipping 
+
+Web Apps:
+
+Web apps must have a live demo, this could be GitHub pages, Vercel, Netlify, etc. Cannot be only local hosting instructions or an ngrok link.
+
+Executable Files:
+
+Must be in a GitHub releases as a .exe, .app, .deb or similar and should include instructions on how to run it properly.
+
+Android App:
+
+Should be a .apk in a GitHub releases (like an executable) or in the Google Play Store.
+
+APIs:
+
+Needs to be on something like Swagger where can test each endpoint and must have a detailed README.
+
+Games:
+
+Games must either be a web build and be on something like itch.io or be in a GitHub releases.
+
+Bots:
+
+Bots need to be hosted and online in order to test it out. Shipwright should never host it themselves. Demo link should be to the channel or server with proper documentation on each command.
+
+This maybe>?
+
+Extensions:
+
+Extensions must either be on the applicable store, or be an unpacked file which works as an extension put in GitHub Releases.
+
+Userscripts:
+
+must be on Tampermonkey or Greasyfork. Cannot be a txt file on GitHub.
+
+Hardware:
+
+Use these guidelines by @user :
+You can submit:
+
+* Completed PCB/schematics as long as they are tracked with hackatime
+* Lapse of you soldering pcbs/your circuit based on your schematic
+
+Optional:
+
+* Firmware
+* Case
+
+Not allowed
+
+* Lapse of messing with breadboards
+* Simulations of hardware (unless the project is just firmware for something like an esp32, then the demo would be something like wokwi etc)
+
+Demo
+
+* If no physical, github release with kicad/eda files
+* Otherwise video of the project.
+
+Important
+
+* If the project has been built physically it must have firmware 
+* If it's physically built schematic isn't needed
+
+Esolangs:
+
+some sort of playground is preferred, but otherwise, detailed installation + syntax guide works.
+
+CLI Tools:
+
+Should be an executable file with instructions on how to use and set it up.
+
+Game Mods:
+Mods should be uploaded to platforms like Modrinth & CurseForge. Avoid GitHub Releases.
+
+README Guidelines:
+
+No matter the project type, the README should explain how to use the project and what it’s for. This looks different for different projects though! For a portfolio site, it could just be a little bit about the development, and the features. But for a CLIO tool, there needs to be detailed install instructions and how to use each feature. It should never just be one line saying “this is a ____” or similar, it always needs to include some info about the project and for more complicated projects, it needs to include download, and feature instructions. The README also must be raw :cut_of_meat:.
+
+Open-source:
+
+All projects must be open-source, this means all files need to be available in some sort of git site, preferably GitHub
+
+## Project Details
+Name: {project_name}
+Type: {project_type}
+Demo URL: {demo_url}
+Repo URL: {repo_url}
+
+## README Content
+{readme_content}
+
+## Response Format
+Return ONLY valid JSON with no markdown, no code blocks:
+{{"summary": "Your analysis and decision"}}"""
+
+
 def clean_json_response(content: str) -> str:
     content = content.strip()
     if content.startswith("```json"):

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
 import { useShipCert } from '@/hooks/useShipCert'
+import { AiSummary } from './ai_summary'
 
 interface Props {
   shipId: string
@@ -137,6 +138,8 @@ export function Form({ shipId }: Props) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            <AiSummary cert={cert} />
+            
             <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20">
               <h3 className="text-amber-400 font-mono text-sm font-bold mb-2 md:mb-3">
                 Description
@@ -368,7 +371,7 @@ export function Form({ shipId }: Props) {
                           <button
                             key={t}
                             onClick={(e) => {
-                              ;(e.currentTarget.parentElement as HTMLElement).classList.add(
+                              ; (e.currentTarget.parentElement as HTMLElement).classList.add(
                                 'hidden'
                               )
                               updateType(t)
@@ -686,11 +689,10 @@ export function Form({ shipId }: Props) {
                   update(confirmAction === 'approve' ? 'approved' : 'rejected')
                   setConfirmAction(null)
                 }}
-                className={`flex-1 font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                  confirmAction === 'approve'
+                className={`flex-1 font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${confirmAction === 'approve'
                     ? 'bg-green-600 text-white border-2 border-green-500 hover:bg-green-500'
                     : 'bg-red-600 text-white border-2 border-red-500 hover:bg-red-500'
-                }`}
+                  }`}
               >
                 YES
               </button>
