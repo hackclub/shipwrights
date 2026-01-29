@@ -2,7 +2,6 @@ import os, requests, json, logging
 import db, helpers
 import flask
 from flask import jsonify, request
-from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,7 +18,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = flask.Flask(__name__)
-CORS(app)
 
 @app.before_request
 def require_api_key():
@@ -42,7 +40,7 @@ def ticket_summery():
 
     try:
         response = requests.post(
-            url="https://ai.hackclub.com/proxy/v1/chat/completions",
+            url="https://openrouter.ai/api/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
                 "Content-Type": "application/json"
@@ -113,7 +111,7 @@ def auto_complete():
     ticket_question = db.get_ticket_question(ticket_id)
     try:
         response = requests.post(
-            url="https://ai.hackclub.com/proxy/v1/chat/completions",
+            url="https://openrouter.ai/api/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
                 "Content-Type": "application/json"
@@ -181,7 +179,7 @@ def detect_issue():
     ticket_question = db.get_ticket_question(ticket_id)
     try:
         response = requests.post(
-            url="https://ai.hackclub.com/proxy/v1/chat/completions",
+            url="https://openrouter.ai/api/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
                 "Content-Type": "application/json"
@@ -256,7 +254,7 @@ def project_summary():
 
     try:
         response = requests.post(
-            url="https://ai.hackclub.com/proxy/v1/chat/completions",
+            url="https://openrouter.ai/api/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENROUTER_KEY}",
                 "Content-Type": "application/json"
