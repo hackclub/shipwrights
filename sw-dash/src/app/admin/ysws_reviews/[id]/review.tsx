@@ -402,7 +402,30 @@ export function Review({ data, canEdit }: Props) {
 
                       {d.commits.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-zinc-700">
-                          <div className="text-gray-400 font-mono text-xs mb-2">Git Activity</div>
+                          <div className="text-gray-400 font-mono text-xs mb-2">
+                            {(() => {
+                              const sortedCommits = [...d.commits].sort(
+                                (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime()
+                              )
+                              const firstSha = sortedCommits[0]?.sha
+                              const lastSha = sortedCommits[sortedCommits.length - 1]?.sha
+                              const repoUrl = data.shipCert.repoUrl
+                              if (repoUrl && firstSha && lastSha && firstSha !== lastSha) {
+                                const compareUrl = `${repoUrl.replace(/\/$/, '')}/compare/${firstSha}...${lastSha}`
+                                return (
+                                  <a
+                                    href={compareUrl}
+                                    target="_blank"
+                                    rel="noopener"
+                                    className="text-amber-400 hover:text-amber-300 underline"
+                                  >
+                                    Git Activity
+                                  </a>
+                                )
+                              }
+                              return 'Git Activity'
+                            })()}
+                          </div>
                           <CommitChart
                             commits={d.commits.map((c) => ({ ...c, ts: new Date(c.ts) }))}
                             repoUrl={data.shipCert.repoUrl ?? undefined}
