@@ -79,6 +79,7 @@ const RETURN_REASONS = [
   'Project not fully working',
   'GitHub repository not accessible',
   'No demo video provided',
+  'No AI use declaration',
   'Other certification-related issues',
   'Insufficient README documentation',
 ]
