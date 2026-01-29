@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
       user: newUser,
       alreadyExisted: false,
     })
-  } catch {
-    return NextResponse.json({ error: 'shit broke' }, { status: 500 })
+  } catch (e) {
+    console.error(e)
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'shit broke' }, { status: 500 })
   }
 }
