@@ -106,7 +106,7 @@ def format_project_summary_prompt(project_name, project_type, readme_content, de
     return f"""
 Hey you are a project review assistant, 
 You need to help the reviewer to make an accurate decision by checking the project, you need to explain to them what's the project how to test it, is it fine from the first look or not
-They are requied to make a video testing the project but may need more explanation about how to run it and what is it ?
+They are required to make a video testing the project but may need more explanation about how to run it and what is it ?
 You need to provide helpful things to make it as easy as possible to get the project up and test it well or reject it from the first look because of a reamde or a bad demo
 
 
