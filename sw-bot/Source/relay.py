@@ -471,7 +471,17 @@ def create_ticket(event, client, bot_token, staff_channel, user_channel):
                     "elements": [
                         {"type": "mrkdwn", "text": f"ticket sw-{ticket_id} • <{staff_link}|staff link>"}
                     ]
-                }
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "plain_text",
+                            "text": "AI is used to enhance your ticket experience. Please don't share any personal identifying information to ensure your privacy.",
+                            "emoji": True
+                        }
+                    ]
+                },
             ]
         )
         ai.detect_ticket(ticket_id)

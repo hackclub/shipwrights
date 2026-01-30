@@ -239,8 +239,7 @@ def detect_issue():
         "detection": ai_response['detection'].lower(),
     }), 200
 
-@app.get("/projects/type")
-@app.get("/projects/type")
+@app.post("/projects/type")
 def type_check():
     data = {
         "title": request.json.get("title"),
