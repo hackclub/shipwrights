@@ -169,6 +169,7 @@ model ShipCert {
   cookiesEarned     Float?
   payoutMulti       Float?
   customBounty      Float?
+  aiSummary         String?   @db.Text
 
   yswsReturnReason String?   @db.Text
   yswsReturnedBy   String?

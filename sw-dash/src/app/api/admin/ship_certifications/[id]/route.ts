@@ -133,6 +133,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       claimedBy,
       claimedAt: cert.reviewStartedAt?.toISOString() || null,
       canEditClaim,
+      aiSummary: cert.aiSummary,
     })
   } catch {
     return NextResponse.json({ error: 'shit hit the fan loading ship details' }, { status: 500 })
