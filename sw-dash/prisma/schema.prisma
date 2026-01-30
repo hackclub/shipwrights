@@ -68,7 +68,7 @@ model PayoutReq {
 model PushSub {
   id        String   @id @default(cuid())
   userId    Int
-  endpoint  String   @unique @db.VarChar(750)
+  endpoint  String   @unique @db.VarChar(1000)
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
