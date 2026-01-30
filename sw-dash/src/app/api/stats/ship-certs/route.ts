@@ -11,44 +11,40 @@ export async function GET(req: NextRequest) {
   try {
     const data = await getCerts({})
 
-    const oldest = await prisma.shipCert.findFirst({
+    const pendingCerts = await prisma.shipCert.findMany({
       where: { status: 'pending' },
       orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
     })
 
     let oldestWait = '-'
-    if (oldest) {
-      const now = Date.now()
-      const diff = now - oldest.createdAt.getTime()
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      oldestWait = `${days}d ${hours}h`
-    }
+    let medianQueueTime = '-'
 
-    const now = new Date()
-    const avgQueue: Record<string, number> = {}
-
-    const pendingCerts = await prisma.shipCert.findMany({
-      where: {
-        status: 'pending',
-      },
-      select: {
-        createdAt: true,
-      },
-    })
-
-    let medianWaitTime = 0
     if (pendingCerts.length > 0) {
+      // Oldest is first due to orderBy
+      const oldestDiff = Date.now() - pendingCerts[0].createdAt.getTime()
+      const oldestDays = Math.floor(oldestDiff / (1000 * 60 * 60 * 24))
+      const oldestHours = Math.floor((oldestDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      oldestWait = `${oldestDays}d ${oldestHours}h`
+
+      // Calculate median wait time
       const waitTimes = pendingCerts
         .map((c) => Date.now() - c.createdAt.getTime())
         .sort((a: number, b: number) => a - b)
 
       const mid = Math.floor(waitTimes.length / 2)
-      medianWaitTime =
+      const medianMs =
         waitTimes.length % 2 === 0
-          ? Math.floor((waitTimes[mid - 1] + waitTimes[mid]) / 2 / 1000)
-          : Math.floor(waitTimes[mid] / 1000)
+          ? (waitTimes[mid - 1] + waitTimes[mid]) / 2
+          : waitTimes[mid]
+
+      const medianDays = Math.floor(medianMs / (1000 * 60 * 60 * 24))
+      const medianHours = Math.floor((medianMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      medianQueueTime = `${medianDays}d ${medianHours}h`
     }
+
+    const now = new Date()
+    const avgQueue: Record<string, number> = {}
 
     for (let i = 6; i >= 0; i--) {
       const day = new Date(now)
@@ -89,7 +85,7 @@ export async function GET(req: NextRequest) {
       pending: data.stats.pending,
       approvalRate: data.stats.approvalRate,
       avgQueueTime: avgQueue,
-      medianWaitTime: medianWaitTime,
+      medianQueueTime: medianQueueTime,
       decisionsToday: data.stats.decisionsToday,
       newShipsToday: data.stats.newShipsToday,
       oldestInQueue: oldestWait,
