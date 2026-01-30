@@ -28,6 +28,28 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const avgQueue: Record<string, number> = {}
 
+    const pendingCerts = await prisma.shipCert.findMany({
+      where: {
+        status: 'pending',
+      },
+      select: {
+        createdAt: true,
+      },
+    })
+
+    let medianWaitTime = 0
+    if (pendingCerts.length > 0) {
+      const waitTimes = pendingCerts
+        .map((c) => Date.now() - c.createdAt.getTime())
+        .sort((a: number, b: number) => a - b)
+
+      const mid = Math.floor(waitTimes.length / 2)
+      medianWaitTime =
+        waitTimes.length % 2 === 0
+          ? Math.floor((waitTimes[mid - 1] + waitTimes[mid]) / 2 / 1000)
+          : Math.floor(waitTimes[mid] / 1000)
+    }
+
     for (let i = 6; i >= 0; i--) {
       const day = new Date(now)
       day.setDate(day.getDate() - i)
@@ -67,6 +89,7 @@ export async function GET(req: NextRequest) {
       pending: data.stats.pending,
       approvalRate: data.stats.approvalRate,
       avgQueueTime: avgQueue,
+      medianWaitTime: medianWaitTime,
       decisionsToday: data.stats.decisionsToday,
       newShipsToday: data.stats.newShipsToday,
       oldestInQueue: oldestWait,
