@@ -249,6 +249,12 @@ export function Review({ data, canEdit }: Props) {
                   <span className="text-white">{data.reviewer.username}</span>
                 </div>
               )}
+              {data.returnReason && (
+                <div>
+                  <span className="text-gray-400">Return Reason:</span>{' '}
+                  <span className="text-red-400">{data.returnReason}</span>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-amber-900/30">
               {data.shipCert.repoUrl && (
@@ -256,7 +262,7 @@ export function Review({ data, canEdit }: Props) {
                   href={data.shipCert.repoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setRepoOpened(true)}
+                  onAuxClick={(e) => e.button === 1 && setRepoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Repo
@@ -267,7 +273,7 @@ export function Review({ data, canEdit }: Props) {
                   href={data.shipCert.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setDemoOpened(true)}
+                  onAuxClick={(e) => e.button === 1 && setDemoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Demo
@@ -541,10 +547,32 @@ export function Review({ data, canEdit }: Props) {
               </div>
               <div className="text-red-300 font-mono text-xs space-y-1">
                 {data.shipCert.demoUrl && !demoOpened && (
-                  <div>• Check the Demo link (cuz u didn't..)</div>
+                  <div>
+                    •{' '}
+                    <a
+                      href={data.shipCert.demoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onAuxClick={() => setDemoOpened(true)}
+                      className="text-red-300 hover:text-red-200 underline"
+                    >
+                      Check the Demo link (cuz u didn't..)
+                    </a>
+                  </div>
                 )}
                 {data.shipCert.repoUrl && !repoOpened && (
-                  <div>• Check the Repo link (cuz u didn't..)</div>
+                  <div>
+                    •{' '}
+                    <a
+                      href={data.shipCert.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onAuxClick={() => setRepoOpened(true)}
+                      className="text-red-300 hover:text-red-200 underline"
+                    >
+                      Check the Repo link (cuz u didn't..)
+                    </a>
+                  </div>
                 )}
               </div>
             </div>

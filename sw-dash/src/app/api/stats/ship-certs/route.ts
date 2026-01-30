@@ -1,26 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCerts } from '@/lib/certs'
+import { prisma } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
-    const key = req.headers.get('x-api-key')
-    if (key !== process.env.FLAVORTOWN_API_KEY) {
-        return NextResponse.json({ error: 'nah who tf are you' }, { status: 401 })
+  const key = req.headers.get('x-api-key')
+  if (key !== process.env.FLAVORTOWN_API_KEY) {
+    return NextResponse.json({ error: 'nah who tf are you' }, { status: 401 })
+  }
+
+  try {
+    const data = await getCerts({})
+
+    const oldest = await prisma.shipCert.findFirst({
+      where: { status: 'pending' },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    let oldestWait = '-'
+    if (oldest) {
+      const now = Date.now()
+      const diff = now - oldest.createdAt.getTime()
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      oldestWait = `${days}d ${hours}h`
     }
 
-    try {
-        const data = await getCerts({})
+    const now = new Date()
+    const avgQueue: Record<string, number> = {}
 
-        return NextResponse.json({
-            totalJudged: data.stats.totalJudged,
-            approved: data.stats.approved,
-            rejected: data.stats.rejected,
-            pending: data.stats.pending,
-            approvalRate: data.stats.approvalRate,
-            avgQueueTime: data.stats.avgQueueTime,
-            decisionsToday: data.stats.decisionsToday,
-            newShipsToday: data.stats.newShipsToday
-        })
-    } catch {
-        return NextResponse.json({ error: 'shit broke' }, { status: 500 })
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date(now)
+      day.setDate(day.getDate() - i)
+      day.setHours(0, 0, 0, 0)
+      const nextDay = new Date(day)
+      nextDay.setDate(nextDay.getDate() + 1)
+
+      const certs = await prisma.shipCert.findMany({
+        where: {
+          status: { in: ['approved', 'rejected'] },
+          reviewCompletedAt: {
+            gte: day,
+            lt: nextDay,
+          },
+        },
+        select: {
+          createdAt: true,
+          reviewCompletedAt: true,
+        },
+      })
+
+      if (certs.length > 0) {
+        const total = certs.reduce((sum, c) => {
+          if (!c.reviewCompletedAt) return sum
+          return sum + (c.reviewCompletedAt.getTime() - c.createdAt.getTime())
+        }, 0)
+        avgQueue[day.toISOString().split('T')[0]] = Math.floor(total / certs.length / 1000)
+      } else {
+        avgQueue[day.toISOString().split('T')[0]] = 0
+      }
     }
+
+    return NextResponse.json({
+      totalJudged: data.stats.totalJudged,
+      approved: data.stats.approved,
+      rejected: data.stats.rejected,
+      pending: data.stats.pending,
+      approvalRate: data.stats.approvalRate,
+      avgQueueTime: avgQueue,
+      decisionsToday: data.stats.decisionsToday,
+      newShipsToday: data.stats.newShipsToday,
+      oldestInQueue: oldestWait,
+    })
+  } catch {
+    return NextResponse.json({ error: 'shit broke' }, { status: 500 })
+  }
 }
