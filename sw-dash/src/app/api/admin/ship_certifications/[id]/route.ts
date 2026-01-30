@@ -105,18 +105,18 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       proofVideo: cert.proofVideoUrl,
       reviewer: cert.reviewer
         ? {
-          username: cert.reviewer.username,
-          avatar: cert.reviewer.avatar,
-        }
+            username: cert.reviewer.username,
+            avatar: cert.reviewer.avatar,
+          }
         : null,
       syncedToFt: cert.syncedToFt,
       assignment: cert.assignments[0]
         ? {
-          id: cert.assignments[0].id,
-          status: cert.assignments[0].status,
-          assignee: cert.assignments[0].assignee?.username || null,
-          createdAt: cert.assignments[0].createdAt.toISOString(),
-        }
+            id: cert.assignments[0].id,
+            status: cert.assignments[0].status,
+            assignee: cert.assignments[0].assignee?.username || null,
+            createdAt: cert.assignments[0].createdAt.toISOString(),
+          }
         : null,
       notes: internalNotes.map((note) => ({
         id: note.id,

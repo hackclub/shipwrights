@@ -67,7 +67,6 @@ export async function checkType(data: {
 
     const result = await res.json()
     return result as TypeCheckResult
-
   } catch (error) {
     return {
       type: 'Unknown',
