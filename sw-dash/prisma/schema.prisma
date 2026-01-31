@@ -261,17 +261,18 @@ model Ticket {
 }
 
 model TicketMsg {
-  id           Int       @id @default(autoincrement())
-  ticketId     Int
-  senderId     String    @db.VarChar(50)
-  senderName   String    @db.VarChar(255)
-  msg          String    @db.Text
-  files        String?   @db.LongText
-  isStaff      Boolean?  @default(false)
-  createdAt    DateTime? @default(now()) @db.Timestamp(0)
-  senderAvatar String?   @db.VarChar(500)
-  messageTs    String?   @db.VarChar(50)
-  ticket       Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  id            Int       @id @default(autoincrement())
+  ticketId      Int
+  senderId      String    @db.VarChar(50)
+  senderName    String    @db.VarChar(255)
+  msg           String    @db.Text
+  files         String?   @db.LongText
+  isStaff       Boolean?  @default(false)
+  createdAt     DateTime? @default(now()) @db.Timestamp(0)
+  senderAvatar  String?   @db.VarChar(500)
+  messageTs     String?   @db.VarChar(50)
+  destMessageTs String?   @db.VarChar(50)
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
   @@index([ticketId])
   @@map("ticket_msgs")
