@@ -332,7 +332,10 @@ export function Review({ data, canEdit }: Props) {
             <li>Looks like over 30% ai - even if it is declared</li>
             <li>Looks like it isn't shipped (shipwrights messed up)</li>
             <li>last project edit was before the event launch</li>
-            <li>project was worked on before event, and not marked as Project Update: in description (return to shipwrights)</li>
+            <li>
+              project was worked on before event, and not marked as Project Update: in description
+              (return to shipwrights)
+            </li>
           </ul>
         </div>
       </div>

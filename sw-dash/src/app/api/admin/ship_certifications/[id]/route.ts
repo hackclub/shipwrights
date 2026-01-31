@@ -84,6 +84,25 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       }
     }
 
+    const history = cert.ftProjectId
+      ? await prisma.shipCert.findMany({
+          where: {
+            ftProjectId: cert.ftProjectId,
+            id: { not: cert.id },
+            status: { in: ['approved', 'rejected'] },
+          },
+          include: {
+            reviewer: {
+              select: {
+                username: true,
+              },
+            },
+          },
+          orderBy: { reviewCompletedAt: 'desc' },
+          take: 10,
+        })
+      : []
+
     return NextResponse.json({
       id: cert.id,
       ftId: cert.ftProjectId,
@@ -134,6 +153,13 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       claimedAt: cert.reviewStartedAt?.toISOString() || null,
       canEditClaim,
       aiSummary: cert.aiSummary,
+      history: history.map((h) => ({
+        id: h.id,
+        verdict: h.status,
+        certifier: h.reviewer?.username || 'unknown',
+        completedAt: h.reviewCompletedAt?.toISOString() || null,
+        feedback: h.reviewFeedback,
+      })),
     })
   } catch {
     return NextResponse.json({ error: 'shit hit the fan loading ship details' }, { status: 500 })

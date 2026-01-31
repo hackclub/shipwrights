@@ -83,6 +83,13 @@ export interface ShipCert {
   claimedBy?: string | null
   claimedAt?: string | null
   canEditClaim?: boolean
+  history?: {
+    id: number
+    verdict: string
+    certifier: string
+    completedAt: string | null
+    feedback?: string | null
+  }[]
 }
 
 export interface UserData {

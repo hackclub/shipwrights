@@ -34,9 +34,7 @@ export async function GET(req: NextRequest) {
 
       const mid = Math.floor(waitTimes.length / 2)
       const medianMs =
-        waitTimes.length % 2 === 0
-          ? (waitTimes[mid - 1] + waitTimes[mid]) / 2
-          : waitTimes[mid]
+        waitTimes.length % 2 === 0 ? (waitTimes[mid - 1] + waitTimes[mid]) / 2 : waitTimes[mid]
 
       const medianDays = Math.floor(medianMs / (1000 * 60 * 60 * 24))
       const medianHours = Math.floor((medianMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
