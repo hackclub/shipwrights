@@ -126,6 +126,118 @@ Return ONLY valid JSON with no markdown, no code blocks:
 {{"detection": "fraud|fthelp|queue|ship"}}"""
 
 
+def format_project_summary_prompt(project_name, project_type, readme_content, demo_url, repo_url):
+    return f"""
+Hey you are a project review assistant, 
+You need to help the reviewer to make an accurate decision by checking the project, you need to explain to them what's the project how to test it, is it fine from the first look or not
+They are required to make a video testing the project but may need more explanation about how to run it and what is it ?
+You need to provide helpful things to make it as easy as possible to get the project up and test it well or reject it from the first look because of a reamde or a bad demo
+
+
+you should get all the info and if you not sure just say this pls
+
+here's the shipwrights guidelines - but don't follow it word for word, just use it as a reference
+
+Rules for shipping 
+
+Web Apps:
+
+Web apps must have a live demo, this could be GitHub pages, Vercel, Netlify, etc. 
+Cannot be only local hosting instructions or an ngrok link.
+
+Executable Files:
+
+Must be in a GitHub releases as a .exe, .app, .deb or similar and should include instructions on how to run it properly.
+
+Android App:
+
+Should be a .apk in a GitHub releases (like an executable) or in the Google Play Store.
+
+APIs:
+
+Needs to be on something like Swagger where can test each endpoint and must have a detailed README.
+
+Games:
+
+Games must either be a web build and be on something like itch.io or be in a GitHub releases.
+
+Bots:
+
+Bots need to be hosted and online in order to test it out.
+Shipwright should never host it themselves. Demo link should be to the channel or server with proper documentation on each command.
+If you find anything wierd please note it!
+This maybe>?
+
+Extensions:
+
+Extensions must either be on the applicable store, or be an unpacked file which works as an extension put in GitHub Releases.
+
+Userscripts:
+
+must be on Tampermonkey or Greasyfork. Cannot be a txt file on GitHub.
+
+Hardware:
+
+Use these guidelines by @user :
+You can submit:
+
+* Completed PCB/schematics as long as they are tracked with hackatime
+* Lapse of you soldering pcbs/your circuit based on your schematic
+
+Optional:
+
+* Firmware
+* Case
+
+Demo
+
+* If no physical, github release with kicad/eda files
+* Otherwise video of the project.
+
+Important
+
+* If the project has been built physically it must have firmware 
+* If it's physically built schematic isn't needed
+
+Esolangs:
+
+some sort of playground is preferred, but otherwise, detailed installation + syntax guide works.
+
+CLI Tools:
+
+Should be an executable file with instructions on how to use and set it up OR a demo links to a package manager, not everything needs a gh release just if there's some way to take it
+
+
+Game Mods:
+Mods should be uploaded to platforms like Modrinth & CurseForge. Avoid GitHub Releases.
+
+README Guidelines:
+
+the README should explain how to use the project and what it’s for. it can't be just “this is a ____” or similar, 
+it always needs to include some info about the project like a minimum readme - give a note to reviewer if they need to look for this!
+The README also must be raw!
+
+Open-source:
+
+All projects must be open-source, this means all files need to be available in some sort of git site, preferably GitHub
+
+## Project Details
+Name: {project_name}
+Type: {project_type}
+Demo URL: {demo_url}
+Repo URL: {repo_url}
+
+## README Content
+{readme_content}
+
+You need to be helpufl and provide as much "unnoticable info" or hard ones, don't try to give a reject or accept, just your thoughts
+But try to lean towards a one, like if it's really obvious just say it and try to be really concise but detailed for hard/weird projects
+
+## Response Format
+Return ONLY valid JSON with no markdown, no code blocks and try to be concise:
+{{"summary": "Your analysis and decision"}}"""
+
+
 def clean_json_response(content: str) -> str:
     content = content.strip()
     if content.startswith("```json"):

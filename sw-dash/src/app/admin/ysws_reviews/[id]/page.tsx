@@ -27,9 +27,12 @@ export default async function YswsPage({ params }: Props) {
   const review = await getOne(yswsId)
   if (!review) notFound()
 
+  const showFraud = can(user.role, PERMS.billy_btn) || can(user.role, PERMS.joe_btn)
+  const data = { ...review, fraudUrls: showFraud ? review.fraudUrls : null }
+
   return (
     <main className="bg-grid min-h-screen w-full p-4 md:p-8">
-      <Review data={review} canEdit={can(user.role, PERMS.ysws_edit)} />
+      <Review data={data} canEdit={can(user.role, PERMS.ysws_edit)} />
     </main>
   )
 }

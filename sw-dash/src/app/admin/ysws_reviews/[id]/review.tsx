@@ -56,6 +56,8 @@ interface ReviewData {
   shipCert: ShipCert
   devlogs: Devlog[]
   reviewer: { username: string } | null
+  aiDeclaration?: string | null
+  fraudUrls?: { billy: string; joe: string } | null
 }
 
 interface Props {
@@ -220,11 +222,41 @@ export function Review({ data, canEdit }: Props) {
               <div>
                 <span className="text-gray-400">Submitter:</span>{' '}
                 <span className="text-white">{data.shipCert.ftUsername}</span>
+                {data.fraudUrls && (
+                  <div className="flex gap-2 mt-2">
+                    <a
+                      href={data.fraudUrls.billy}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-amber-900/40 text-amber-200 px-3 py-1.5 rounded-xl font-mono text-xs hover:bg-amber-800/50 hover:scale-[1.02] active:scale-[0.98] transition-all border-2 border-amber-900/40"
+                    >
+                      Billy
+                    </a>
+                    <a
+                      href={data.fraudUrls.joe}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-amber-900/40 text-amber-200 px-3 py-1.5 rounded-xl font-mono text-xs hover:bg-amber-800/50 hover:scale-[1.02] active:scale-[0.98] transition-all border-2 border-amber-900/40"
+                    >
+                      Joe
+                    </a>
+                  </div>
+                )}
               </div>
               <div>
                 <span className="text-gray-400">Type:</span>{' '}
                 <span className="text-white">{data.shipCert.projectType || 'unknown'}</span>
               </div>
+              {data.aiDeclaration !== undefined && (
+                <div>
+                  <span className="text-gray-400">AI Declaration:</span>{' '}
+                  <span
+                    className={data.aiDeclaration ? 'text-amber-300' : 'text-red-400 font-bold'}
+                  >
+                    {data.aiDeclaration || 'NOT DECLARED!'}
+                  </span>
+                </div>
+              )}
               <div>
                 <span className="text-gray-400">Ship Certified:</span>{' '}
                 <span className="text-green-400">{data.shipCert.reviewer?.username || '-'}</span>
@@ -262,7 +294,8 @@ export function Review({ data, canEdit }: Props) {
                   href={data.shipCert.repoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onAuxClick={(e) => e.button === 1 && setRepoOpened(true)}
+                  onClick={() => setRepoOpened(true)}
+                  onAuxClick={() => setRepoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Repo
@@ -273,7 +306,8 @@ export function Review({ data, canEdit }: Props) {
                   href={data.shipCert.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onAuxClick={(e) => e.button === 1 && setDemoOpened(true)}
+                  onClick={() => setDemoOpened(true)}
+                  onAuxClick={() => setDemoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Demo
@@ -330,7 +364,10 @@ export function Review({ data, canEdit }: Props) {
             <li>Looks like over 30% ai - even if it is declared</li>
             <li>Looks like it isn't shipped (shipwrights messed up)</li>
             <li>last project edit was before the event launch</li>
-            <li>project was worked on before event, and not marked as Project Update: in description (return to shipwrights)</li>
+            <li>
+              project was worked on before event, and not marked as Project Update: in description
+              (return to shipwrights)
+            </li>
           </ul>
         </div>
       </div>
@@ -553,7 +590,7 @@ export function Review({ data, canEdit }: Props) {
                       href={data.shipCert.demoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onAuxClick={() => setDemoOpened(true)}
+                      onClick={() => setDemoOpened(true)}
                       className="text-red-300 hover:text-red-200 underline"
                     >
                       Check the Demo link (cuz u didn't..)
@@ -567,7 +604,7 @@ export function Review({ data, canEdit }: Props) {
                       href={data.shipCert.repoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onAuxClick={() => setRepoOpened(true)}
+                      onClick={() => setRepoOpened(true)}
                       className="text-red-300 hover:text-red-200 underline"
                     >
                       Check the Repo link (cuz u didn't..)
