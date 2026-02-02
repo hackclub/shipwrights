@@ -102,6 +102,9 @@ export function Review({ data, canEdit }: Props) {
       notes: d.notes || '',
     }))
   )
+  const [showReport, setShowReport] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportBusy, setReportBusy] = useState(false)
 
   const totalSecs = data.devlogs.reduce((s, d) => s + d.origSecs, 0)
   const avgSecs = data.devlogs.length > 0 ? totalSecs / data.devlogs.length : 0
@@ -150,6 +153,25 @@ export function Review({ data, canEdit }: Props) {
 
   const getLocal = (id: string) => local.find((d) => d.id === id)!
 
+  const submitReport = async () => {
+    if (!reportReason.trim()) return
+    setReportBusy(true)
+    try {
+      await fetch(`/api/admin/ysws_reviews/${data.id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ftProjectId: data.shipCert.ftProjectId,
+          details: `YSWS Review is reporting this project: ${reportReason}`,
+        }),
+      })
+      setShowReport(false)
+      setReportReason('')
+    } finally {
+      setReportBusy(false)
+    }
+  }
+
   return (
     <div className="w-full">
       <Link
@@ -159,10 +181,20 @@ export function Review({ data, canEdit }: Props) {
         ← back
       </Link>
 
-      <h1 className="text-2xl md:text-4xl font-mono text-amber-400 mb-1 md:mb-2">YSWS Review</h1>
-      <h2 className="text-lg md:text-2xl font-mono text-amber-300 mb-4 md:mb-8 truncate">
-        {data.shipCert.projectName}
-      </h2>
+      <div className="flex items-start justify-between gap-4 mb-4 md:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-4xl font-mono text-amber-400 mb-1 md:mb-2">YSWS Review</h1>
+          <h2 className="text-lg md:text-2xl font-mono text-amber-300 truncate">
+            {data.shipCert.projectName}
+          </h2>
+        </div>
+        <button
+          onClick={() => setShowReport(true)}
+          className="shrink-0 bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all"
+        >
+          🚩 Report to Fraud Squad!
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
         <div className="lg:col-span-2 space-y-4 md:space-y-6">
@@ -693,6 +725,44 @@ export function Review({ data, canEdit }: Props) {
                 disabled={busy || returnReasons.length === 0}
               >
                 {busy ? 'returning...' : 'yeet it back'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReport && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border-2 border-red-800 rounded-2xl p-6 max-w-lg w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-mono text-lg">🚩 Report to Fraud Squad</h3>
+              <button
+                onClick={() => setShowReport(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-gray-400 font-mono text-sm mb-4">What sus stuff did you see?</p>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full bg-zinc-800 text-white px-3 py-2 rounded font-mono text-sm h-32 resize-none border border-zinc-600 mb-4"
+              placeholder="Describe the suspicious activity..."
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowReport(false)}
+                className="bg-gray-700 text-gray-300 px-4 py-2 rounded-xl font-mono text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                className="bg-red-700 text-white px-4 py-2 rounded-xl font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={reportBusy || !reportReason.trim()}
+              >
+                {reportBusy ? 'Submitting...' : 'Submit'}
               </button>
             </div>
           </div>
