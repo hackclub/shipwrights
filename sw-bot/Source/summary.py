@@ -1,14 +1,7 @@
-import os
 import time
 import schedule
 import db
-from slack_sdk import WebClient
-from dotenv import load_dotenv
-
-load_dotenv()
-
-REMINDERS_CHANNEL = os.getenv("REMINDER_CHANNEL_ID", "C09TTRZH94Z")
-client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
+from globals import REMINDERS_CHANNEL, client
 
 def message_blocks():
 	reviews_done = db.recent_reviews()

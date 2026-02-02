@@ -1,9 +1,6 @@
 import views, db
 from collections import defaultdict
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-
-load_dotenv()
 
 rate_limits = defaultdict(list)
 MAX_REQS = 30
@@ -13,7 +10,6 @@ AVAILABLE_TYPES = [
     "Desktop App (Windows)", "Desktop App (Linux)", "Desktop App (macOS)",
     "Minecraft Mods", "Hardware", "Android App", "iOS App", "Other"
 ]
-
 
 def check_rate(ip):
     now = datetime.now()

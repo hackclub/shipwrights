@@ -107,21 +107,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'missing description and links' }, { status: 400 })
     }
 
-    const recent = await prisma.shipCert.findFirst({
+    const existing = await prisma.shipCert.findFirst({
       where: {
         ftProjectId: String(ftProjectId),
-        createdAt: { gte: new Date(Date.now() - 5000) },
+        status: 'pending',
       },
     })
 
-    if (recent) {
+    if (existing) {
       await syslog(
         'ft_dup_blocked',
         403,
         null,
-        `dup blocked: ${projectName} (ft#${ftProjectId})`,
+        `dup blocked: ${projectName} (ft#${ftProjectId}) - already pending`,
         { ip, userAgent },
-        { metadata: { ftProjectId, existingCertId: recent.id } }
+        { metadata: { ftProjectId, existingCertId: existing.id } }
       )
       return NextResponse.json({ error: 'duplicate ship, already in the queue!' }, { status: 403 })
     }

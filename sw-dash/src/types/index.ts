@@ -79,9 +79,17 @@ export interface ShipCert {
   createdAt: string
   updatedAt: string
   customBounty?: number | null
+  aiSummary?: string
   claimedBy?: string | null
   claimedAt?: string | null
   canEditClaim?: boolean
+  history?: {
+    id: number
+    verdict: string
+    certifier: string
+    completedAt: string | null
+    feedback?: string | null
+  }[]
 }
 
 export interface UserData {

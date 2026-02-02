@@ -71,7 +71,7 @@ def save_ticket(user_id, user_name, user_avatar, question, user_thread, staff_th
         cursor.close()
         db.close()
 
-def save_message(ticket_id, sender_id, sender_name, sender_avatar, msg, from_staff, files=None, message_ts=None):
+def save_message(ticket_id, sender_id, sender_name, sender_avatar, msg, from_staff, files=None, message_ts=None, origin_message_ts=None):
     db = get_db()
     if not db:
         return
@@ -80,8 +80,8 @@ def save_message(ticket_id, sender_id, sender_name, sender_avatar, msg, from_sta
     try:
         files_json = json.dumps(files) if files else None
         cursor.execute(
-            "INSERT INTO ticket_msgs (ticketId, senderId, senderName, senderAvatar, msg, files, isStaff, messageTs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (ticket_id, sender_id, sender_name, sender_avatar, msg, files_json, from_staff, message_ts)
+            "INSERT INTO ticket_msgs (ticketId, senderId, senderName, senderAvatar, msg, files, isStaff, messageTs, originMessageTs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (ticket_id, sender_id, sender_name, sender_avatar, msg, files_json, from_staff, message_ts, origin_message_ts)
         )
         db.commit()
     except Exception as e:
@@ -422,6 +422,42 @@ def top_reviewer_yesterday():
     except Exception as e:
         print(f"Error fetching top reviewer: {e}")
         return {"slack_ids": [], "counts": []}
+    finally:
+        cursor.close()
+        db.close()
+
+def get_dest_message_ts(message_ts):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT messageTs FROM ticket_msgs WHERE originMessageTs = %s", (message_ts,))
+        row = cursor.fetchone()
+        return row.get("messageTs") if row else None
+    except Exception as e:
+        print(f"couldn't get destMessageTs: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
+def open_ticket(ticket_id):
+    db = get_db()
+    if not db:
+        return False
+
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "UPDATE tickets SET status = 'open' WHERE id = %s",
+            (ticket_id,)
+        )
+        db.commit()
+        return True
+    except Exception as e:
+        print(f"couldn't close ticket: {e}")
+        return False
     finally:
         cursor.close()
         db.close()

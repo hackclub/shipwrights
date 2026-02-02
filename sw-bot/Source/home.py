@@ -1,6 +1,6 @@
 import db
-
-def publish_home(client, user_id, view):
+from globals import client
+def publish_home(user_id, view):
 	client.views_publish(user_id=user_id, view=view)
 
 def not_user():

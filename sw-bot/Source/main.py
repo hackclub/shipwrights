@@ -1,32 +1,15 @@
-import os, threading, json, summery, threading
+import os, json, summary, threading
 import db, helpers, api, home, relay, ai
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from summery import send_reminder
+from summary import send_reminder
+from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL
 
-DASH_URL = os.getenv("DASHBOARD_URL", "http://localhost:3000")
-API_KEY = os.getenv("API_KEY")
-USER_CHANNEL = os.getenv("USER_CHANNEL_ID")
-STAFF_CHANNEL = os.getenv("STAFF_CHANNEL_ID")
-BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
-ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 slack_app = App(token=BOT_TOKEN, signing_secret=os.getenv("SLACK_SIGNING_SECRET"), process_before_response=True)
-EMOJI_MAP = {}
 seen = set()
 MAX_SEEN = 1000
 
-def cache_emojis():
-    global EMOJI_MAP
-    try:
-        result = slack_app.client.emoji_list()
-        if result["ok"]:
-            EMOJI_MAP = result["emoji"]
-            with open("emoji_cache.json", "w") as f:
-                json.dump(EMOJI_MAP, f)
-            print(f"loaded {len(EMOJI_MAP)} emojis")
-    except Exception as e:
-        print(f"failed to load emoji cache: {e}")
 
 
 def seen_already(event_id):
@@ -39,28 +22,32 @@ def seen_already(event_id):
 
 
 @slack_app.event("message")
-def msg(event, client):
+def msg(event):
     if seen_already(event.get("client_msg_id") or event.get("event_ts")):
         return
     subtype = event.get("subtype")
-    if subtype and subtype not in ["file_share"]:
+    if subtype and subtype not in ["file_share", "message_changed"]:
         return
     channel = event["channel"]
-
+    if subtype == "message_changed":
+        if channel != USER_CHANNEL:
+            return
+        relay.edit_message(event)
+        return
     if channel == USER_CHANNEL:
-        if relay.handle_client_reply(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL):
+        if relay.handle_client_reply(event):
             pass
         else:
-            relay.create_ticket(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL)
+            relay.create_ticket(event)
     elif channel == STAFF_CHANNEL:
-        relay.handle_staff_reply(event, client, BOT_TOKEN, STAFF_CHANNEL, USER_CHANNEL)
+        relay.handle_staff_reply(event)
 
 @slack_app.event("app_home_opened")
 def render_app_home(event, client):
     user_id = event.get("user")
     if not user_id:
         return
-    home.publish_home(client, user_id, home.not_user())
+    home.publish_home(user_id, home.not_user())
 
 @slack_app.action("send_paraphrased")
 def send_paraphrased(client, body, ack):
@@ -123,7 +110,7 @@ def resolve_detected(ack, body, client):
     ticket = db.get_ticket(ticket_id)
     user_info = helpers.get_user_info(client, user_id)
     if ticket["status"] == "open":
-        db.close_ticket(ticket_id, user_id)
+        db.close_ticket(ticket_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
@@ -282,14 +269,8 @@ def run_bot():
     handler.start()
 
 if __name__ == "__main__":
-    print("starting services...")
-    reminder_thread = threading.Thread(target=summery.reminders_loop, daemon=True)
-    reminder_thread.start()
-    cache_emojis()
-    port = int(os.getenv('PORT', 45100))
+    reminder_thread = threading.Thread(target=summary.reminders_loop, daemon=True)
     server_thread = threading.Thread(target=api.run_server, daemon=True)
     server_thread.start()
-    print(f"server on port {port}")
-    
-    print("bot starting...")
+    reminder_thread.start()
     run_bot()

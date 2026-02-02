@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
 import { useShipCert } from '@/hooks/useShipCert'
+import { AiSummary } from './ai-summary'
 
 interface Props {
   shipId: string
@@ -137,6 +138,8 @@ export function Form({ shipId }: Props) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            <AiSummary cert={cert} />
+
             <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20">
               <h3 className="text-amber-400 font-mono text-sm font-bold mb-2 md:mb-3">
                 Description
@@ -594,6 +597,49 @@ export function Form({ shipId }: Props) {
                 post note
               </button>
             </div>
+
+            {cert.history && cert.history.length > 0 && (
+              <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20">
+                <h3 className="text-amber-400 font-mono text-sm font-bold mb-3 md:mb-4">
+                  Cert history
+                </h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {cert.history.map((h, i) => (
+                    <Link
+                      key={i}
+                      href={`/admin/ship_certifications/${h.id}/edit`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-zinc-950/50 border-2 border-amber-900/30 rounded-2xl p-3 hover:border-amber-700/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded font-mono text-xs ${
+                              h.verdict === 'approved'
+                                ? 'bg-green-900/30 text-green-400'
+                                : 'bg-red-900/30 text-red-400'
+                            }`}
+                          >
+                            {h.verdict}
+                          </span>
+                          <span className="text-gray-500 font-mono text-xs">#{h.id}</span>
+                        </div>
+                        <span className="text-gray-500 font-mono text-xs">
+                          {h.completedAt ? new Date(h.completedAt).toLocaleDateString() : '-'}
+                        </span>
+                      </div>
+                      <div className="text-white font-mono text-xs mb-1">by {h.certifier}</div>
+                      {h.feedback && (
+                        <div className="text-gray-400 font-mono text-xs line-clamp-2">
+                          {h.feedback}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

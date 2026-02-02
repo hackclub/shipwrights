@@ -1,18 +1,7 @@
-import requests, os, json
+import requests, json
 import db
-from slack_sdk import WebClient
-from dotenv import load_dotenv
-load_dotenv()
+from globals import SWAI_KEY, MACROS, STAFF_CHANNEL,client
 
-SWAI_KEY = os.getenv("SW_AI")
-client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
-
-MACROS = {
-    "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",
-    "fthelp": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward related questions to <#C09MATKQM8C>.",
-    "faq": "Hey there!\nPlease have a look at our FAQ <https://us.review.hackclub.com/faq | here>",
-    "queue": "Hey there!\nwe currently have a backlog of projects waiting to be certified. Please be patient.\n\n*You can keep track of the queue <https://us.review.hackclub.com/queue | here>!*",
-}
 
 def get_ticket_summery(ticket_id):
     return json.loads(requests.get(
@@ -25,7 +14,7 @@ def summarize_ticket(ticket_id):
     summary = get_ticket_summery(ticket_id)
     ticket = db.get_ticket(ticket_id)
     client.chat_postMessage(
-        channel=os.getenv('STAFF_CHANNEL_ID'),
+        channel=STAFF_CHANNEL,
         thread_ts=ticket['staffThreadTs'],
         text='',
         blocks=[
@@ -77,7 +66,7 @@ def paraphrase_message(ticket_id, message):
     paraphrased = get_message_completion(ticket_id=ticket_id, message=message).get('paraphrased')
     ticket = db.get_ticket(ticket_id)
     client.chat_postMessage(
-        channel=os.getenv('STAFF_CHANNEL_ID'),
+        channel=STAFF_CHANNEL,
         thread_ts=ticket['staffThreadTs'],
         text="",
         blocks=[
@@ -123,7 +112,7 @@ def detect_ticket(ticket_id):
     if detection not in MACROS.keys():
         return
     client.chat_postMessage(
-        channel=os.getenv('STAFF_CHANNEL_ID'),
+        channel=STAFF_CHANNEL,
         thread_ts=ticket['staffThreadTs'],
         text="",
         blocks=[

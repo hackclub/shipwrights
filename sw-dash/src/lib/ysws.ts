@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { cache, genKey } from '@/lib/cache'
-import { fetchDevlogs, FtDevlog } from './ft'
+import { fetchDevlogs, FtDevlog, getAiDecl } from './ft'
 import { parseRepo, fetchCommits } from './gh'
 import { grab, upload } from './r2'
 
@@ -383,8 +383,26 @@ export async function getOne(id: number) {
     }
   })
 
+  const aiDeclaration = review.shipCert.ftProjectId
+    ? await getAiDecl(review.shipCert.ftProjectId)
+    : null
+
+  let fraudUrls = null
+  if (review.shipCert.ftSlackId) {
+    const billy = process.env.BILLY_URL
+    const joe = process.env.JOE_URL
+    if (billy && joe) {
+      fraudUrls = {
+        billy: `${billy}/?u=${review.shipCert.ftSlackId}`,
+        joe: `${joe}/profile/${review.shipCert.ftSlackId}`,
+      }
+    }
+  }
+
   return {
     ...review,
     devlogs: merged,
+    aiDeclaration,
+    fraudUrls,
   }
 }

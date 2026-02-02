@@ -56,6 +56,8 @@ interface ReviewData {
   shipCert: ShipCert
   devlogs: Devlog[]
   reviewer: { username: string } | null
+  aiDeclaration?: string | null
+  fraudUrls?: { billy: string; joe: string } | null
 }
 
 interface Props {
@@ -72,16 +74,16 @@ interface LocalDevlog {
 
 const RETURN_REASONS = [
   'Functionality not clearly demonstrated',
-  'Unclear or confusing project demonstration',
-  'Technical issues in the certification video',
-  'Insufficient proof that project works',
-  'Demo Link not working during review',
-  'Project not fully working',
+  'Unclear or confusing cert video',
+  'Technical issues in cert video',
+  'Insufficient proof in cert video that project works',
+  'Demo Link not working during YSWS review',
   'GitHub repository not accessible',
   'No demo video provided',
   'No AI use declaration',
+  'Insufficient README',
+  'Project started before Flavortown, but not labelled as an updated project.',
   'Other certification-related issues',
-  'Insufficient README documentation',
 ]
 
 export function Review({ data, canEdit }: Props) {
@@ -252,11 +254,41 @@ export function Review({ data, canEdit }: Props) {
               <div>
                 <span className="text-gray-400">Submitter:</span>{' '}
                 <span className="text-white">{data.shipCert.ftUsername}</span>
+                {data.fraudUrls && (
+                  <div className="flex gap-2 mt-2">
+                    <a
+                      href={data.fraudUrls.billy}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-amber-900/40 text-amber-200 px-3 py-1.5 rounded-xl font-mono text-xs hover:bg-amber-800/50 hover:scale-[1.02] active:scale-[0.98] transition-all border-2 border-amber-900/40"
+                    >
+                      Billy
+                    </a>
+                    <a
+                      href={data.fraudUrls.joe}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-amber-900/40 text-amber-200 px-3 py-1.5 rounded-xl font-mono text-xs hover:bg-amber-800/50 hover:scale-[1.02] active:scale-[0.98] transition-all border-2 border-amber-900/40"
+                    >
+                      Joe
+                    </a>
+                  </div>
+                )}
               </div>
               <div>
                 <span className="text-gray-400">Type:</span>{' '}
                 <span className="text-white">{data.shipCert.projectType || 'unknown'}</span>
               </div>
+              {data.aiDeclaration !== undefined && (
+                <div>
+                  <span className="text-gray-400">AI Declaration:</span>{' '}
+                  <span
+                    className={data.aiDeclaration ? 'text-amber-300' : 'text-red-400 font-bold'}
+                  >
+                    {data.aiDeclaration || 'NOT DECLARED!'}
+                  </span>
+                </div>
+              )}
               <div>
                 <span className="text-gray-400">Ship Certified:</span>{' '}
                 <span className="text-green-400">{data.shipCert.reviewer?.username || '-'}</span>
@@ -281,6 +313,12 @@ export function Review({ data, canEdit }: Props) {
                   <span className="text-white">{data.reviewer.username}</span>
                 </div>
               )}
+              {data.returnReason && (
+                <div>
+                  <span className="text-gray-400">Return Reason:</span>{' '}
+                  <span className="text-red-400">{data.returnReason}</span>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-amber-900/30">
               {data.shipCert.repoUrl && (
@@ -289,6 +327,7 @@ export function Review({ data, canEdit }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setRepoOpened(true)}
+                  onAuxClick={() => setRepoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Repo
@@ -300,6 +339,7 @@ export function Review({ data, canEdit }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setDemoOpened(true)}
+                  onAuxClick={() => setDemoOpened(true)}
                   className="bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded font-mono text-xs hover:bg-amber-800/50 transition-colors"
                 >
                   Demo
@@ -352,11 +392,14 @@ export function Review({ data, canEdit }: Props) {
               low quality to the point it doesn't do what it says it does (shipwrights messed up -
               return to them)
             </li>
-            <li>Looks like ai, but undeclared</li>
-            <li>Looks like over 30% ai</li>
+            <li>Looks like ai, but is undeclared (check declaration on the ft project page) </li>
+            <li>Looks like over 30% ai - even if it is declared</li>
             <li>Looks like it isn't shipped (shipwrights messed up)</li>
             <li>last project edit was before the event launch</li>
-            <li>project was previously put into the ysws db</li>
+            <li>
+              project was worked on before event, and not marked as Project Update: in description
+              (return to shipwrights)
+            </li>
           </ul>
         </div>
       </div>
@@ -573,10 +616,32 @@ export function Review({ data, canEdit }: Props) {
               </div>
               <div className="text-red-300 font-mono text-xs space-y-1">
                 {data.shipCert.demoUrl && !demoOpened && (
-                  <div>• Check the Demo link (cuz u didn't..)</div>
+                  <div>
+                    •{' '}
+                    <a
+                      href={data.shipCert.demoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setDemoOpened(true)}
+                      className="text-red-300 hover:text-red-200 underline"
+                    >
+                      Check the Demo link (cuz u didn't..)
+                    </a>
+                  </div>
                 )}
                 {data.shipCert.repoUrl && !repoOpened && (
-                  <div>• Check the Repo link (cuz u didn't..)</div>
+                  <div>
+                    •{' '}
+                    <a
+                      href={data.shipCert.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setRepoOpened(true)}
+                      className="text-red-300 hover:text-red-200 underline"
+                    >
+                      Check the Repo link (cuz u didn't..)
+                    </a>
+                  </div>
                 )}
               </div>
             </div>
