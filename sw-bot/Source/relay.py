@@ -68,7 +68,6 @@ def handle_staff_reply(event):
 
     text = event.get("text", "")
     files = event.get("files", [])
-    message_origin = event.get("message").get("ts")
     if not text and not files:
         return
 
@@ -108,7 +107,7 @@ def handle_staff_reply(event):
             )
             dest_ts = resp["ts"]
 
-        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, file_info if file_info else None, dest_ts, message_origin)
+        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, file_info if file_info else None, dest_ts)
         ping_ws(ticket["id"])
 
         if not files:
