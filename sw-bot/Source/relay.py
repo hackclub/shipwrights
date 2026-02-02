@@ -249,55 +249,61 @@ def handle_staff_reply(event):
         clean_text = text[1:].lstrip('!ai')
         ai.paraphrase_message(ticket["id"], clean_text)
 
+    elif text.strip().lower().startswith('!reopen'):
+        db.open_ticket(ticket["id"])
+        client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["userThreadTs"],
+            text=f"Hey it seems that this ticket was reopened by <@{user_id}>!",
+        )
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text=f"<@{user_id}> has reopened this ticket.",
 
-    elif text.strip() == ".resolve":
-        if not db.can_close(user_id):
-            client.chat_postEphemeral(
+        )
+        client.reactions_remove(
+            channel=STAFF_CHANNEL,
+            timestamp=ticket["staffThreadTs"],
+            name="checks-passed-octicon"
+        )
+        client.reactions_remove(
+            channel=USER_CHANNEL,
+            timestamp=ticket["userThreadTs"],
+            name="checks-passed-octicon"
+        )
+
+    elif text.strip().lower().startswith('!resolve'):
+        db.close_ticket(ticket["id"])
+        try:
+            client.reactions_add(
                 channel=STAFF_CHANNEL,
-                thread_ts=thread,
-                user=user_id,
-                text="Are u sure u have the right perms for this?"
+                timestamp=thread,
+                name="checks-passed-octicon"
             )
-            return
+        except Exception as e:
+            print(f"Failed to add staff thread reaction for a ticket: {e}")
 
-        if db.close_ticket(ticket["id"]):
-
-            try:
-                client.reactions_add(
-                    channel=STAFF_CHANNEL,
-                    timestamp=thread,
-                    name="checks-passed-octicon"
-                )
-            except Exception as e:
-                print(f"Failed to add staff thread reaction for a ticket: {e}")
-
-            try:
-                client.reactions_add(
-                    channel=USER_CHANNEL,
-                    timestamp=ticket["userThreadTs"],
-                    name="checks-passed-octicon"
-                )
-            except Exception as e:
-                print(f"Failed to add client thread reaction for a ticket: {e}")
-
-            client.chat_postMessage(
-                channel=STAFF_CHANNEL,
-                thread_ts=thread,
-                text="ticket closed"
-            )
-
-            client.chat_postMessage(
+        try:
+            client.reactions_add(
                 channel=USER_CHANNEL,
-                thread_ts=ticket["userThreadTs"],
-                text="This ticket has been resolved. If you have any more questions create a new ticket!"
+                timestamp=ticket["userThreadTs"],
+                name="checks-passed-octicon"
             )
-        else:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL,
-                thread_ts=thread,
-                user=user_id,
-                text="shit broke yo"
-            )
+        except Exception as e:
+            print(f"Failed to add client thread reaction for a ticket: {e}")
+
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=thread,
+            text="ticket closed"
+        )
+
+        client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["userThreadTs"],
+            text="This ticket has been resolved. If you have any more questions create a new ticket!"
+        )
     else:
         file_info = []
         if files:

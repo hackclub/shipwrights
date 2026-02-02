@@ -441,3 +441,23 @@ def get_dest_message_ts(message_ts):
     finally:
         cursor.close()
         db.close()
+
+def open_ticket(ticket_id):
+    db = get_db()
+    if not db:
+        return False
+
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "UPDATE tickets SET status = 'open' WHERE id = %s",
+            (ticket_id,)
+        )
+        db.commit()
+        return True
+    except Exception as e:
+        print(f"couldn't close ticket: {e}")
+        return False
+    finally:
+        cursor.close()
+        db.close()
