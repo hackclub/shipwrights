@@ -58,6 +58,7 @@ export const PATCH = withParams(PERMS.users_edit)(async ({ user, req, params, ip
       'observer',
       'fraudster',
       'ysws_reviewer',
+      'sw_ysws',
     ]
     if (role && !validRoles.includes(role)) {
       return NextResponse.json({ error: 'role is fucked up' }, { status: 400 })
