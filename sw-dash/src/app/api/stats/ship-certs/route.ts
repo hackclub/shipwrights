@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const data = await getCerts({})
 
     const pendingCerts = await prisma.shipCert.findMany({
-      where: { status: 'pending' },
+      where: { status: 'pending', yswsReturnedAt: null },
       orderBy: { createdAt: 'asc' },
       select: { createdAt: true },
     })

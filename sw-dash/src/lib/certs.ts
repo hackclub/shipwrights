@@ -38,17 +38,17 @@ async function fetchCerts(filters: Filters = {}) {
     }),
   ])
 
-  type StatCert = { id: number; status: string; createdAt: Date; reviewCompletedAt: Date | null }
+  type StatCert = { id: number; status: string; createdAt: Date; reviewCompletedAt: Date | null; yswsReturnedAt: Date | null }
   let statCerts: StatCert[] = certs
   if (status && status !== 'all') {
     statCerts = await prisma.shipCert.findMany({
-      select: { id: true, status: true, createdAt: true, reviewCompletedAt: true },
+      select: { id: true, status: true, createdAt: true, reviewCompletedAt: true, yswsReturnedAt: true },
     })
   }
 
   const approved = statCerts.filter((c) => c.status === 'approved').length
   const rejected = statCerts.filter((c) => c.status === 'rejected').length
-  const pending = statCerts.filter((c) => c.status === 'pending').length
+  const pending = statCerts.filter((c) => c.status === 'pending' && !c.yswsReturnedAt).length
   const totalJudged = approved + rejected
   const approvalRate = totalJudged > 0 ? Number(((approved / totalJudged) * 100).toFixed(1)) : 0
 
@@ -57,7 +57,7 @@ async function fetchCerts(filters: Filters = {}) {
   ).length
   const newShipsToday = statCerts.filter((c) => c.createdAt >= today).length
 
-  const pendingShips = statCerts.filter((c) => c.status === 'pending')
+  const pendingShips = statCerts.filter((c) => c.status === 'pending' && !c.yswsReturnedAt)
   let avgQueueTime = '-'
   if (pendingShips.length > 0) {
     const totalWait = pendingShips.reduce(

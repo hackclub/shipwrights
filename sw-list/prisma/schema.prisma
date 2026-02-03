@@ -24,6 +24,7 @@ model ShipCert {
   status              String    @default("pending")
   createdAt           DateTime  @default(now())
   reviewCompletedAt   DateTime?
+  yswsReturnedAt      DateTime?
 
   @@index([status])
   @@index([projectType])
