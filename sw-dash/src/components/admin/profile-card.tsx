@@ -20,6 +20,12 @@ const roleStyle = (r: string) => {
       return 'bg-red-900/30 text-red-400 border-red-700/50'
     case 'shipwright':
       return 'bg-blue-900/30 text-blue-400 border-blue-700/50'
+    case 'ysws_reviewer':
+      return 'bg-cyan-900/30 text-cyan-400 border-cyan-700/50'
+    case 'sw_ysws':
+      return 'bg-teal-900/30 text-teal-400 border-teal-700/50'
+    case 'fraudster':
+      return 'bg-orange-900/30 text-orange-400 border-orange-700/50'
     case 'observer':
       return 'bg-gray-900/30 text-gray-400 border-gray-700/50'
     case 'syswright':

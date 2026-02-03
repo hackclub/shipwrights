@@ -56,6 +56,8 @@ const roleColor = (r: string) => {
       return 'text-green-400 bg-green-900/30 border-green-700/50'
     case 'ysws_reviewer':
       return 'text-cyan-400 bg-cyan-900/30 border-cyan-700/50'
+    case 'sw_ysws':
+      return 'text-teal-400 bg-teal-900/30 border-teal-700/50'
     case 'fraudster':
       return 'text-orange-400 bg-orange-900/30 border-orange-700/50'
     case 'syswright':
@@ -342,6 +344,13 @@ export function UserProfile({ user: init, keys: k, logs: l, stats: s, currentUse
                 className="w-full bg-cyan-900/30 border-2 border-cyan-700/50 text-cyan-400 hover:bg-cyan-900/50 font-mono text-xs px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
               >
                 grant YSWS Reviewer
+              </button>
+              <button
+                onClick={() => grant('sw_ysws')}
+                disabled={updating || user.role === 'sw_ysws'}
+                className="w-full bg-teal-900/30 border-2 border-teal-700/50 text-teal-400 hover:bg-teal-900/50 font-mono text-xs px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
+              >
+                grant SW + YSWS
               </button>
               {(currentUser.role === 'megawright' ||
                 currentUser.role === 'hq' ||

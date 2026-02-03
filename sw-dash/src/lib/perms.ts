@@ -96,6 +96,18 @@ export const ROLES = {
     label: 'YSWS Reviewer',
     perms: [PERMS.ysws_view, PERMS.ysws_edit],
   },
+  sw_ysws: {
+    value: 'sw_ysws',
+    label: 'SW + YSWS',
+    perms: [
+      PERMS.certs_view,
+      PERMS.certs_edit,
+      PERMS.certs_report,
+      PERMS.support_admin,
+      PERMS.ysws_view,
+      PERMS.ysws_edit,
+    ],
+  },
 }
 
 export function can(userRole: string, perm: string): boolean {
