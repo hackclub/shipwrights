@@ -8,6 +8,7 @@ type User = {
   username: string
   role: string
   slackId: string
+  ftuid?: string | null
   isActive: boolean
   avatar?: string | null
 }

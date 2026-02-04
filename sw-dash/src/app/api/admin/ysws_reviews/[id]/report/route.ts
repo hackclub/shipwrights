@@ -30,7 +30,7 @@ export const POST = yswsApiWithParams(PERMS.ysws_view)(async ({ user, req, param
         Authorization: `Bearer ${reportKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ details }),
+      body: JSON.stringify({ details: details, reportedBy: user.ftuid, reason: 'YSWS project flag' }),
     })
 
     if (!response.ok) {
