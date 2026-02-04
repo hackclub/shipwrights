@@ -50,69 +50,7 @@ const fmtDate = (date: string) => {
   return new Date(date).toLocaleDateString()
 }
 
-interface TickerItemProps {
-  symbol: string
-  value: number | string
-  delta: number
-  invertColor?: boolean
-  isAbsolute?: boolean
-  showSign?: boolean
-  threshold?: number
-  tooltip?: string
-}
-
-const PENDING_THRESHOLD = 35
-
-function TickerItem({ symbol, value, delta, invertColor, isAbsolute, showSign, threshold, tooltip }: TickerItemProps) {
-  const isPositiveDelta = delta > 0
-  const isNegativeDelta = delta < 0
-  
-  // Determine if this change is "good" for the team
-  // invertColor: for metrics where going DOWN is good (pending, intake)
-  const isGood = invertColor ? isNegativeDelta : isPositiveDelta
-  const isBad = invertColor ? isPositiveDelta : isNegativeDelta
-  
-  const deltaColorClass = isGood 
-    ? 'text-green-400' 
-    : isBad 
-      ? 'text-red-400' 
-      : 'text-gray-500'
-  
-  // Value color based on threshold (if provided)
-  let valueColorClass = 'text-white'
-  if (threshold !== undefined && typeof value === 'number') {
-    valueColorClass = value > threshold ? 'text-red-400' : 'text-green-400'
-  }
-  
-  const arrow = isPositiveDelta ? '▲' : isNegativeDelta ? '▼' : ''
-  const deltaDisplay = isAbsolute 
-    ? `${delta > 0 ? '+' : ''}${delta}` 
-    : `${Math.abs(delta)}%`
-  
-  const valueDisplay = showSign && typeof value === 'number' 
-    ? `${value > 0 ? '+' : ''}${value}` 
-    : value
-
-  return (
-    <div 
-      className="flex items-center gap-2 font-mono text-sm cursor-help"
-      title={tooltip}
-    >
-      <span className="text-gray-500">{symbol}</span>
-      <span className={`${valueColorClass} font-bold`}>
-        {valueDisplay}
-        {threshold !== undefined && (
-          <span className="text-gray-600 font-normal text-xs">/{threshold}</span>
-        )}
-      </span>
-      {delta !== 0 && (
-        <span className={`${deltaColorClass} text-xs`}>
-          {arrow}{deltaDisplay}
-        </span>
-      )}
-    </div>
-  )
-}
+const QUEUE_TARGET = 35
 
 export function CertsView({ initial }: Props) {
   const params = useSearchParams()
@@ -240,72 +178,58 @@ export function CertsView({ initial }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 md:mb-8 items-start">
-        {/* Stats Ticker */}
-        <div className="lg:col-span-2 bg-gradient-to-r from-zinc-900 via-black to-zinc-900 border-2 border-amber-900/40 rounded-2xl p-3 md:p-4 shadow-xl">
-          <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <TickerItem
-              symbol="QUEUE"
-              value={stats.pending}
-              delta={stats.deltas?.pending ?? 0}
-              invertColor
-              threshold={PENDING_THRESHOLD}
-              tooltip="Projects waiting to be reviewed"
-            />
-            <span className="text-amber-900/60">│</span>
-            <TickerItem
-              symbol="NET"
-              value={stats.netFlow ?? 0}
-              delta={stats.deltas?.netFlow ?? 0}
-              isAbsolute
-              showSign
-              tooltip="Reviewed today minus new submissions (positive = clearing backlog)"
-            />
-            <span className="text-amber-900/60">│</span>
-            <TickerItem
-              symbol="REVIEWED"
-              value={stats.decisionsToday}
-              delta={stats.deltas?.decisions ?? 0}
-              tooltip="Projects reviewed today"
-            />
-            <span className="text-amber-900/60">│</span>
-            <TickerItem
-              symbol="NEW"
-              value={stats.newShipsToday}
-              delta={stats.deltas?.intake ?? 0}
-              invertColor
-              tooltip="New project submissions today"
-            />
-            <span className="text-amber-900/60">│</span>
-            <TickerItem
-              symbol="RATE"
-              value={`${stats.approvalRate}%`}
-              delta={stats.deltas?.approvalRate ?? 0}
-              isAbsolute
-              tooltip="Percentage of projects approved (all time)"
-            />
-            <span className="text-amber-900/60">│</span>
-            <div className="flex items-center gap-2 font-mono text-sm" title="Average time projects spend waiting in queue">
-              <span className="text-gray-500">WAIT</span>
-              <span className="text-white font-bold">{stats.avgQueueTime}</span>
+        {/* Today's Progress */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-zinc-900/90 to-black/90 border-2 border-amber-900/40 rounded-2xl p-4 md:p-5 shadow-xl">
+          {/* Main metric: Net Progress */}
+          <div className="mb-4">
+            <div className="text-gray-400 font-mono text-xs mb-1">Today&apos;s progress</div>
+            <div className="flex items-baseline gap-3">
+              <span className={`text-3xl md:text-4xl font-bold font-mono ${(stats.netFlow ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(stats.netFlow ?? 0) >= 0 ? '+' : ''}{stats.netFlow ?? 0}
+              </span>
+              <span className="text-gray-400 font-mono text-sm">
+                {(stats.netFlow ?? 0) >= 0 ? 'ahead' : 'behind'} — reviewed {stats.decisionsToday}, received {stats.newShipsToday} new
+              </span>
             </div>
           </div>
-          {/* Legend row - hidden on mobile, shown on md+ */}
-          <div className="hidden md:flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 pt-3 border-t border-amber-900/20 text-[10px] font-mono text-gray-500">
-            <span>▲▼ vs yesterday</span>
-            <span>•</span>
-            <span>QUEUE = waiting for review</span>
-            <span>•</span>
-            <span>NET = reviewed − new</span>
+
+          {/* Queue status */}
+          <div className="flex flex-wrap gap-4 md:gap-6 pt-4 border-t border-zinc-800">
+            <div>
+              <div className="text-gray-500 font-mono text-xs mb-1">In queue</div>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-xl font-bold font-mono ${stats.pending > QUEUE_TARGET ? 'text-red-400' : 'text-green-400'}`}>
+                  {stats.pending}
+                </span>
+                {stats.pending > QUEUE_TARGET ? (
+                  <span className="text-red-400/70 font-mono text-xs">
+                    ({stats.pending - QUEUE_TARGET} over target)
+                  </span>
+                ) : (
+                  <span className="text-green-400/70 font-mono text-xs">
+                    ✓ at target
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-gray-500 font-mono text-xs mb-1">Avg wait</div>
+              <span className="text-xl font-bold font-mono text-white">{stats.avgQueueTime}</span>
+            </div>
+
+            <div>
+              <div className="text-gray-500 font-mono text-xs mb-1">Approval rate</div>
+              <span className="text-xl font-bold font-mono text-white">{stats.approvalRate}%</span>
+            </div>
           </div>
-          {/* Mobile: simplified legend */}
-          <div className="md:hidden mt-2 pt-2 border-t border-amber-900/20 text-[10px] font-mono text-gray-500">
-            ▲▼ vs yesterday
-          </div>
-          {/* Secondary stats row */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs font-mono text-gray-500">
-            <span>Total: <span className="text-white">{stats.totalJudged}</span></span>
-            <span>✓<span className="text-green-400">{stats.approved}</span></span>
-            <span>✗<span className="text-red-400">{stats.rejected}</span></span>
+
+          {/* All-time totals */}
+          <div className="flex gap-4 mt-4 pt-3 border-t border-zinc-800/50 text-sm font-mono">
+            <span className="text-gray-500">All time:</span>
+            <span className="text-green-400">✓ {stats.approved}</span>
+            <span className="text-red-400">✗ {stats.rejected}</span>
+            <span className="text-gray-400">= {stats.totalJudged} reviewed</span>
           </div>
         </div>
 

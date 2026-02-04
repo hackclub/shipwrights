@@ -1,96 +1,53 @@
-export interface Snippet {
+// Internal audit tags - for tracking patterns, NOT for composing feedback
+// These are stored internally and don't appear in the feedback sent to users
+
+export interface AuditTag {
   id: string
   label: string
-  text: string
+  category: 'positive' | 'negative' | 'neutral'
 }
 
-// Approval snippets - prompts that require personalization
-export const APPROVAL_SNIPPETS: Snippet[] = [
-  {
-    id: 'loved',
-    label: 'What I loved',
-    text: "What I loved: ",
-  },
-  {
-    id: 'stood-out',
-    label: 'Stood out',
-    text: "What stood out: ",
-  },
-  {
-    id: 'impressed',
-    label: 'Impressed by',
-    text: "I was impressed by ",
-  },
-  {
-    id: 'creative',
-    label: 'Creative',
-    text: "Creative approach to ",
-  },
-  {
-    id: 'polished',
-    label: 'Polished',
-    text: "Really polished - especially ",
-  },
-  {
-    id: 'keep-shipping',
-    label: 'Keep shipping',
-    text: "Keep shipping!",
-  },
+// Tags for approved projects - helps us understand what makes good submissions
+export const APPROVAL_TAGS: AuditTag[] = [
+  { id: 'good-demo', label: 'Good demo', category: 'positive' },
+  { id: 'creative', label: 'Creative/Original', category: 'positive' },
+  { id: 'polished', label: 'Polished', category: 'positive' },
+  { id: 'good-readme', label: 'Good README', category: 'positive' },
+  { id: 'learned-something', label: 'Learned something new', category: 'positive' },
+  { id: 'exceeded-expectations', label: 'Exceeded expectations', category: 'positive' },
+  { id: 'first-time-builder', label: 'First-time builder', category: 'neutral' },
+  { id: 'resubmission', label: 'Resubmission (improved)', category: 'neutral' },
 ]
 
-// Rejection snippets - prompts that require details
-export const REJECTION_SNIPPETS: Snippet[] = [
-  {
-    id: 'tried',
-    label: 'What I tried',
-    text: "What I tried: ",
-  },
-  {
-    id: 'couldnt-verify',
-    label: "Couldn't verify",
-    text: "I couldn't verify the project because ",
-  },
-  {
-    id: 'demo-issue',
-    label: 'Demo issue',
-    text: "Demo issue: ",
-  },
-  {
-    id: 'missing',
-    label: 'Missing',
-    text: "What's missing: ",
-  },
-  {
-    id: 'close',
-    label: "You're close",
-    text: "You're close! Once you fix this, resubmit and we'll take another look.",
-  },
-  {
-    id: 'resubmit',
-    label: 'Resubmit invite',
-    text: "Fix these and resubmit - looking forward to seeing v2!",
-  },
+// Tags for rejected projects - helps us track common issues
+export const REJECTION_TAGS: AuditTag[] = [
+  { id: 'demo-broken', label: 'Demo broken/missing', category: 'negative' },
+  { id: 'demo-slow', label: 'Demo too slow', category: 'negative' },
+  { id: 'no-readme', label: 'No/poor README', category: 'negative' },
+  { id: 'tutorial-clone', label: 'Tutorial clone', category: 'negative' },
+  { id: 'ai-slop', label: 'Suspected AI-generated', category: 'negative' },
+  { id: 'incomplete', label: 'Incomplete/WIP', category: 'negative' },
+  { id: 'no-originality', label: 'Nothing original', category: 'negative' },
+  { id: 'cant-verify', label: "Couldn't verify it works", category: 'negative' },
+  { id: 'wrong-links', label: 'Wrong/dead links', category: 'negative' },
+  { id: 'private-repo', label: 'Private repo', category: 'negative' },
 ]
 
+// Checklist reminders for reviewers
 export const FEEDBACK_CHECKLIST = {
   approve: [
     'Mention something specific you liked about THIS project',
     'Reference something you actually saw (demo, code, feature)',
   ],
   reject: [
-    'Mention what you tried/looked at (shows you checked)',
+    'Explain what you tried/looked at',
     'State the main blocker clearly',
-    'Add 2+ actionable next steps below',
+    'Give actionable next steps',
     'Invite them to resubmit',
   ],
 }
 
-// Default next steps for rejections
-export const DEFAULT_NEXT_STEPS = [
-  '',
-  '',
-]
-
+// Suggested next steps for rejections
 export const SUGGESTED_NEXT_STEPS = [
   'Add a working demo link (public URL or video)',
   'Update README with: what it does, how to run it',
@@ -98,4 +55,6 @@ export const SUGGESTED_NEXT_STEPS = [
   'Add more original features beyond the tutorial',
   'Explain what you learned and built yourself',
   'Record a short walkthrough video showing it working',
+  'Add a unique feature that shows YOUR idea, not just tutorial code',
+  'Explain in README what makes this project yours',
 ]

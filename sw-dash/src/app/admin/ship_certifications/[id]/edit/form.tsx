@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
 import { useShipCert } from '@/hooks/useShipCert'
 import { AiSummary } from './ai-summary'
 import {
-  APPROVAL_SNIPPETS,
-  REJECTION_SNIPPETS,
+  APPROVAL_TAGS,
+  REJECTION_TAGS,
   FEEDBACK_CHECKLIST,
   SUGGESTED_NEXT_STEPS,
+  type AuditTag,
 } from '@/lib/feedback-snippets'
 
 interface Props {
@@ -72,24 +73,25 @@ export function Form({ shipId }: Props) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null)
   const [feedbackMode, setFeedbackMode] = useState<'approve' | 'reject'>('approve')
-  const [anchor, setAnchor] = useState('')
   const [nextSteps, setNextSteps] = useState<string[]>(['', ''])
   const [showStepSuggestions, setShowStepSuggestions] = useState(false)
-
-  const snippets = feedbackMode === 'approve' ? APPROVAL_SNIPPETS : REJECTION_SNIPPETS
+  
+  // Audit tags - internal only, not sent to users
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  
+  const auditTags = feedbackMode === 'approve' ? APPROVAL_TAGS : REJECTION_TAGS
   const checklist = FEEDBACK_CHECKLIST[feedbackMode]
 
-  const toggleSnippet = (text: string) => {
+  const toggleTag = (tagId: string) => {
     if (isViewOnly) return
-    if (reason.includes(text)) {
-      setReason((prev) => prev.replace(text, '').replace(/\n{3,}/g, '\n\n').trim())
-    } else {
-      const separator = reason.trim() ? '\n\n' : ''
-      setReason((prev) => prev.trim() + separator + text)
-    }
+    setSelectedTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    )
   }
 
-  const isSnippetActive = (text: string) => reason.includes(text)
+  const isTagSelected = (tagId: string) => selectedTags.includes(tagId)
 
   const updateStep = (index: number, value: string) => {
     setNextSteps((prev) => prev.map((s, i) => (i === index ? value : s)))
@@ -114,31 +116,14 @@ export function Form({ shipId }: Props) {
     setShowStepSuggestions(false)
   }
 
-  // Calculate if feedback is mostly snippets (warning)
-  const snippetTexts = snippets.map((s) => s.text)
-  const feedbackWithoutSnippets = snippetTexts.reduce((text, snippet) => text.replace(snippet, ''), reason)
-  const isMostlySnippets = reason.length > 0 && feedbackWithoutSnippets.trim().length < 20
-
   // Validation
   const filledSteps = nextSteps.filter((s) => s.trim().length > 0)
-  const isAnchorValid = anchor.trim().length >= 10
   const isStepsValid = feedbackMode === 'approve' || filledSteps.length >= 2
   const isReasonValid = reason.trim().length >= (feedbackMode === 'approve' ? 50 : 100)
-  const canSubmitFeedback = isAnchorValid && isStepsValid && isReasonValid
 
   // Combine all fields into final feedback before submission
   const buildFinalFeedback = () => {
-    let feedback = ''
-    
-    // Add anchor
-    if (anchor.trim()) {
-      feedback += anchor.trim()
-    }
-    
-    // Add main reason
-    if (reason.trim()) {
-      feedback += (feedback ? '\n\n' : '') + reason.trim()
-    }
+    let feedback = reason.trim()
     
     // Add next steps for rejections
     if (feedbackMode === 'reject' && filledSteps.length > 0) {
@@ -327,28 +312,6 @@ export function Form({ shipId }: Props) {
                 </button>
               </div>
 
-              {/* Anchor Field - Required */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-gray-400 font-mono text-xs">What stood out?</span>
-                  <span className="text-red-400 font-mono text-xs">*required</span>
-                  {isAnchorValid && <span className="text-green-400 font-mono text-xs">✓</span>}
-                </div>
-                <input
-                  type="text"
-                  value={anchor}
-                  onChange={(e) => setAnchor(e.target.value)}
-                  disabled={isViewOnly}
-                  className={`w-full bg-zinc-950/50 border-2 text-white font-mono text-sm p-3 rounded-xl focus:outline-none focus:border-amber-600/50 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isAnchorValid ? 'border-green-800/50' : 'border-amber-900/30'
-                  }`}
-                  placeholder="e.g., The level editor was really clever..."
-                />
-                <div className="text-gray-500 font-mono text-xs mt-1">
-                  Mention something specific you saw (proves you actually looked)
-                </div>
-              </div>
-
               {/* Next Steps - Required for Rejections */}
               {feedbackMode === 'reject' && (
                 <div className="mb-4">
@@ -413,42 +376,40 @@ export function Form({ shipId }: Props) {
                 </div>
               )}
 
-              {/* Snippet Buttons */}
-              <div className="mb-3">
-                <div className="text-gray-400 font-mono text-xs mb-2">Quick add (click to toggle):</div>
+              {/* Audit Tags - Internal only */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-gray-400 font-mono text-xs">🏷️ Audit tags</span>
+                  <span className="text-gray-600 font-mono text-[10px]">(internal only — not sent to user)</span>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {snippets.map((snippet) => {
-                    const active = isSnippetActive(snippet.text)
+                  {auditTags.map((tag) => {
+                    const selected = isTagSelected(tag.id)
                     return (
                       <button
-                        key={snippet.id}
-                        onClick={() => toggleSnippet(snippet.text)}
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
                         disabled={isViewOnly}
                         className={`px-2 py-1 rounded-lg font-mono text-xs transition-all border disabled:opacity-50 disabled:cursor-not-allowed ${
-                          active
-                            ? 'bg-amber-900/50 text-amber-300 border-amber-600'
-                            : 'bg-zinc-800/50 hover:bg-zinc-700/50 text-gray-300 hover:text-white border-zinc-700/50 hover:border-zinc-600'
+                          selected
+                            ? tag.category === 'positive'
+                              ? 'bg-green-900/50 text-green-300 border-green-600'
+                              : tag.category === 'negative'
+                                ? 'bg-red-900/50 text-red-300 border-red-600'
+                                : 'bg-amber-900/50 text-amber-300 border-amber-600'
+                            : 'bg-zinc-800/50 hover:bg-zinc-700/50 text-gray-400 hover:text-white border-zinc-700/50 hover:border-zinc-600'
                         }`}
                       >
-                        {active ? '✓ ' : ''}{snippet.label}
+                        {selected ? '✓ ' : ''}{tag.label}
                       </button>
                     )
                   })}
                 </div>
               </div>
 
-              {/* Warning if mostly snippets */}
-              {isMostlySnippets && (
-                <div className="mb-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-2">
-                  <span className="text-yellow-400 font-mono text-xs">
-                    ⚠️ Add something specific so it doesn't feel like a template
-                  </span>
-                </div>
-              )}
-
               {/* Main Feedback Textarea */}
               <div className="mb-2 text-gray-400 font-mono text-xs md:text-sm">
-                Additional feedback:
+                Your feedback to the submitter:
               </div>
               <textarea
                 value={reason}
@@ -947,7 +908,7 @@ export function Form({ shipId }: Props) {
               disabled={
                 isViewOnly ||
                 submitting ||
-                !isAnchorValid ||
+                !isReasonValid ||
                 (claimedBy !== null &&
                   timeLeft !== null &&
                   timeLeft > 0 &&
@@ -956,7 +917,7 @@ export function Form({ shipId }: Props) {
               }
               className="bg-green-950/30 text-green-400 border-2 border-green-700/60 hover:bg-green-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-950/20 hover:scale-[1.02] active:scale-[0.98]"
             >
-              Approve {!isAnchorValid && '(need anchor)'}
+              Approve {!isReasonValid && '(need feedback)'}
             </button>
             <button
               onClick={() => {
@@ -966,7 +927,7 @@ export function Form({ shipId }: Props) {
               disabled={
                 isViewOnly ||
                 submitting ||
-                !isAnchorValid ||
+                !isReasonValid ||
                 (feedbackMode === 'reject' && !isStepsValid) ||
                 (claimedBy !== null &&
                   timeLeft !== null &&
@@ -976,7 +937,7 @@ export function Form({ shipId }: Props) {
               }
               className="bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 font-mono text-sm px-4 md:px-8 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-950/20 hover:scale-[1.02] active:scale-[0.98]"
             >
-              Reject {!isAnchorValid ? '(need anchor)' : feedbackMode === 'reject' && !isStepsValid ? '(need 2+ steps)' : ''}
+              Reject {!isReasonValid ? '(need feedback)' : feedbackMode === 'reject' && !isStepsValid ? '(need 2+ steps)' : ''}
             </button>
             {(cert.status === 'approved' || cert.status === 'rejected') && (
               <button
