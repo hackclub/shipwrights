@@ -1,6 +1,7 @@
 import db
 from ai import get_metrics
 from globals import client
+
 def publish_home(user_id, view):
 	client.views_publish(user_id=user_id, view=view)
 
