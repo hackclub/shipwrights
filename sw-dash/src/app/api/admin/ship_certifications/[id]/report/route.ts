@@ -39,7 +39,11 @@ export const POST = withParams(PERMS.certs_report)(async ({ user, req, params, i
         Authorization: `Bearer ${reportKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ details }),
+      body: JSON.stringify({
+        details: details,
+        reportedBy: user.ftuid,
+        reason: 'Shipwrights project flag',
+      }),
     })
 
     if (!response.ok) {

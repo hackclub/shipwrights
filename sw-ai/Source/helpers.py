@@ -22,13 +22,17 @@ TYPES = [
 ]
 
 
-def format_messages(ticket_messages):
+def format_messages(ticket_messages, show_discussion=True):
     conversation=""
     for message in ticket_messages:
         if message.get("isStaff", False):
-            conversation += f"Shipwrights team: {message.get('msg', 'None')}"
+            if show_discussion:
+                conversation += f"Shipwrights team: {message.get('msg', 'None').lstrip('?').strip()}\n"
+                pass
+            if message.get('msg').startswith("?"):
+                conversation += f"Shipwrights team: {message.get('msg', 'None').lstrip('?').strip()}\n"
         else:
-            conversation += f"User: {message.get('msg', 'None')}"
+            conversation += f"User: {message.get('msg', 'None')}\n"
     return conversation
 
 def format_summary_prompt(ticket_messages, ticket_question):
@@ -389,3 +393,30 @@ def check_type(data: dict) -> dict:
             return {"type": "Unknown", "debug": {"input": input_data, "request": req_body, "response": None, "error": str(e)}}
 
     return {"type": "Unknown", "debug": {"input": input_data, "request": req_body, "response": None, "error": "max retries"}}
+
+
+def format_vibes_message(tickets):
+    ticket_data = ""
+    for ticket in tickets:
+        ticket_data += f"Ticket question: {ticket['question']}:\n{ticket['messages']}\n\n"
+    return f"""You are a bot designed to return qualitative metrics to the Shipwrights team by extracting user feedback from the day's tickets.
+
+## Your Task
+Analyze the provided tickets and determine:
+1. Whether the majority of users had a positive experience (boolean: true or false)
+2. Select a direct quote from a user that represents the day's ticket flow (copy exactly, no modifications)
+3. Provide one actionable recommendation to improve the team based on the tickets
+
+## Important Rules
+- Only reference staff messages prefixed with '?' (these were sent to the user). Messages without '?' are internal discussions and should NOT be mentioned.
+- Do NOT provide recommendations about delays or response times. We are a volunteer team.
+- The quote must be from a USER, not from staff.
+
+## Ticket Data
+{ticket_data}
+
+## Response Format
+Return ONLY valid JSON with no markdown, no code blocks, no explanation:
+{{"bool": true, "quote_otd": "Exact user quote here", "recommendation": "Your improvement suggestion"}}
+
+Note: Use lowercase true/false for the boolean value."""

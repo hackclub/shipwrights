@@ -274,7 +274,10 @@ def handle_staff_reply(event):
         )
 
     elif text.strip().lower().startswith('!resolve'):
+        if ticket["status"] != "open":
+            return
         db.close_ticket(ticket["id"])
+        db.claim_ticket(ticket["id"], user_id)
         try:
             client.reactions_add(
                 channel=STAFF_CHANNEL,

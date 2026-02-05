@@ -20,7 +20,7 @@ async function load() {
       },
     }),
     db.shipCert.findMany({
-      where: { status: 'pending' },
+      where: { status: 'pending', yswsReturnedAt: null },
       select: {
         id: true,
         projectType: true,

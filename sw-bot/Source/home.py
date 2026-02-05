@@ -1,5 +1,7 @@
 import db
+from ai import get_metrics
 from globals import client
+
 def publish_home(user_id, view):
 	client.views_publish(user_id=user_id, view=view)
 
@@ -100,3 +102,70 @@ def not_user():
 		}
 	]
 }
+
+def show_home():
+	metrics = get_metrics()
+	return {
+	"type": "home",
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Shipwright Home!",
+				"emoji": True
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Qualitative metrics*:"
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "Generated via AI so take it with a grain of salt.",
+					"emoji": True
+				}
+			]
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"- *In the past 24 hours have the majority of users been satisfied*: {'Yes' if metrics.get('bool') else 'No'}"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"- *User quote of the day*: {metrics.get('quote_otd', 'idk man')}"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"- *AI suggested improvement*: {metrics.get('recommendation', 'how should i know')}"
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "I'll add more eventually."
+			}
+		}
+	]
+	}

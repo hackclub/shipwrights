@@ -16,6 +16,7 @@ interface User {
   avatar?: string | null
   skills?: string[]
   staffNotes?: string | null
+  ftuid?: string | null
 }
 
 interface Key {
@@ -380,6 +381,12 @@ export function UserProfile({ user: init, keys: k, logs: l, stats: s, currentUse
                 {user.role}
               </span>
             </div>
+            {user.ftuid && (
+              <div>
+                <span className="text-amber-300/50 font-mono text-xs block mb-1">FT ID</span>
+                <span className="text-amber-200 font-mono text-xs">{user.ftuid}</span>
+              </div>
+            )}
             <div>
               <span className="text-amber-300/50 font-mono text-xs block mb-1">active</span>
               {canEdit ? (

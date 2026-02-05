@@ -7,13 +7,16 @@ import { getSlackUser } from '@/lib/slack'
 
 export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
   const body = await req.json()
-  const { slackId, username, role, source, fraudDone, fraudById, notes } = body
+  const { slackId, username, ftuid, role, source, fraudDone, fraudById, notes } = body
 
   if (!slackId?.trim()) {
     return NextResponse.json({ error: 'slack id missing dummy' }, { status: 400 })
   }
   if (!username?.trim()) {
     return NextResponse.json({ error: 'need a username' }, { status: 400 })
+  }
+  if (!ftuid?.trim()) {
+    return NextResponse.json({ error: 'need FT ID bruh' }, { status: 400 })
   }
   if (!source) {
     return NextResponse.json({ error: 'pick a source' }, { status: 400 })
@@ -42,6 +45,7 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
     data: {
       slackId,
       username,
+      ftuid,
       avatar,
       role,
       isActive,

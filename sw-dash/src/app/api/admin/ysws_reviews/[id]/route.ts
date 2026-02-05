@@ -64,22 +64,16 @@ export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({ user, req, para
     })
 
     if (action === 'return') {
-      const cert = await prisma.shipCert.update({
+      await prisma.shipCert.update({
         where: { id: review.shipCertId },
         data: {
           status: 'pending',
-          syncedToFt: false,
           reviewCompletedAt: null,
           yswsReturnReason: returnReason,
           yswsReturnedBy: user.username,
           yswsReturnedAt: new Date(),
         },
       })
-
-      if (cert.ftProjectId) {
-        await syncFt(cert.ftProjectId, 'pending', '')
-        await prisma.shipCert.update({ where: { id: cert.id }, data: { syncedToFt: true } })
-      }
     }
 
     await syslog(

@@ -43,11 +43,15 @@ def msg(event):
         relay.handle_staff_reply(event)
 
 @slack_app.event("app_home_opened")
-def render_app_home(event, client):
+def render_app_home(event):
     user_id = event.get("user")
     if not user_id:
         return
+    if user_id in db.get_authorized_users():
+        home.publish_home(user_id, home.show_home())
+        return
     home.publish_home(user_id, home.not_user())
+    return
 
 @slack_app.action("send_paraphrased")
 def send_paraphrased(client, body, ack):
@@ -111,6 +115,7 @@ def resolve_detected(ack, body, client):
     user_info = helpers.get_user_info(client, user_id)
     if ticket["status"] == "open":
         db.close_ticket(ticket_id)
+        db.claim_ticket(ticket_id, user_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],

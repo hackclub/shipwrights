@@ -28,6 +28,7 @@ export function AddUser({ open, onClose, myName, mySlackId }: Props) {
   const [fraudDone, setFraudDone] = useState(false)
   const [fraudById, setFraudById] = useState('')
   const [notes, setNotes] = useState('')
+  const [ftuid, setFtuid] = useState('')
   const [loading, setLoading] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [fraudPreview, setFraudPreview] = useState<Preview | null>(null)
@@ -130,6 +131,7 @@ export function AddUser({ open, onClose, myName, mySlackId }: Props) {
     setFraudDone(false)
     setFraudById('')
     setNotes('')
+    setFtuid('')
     setPreview(null)
     setFraudPreview(null)
     setError('')
@@ -150,6 +152,10 @@ export function AddUser({ open, onClose, myName, mySlackId }: Props) {
     if (!preview) return
     if (!username.trim()) {
       setError('need a username')
+      return
+    }
+    if (!ftuid.trim()) {
+      setError('need a FT ID')
       return
     }
     if (!source) {
@@ -174,6 +180,7 @@ export function AddUser({ open, onClose, myName, mySlackId }: Props) {
         body: JSON.stringify({
           slackId: slackId.trim(),
           username: username.trim(),
+          ftuid: ftuid.trim(),
           role,
           source,
           fraudDone: role !== 'observer' ? fraudDone : false,
@@ -238,17 +245,39 @@ export function AddUser({ open, onClose, myName, mySlackId }: Props) {
           </div>
 
           {preview && (
-            <div>
-              <label className="block text-amber-400/80 font-mono text-xs mb-1">
-                USERNAME <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-zinc-950/50 border-2 border-amber-900/30 text-amber-200 rounded-xl p-2 font-mono text-sm focus:outline-none focus:border-amber-700 transition-colors"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-amber-400/80 font-mono text-xs mb-1">
+                  USERNAME <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-zinc-950/50 border-2 border-amber-900/30 text-amber-200 rounded-xl p-2 font-mono text-sm focus:outline-none focus:border-amber-700 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-amber-400/80 font-mono text-xs mb-1">
+                  FT ID{' '}
+                  <a
+                    href={`https://flavortown.hackclub.com/admin/users?query=${slackId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-300 hover:text-amber-200 underline"
+                  >
+                    (check here (click me duh))
+                  </a>{' '}
+                  <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={ftuid}
+                  onChange={(e) => setFtuid(e.target.value)}
+                  className="w-full bg-zinc-950/50 border-2 border-amber-900/30 text-amber-200 rounded-xl p-2 font-mono text-sm focus:outline-none focus:border-amber-700 transition-colors"
+                />
+              </div>
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-3">
