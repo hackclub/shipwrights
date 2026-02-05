@@ -26,7 +26,7 @@ def format_messages(ticket_messages, show_discussion=True):
     conversation=""
     for message in ticket_messages:
         if message.get("isStaff", False):
-            if show_discussion == True:
+            if show_discussion:
                 conversation += f"Shipwrights team: {message.get('msg', 'None').lstrip('?').strip()}\n"
                 pass
             if message.get('msg').startswith("?"):
@@ -403,13 +403,20 @@ def format_vibes_message(tickets):
 
 ## Your Task
 Analyze the provided tickets and determine:
-1. Whether the majority of users had a positive experience (true/false)
+1. Whether the majority of users had a positive experience (boolean: true or false)
 2. Select a direct quote from a user that represents the day's ticket flow (copy exactly, no modifications)
 3. Provide one actionable recommendation to improve the team based on the tickets
+
+## Important Rules
+- Only reference staff messages prefixed with '?' (these were sent to the user). Messages without '?' are internal discussions and should NOT be mentioned.
+- Do NOT provide recommendations about delays or response times. We are a volunteer team.
+- The quote must be from a USER, not from staff.
 
 ## Ticket Data
 {ticket_data}
 
 ## Response Format
 Return ONLY valid JSON with no markdown, no code blocks, no explanation:
-{{"bool": true, "quote_otd": "Exact user quote here", "recommendation": "Your improvement suggestion"}}"""
+{{"bool": true, "quote_otd": "Exact user quote here", "recommendation": "Your improvement suggestion"}}
+
+Note: Use lowercase true/false for the boolean value."""

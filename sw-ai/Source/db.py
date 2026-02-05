@@ -73,7 +73,7 @@ def get_recent_tickets():
             result.append({
                 'id': ticket['id'],
                 'question': ticket['question'],
-                'messages': format_messages(messages, False)
+                'messages': format_messages(messages)
             })
 
         return result

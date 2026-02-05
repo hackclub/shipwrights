@@ -115,6 +115,7 @@ def resolve_detected(ack, body, client):
     user_info = helpers.get_user_info(client, user_id)
     if ticket["status"] == "open":
         db.close_ticket(ticket_id)
+        db.claim_ticket(ticket_id, user_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
