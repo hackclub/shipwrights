@@ -26,9 +26,9 @@ def format_messages(ticket_messages):
     conversation=""
     for message in ticket_messages:
         if message.get("isStaff", False):
-            conversation += f"Shipwrights team: {message.get('msg', 'None')}"
+            conversation += f"Shipwrights team: {message.get('msg', 'None').lstrip('?').strip()}\n"
         else:
-            conversation += f"User: {message.get('msg', 'None')}"
+            conversation += f"User: {message.get('msg', 'None')}\n"
     return conversation
 
 def format_summary_prompt(ticket_messages, ticket_question):
@@ -389,3 +389,23 @@ def check_type(data: dict) -> dict:
             return {"type": "Unknown", "debug": {"input": input_data, "request": req_body, "response": None, "error": str(e)}}
 
     return {"type": "Unknown", "debug": {"input": input_data, "request": req_body, "response": None, "error": "max retries"}}
+
+
+def format_vibes_message(tickets):
+    ticket_data = ""
+    for ticket in tickets:
+        ticket_data += f"Ticket question: {ticket['question']}:\n{ticket['messages']}\n\n"
+    return f"""You are a bot designed to return qualitative metrics to the Shipwrights team by extracting user feedback from the day's tickets.
+
+## Your Task
+Analyze the provided tickets and determine:
+1. Whether the majority of users had a positive experience (true/false)
+2. Select a direct quote from a user that represents the day's ticket flow (copy exactly, no modifications)
+3. Provide one actionable recommendation to improve the team based on the tickets
+
+## Ticket Data
+{ticket_data}
+
+## Response Format
+Return ONLY valid JSON with no markdown, no code blocks, no explanation:
+{{"bool": true, "quote_otd": "Exact user quote here", "recommendation": "Your improvement suggestion"}}"""
