@@ -4,33 +4,32 @@
 export interface AuditTag {
   id: string
   label: string
-  category: 'positive' | 'negative' | 'neutral'
+  category: 'highlight' | 'needs-work' | 'note'
 }
 
-// Tags for approved projects - helps us understand what makes good submissions
-export const APPROVAL_TAGS: AuditTag[] = [
-  { id: 'good-demo', label: 'Good demo', category: 'positive' },
-  { id: 'creative', label: 'Creative/Original', category: 'positive' },
-  { id: 'polished', label: 'Polished', category: 'positive' },
-  { id: 'good-readme', label: 'Good README', category: 'positive' },
-  { id: 'learned-something', label: 'Learned something new', category: 'positive' },
-  { id: 'exceeded-expectations', label: 'Exceeded expectations', category: 'positive' },
-  { id: 'first-time-builder', label: 'First-time builder', category: 'neutral' },
-  { id: 'resubmission', label: 'Resubmission (improved)', category: 'neutral' },
+// Tags for shipped projects - helps us understand what makes good submissions
+export const SHIPPED_TAGS: AuditTag[] = [
+  { id: 'good-demo', label: 'Good demo', category: 'highlight' },
+  { id: 'creative', label: 'Creative/Original', category: 'highlight' },
+  { id: 'polished', label: 'Polished', category: 'highlight' },
+  { id: 'good-readme', label: 'Good README', category: 'highlight' },
+  { id: 'learned-something', label: 'Learned something new', category: 'highlight' },
+  { id: 'exceeded-expectations', label: 'Exceeded expectations', category: 'highlight' },
+  { id: 'first-time-builder', label: 'First-time builder', category: 'note' },
+  { id: 'resubmission', label: 'Resubmission (improved)', category: 'note' },
 ]
 
-// Tags for rejected projects - helps us track common issues
-export const REJECTION_TAGS: AuditTag[] = [
-  { id: 'demo-broken', label: 'Demo broken/missing', category: 'negative' },
-  { id: 'demo-slow', label: 'Demo too slow', category: 'negative' },
-  { id: 'no-readme', label: 'No/poor README', category: 'negative' },
-  { id: 'tutorial-clone', label: 'Tutorial clone', category: 'negative' },
-  { id: 'ai-slop', label: 'Suspected AI-generated', category: 'negative' },
-  { id: 'incomplete', label: 'Incomplete/WIP', category: 'negative' },
-  { id: 'no-originality', label: 'Nothing original', category: 'negative' },
-  { id: 'cant-verify', label: "Couldn't verify it works", category: 'negative' },
-  { id: 'wrong-links', label: 'Wrong/dead links', category: 'negative' },
-  { id: 'private-repo', label: 'Private repo', category: 'negative' },
+// Tags for projects that need more work - helps us track common blockers
+export const REVISION_TAGS: AuditTag[] = [
+  { id: 'demo-broken', label: "Demo didn't load", category: 'needs-work' },
+  { id: 'demo-slow', label: 'Demo was too slow to test', category: 'needs-work' },
+  { id: 'no-readme', label: 'README needs more detail', category: 'needs-work' },
+  { id: 'tutorial-clone', label: 'Looks like a tutorial project', category: 'needs-work' },
+  { id: 'missing-ai-disclosure', label: 'Missing AI disclosure', category: 'needs-work' },
+  { id: 'incomplete', label: 'Not finished yet', category: 'needs-work' },
+  { id: 'cloned-project', label: 'Appears to be a clone/fork', category: 'needs-work' },
+  { id: 'wrong-links', label: 'Links were broken', category: 'needs-work' },
+  { id: 'private-repo', label: "Repo is private, can't see code", category: 'needs-work' },
 ]
 
 // Checklist reminders for reviewers
