@@ -34,11 +34,13 @@ model User {
   pushSubs         PushSub[]
   ticketNotes      TicketNote[]
 
-  cookieBalance   Float        @default(0)
-  cookiesEarned   Float        @default(0)
-  payoutReqs      PayoutReq[]  @relation("PayoutReqs")
-  payoutApprovals PayoutReq[]  @relation("PayoutApprovals")
-  yswsReviews     YswsReview[] @relation("YswsReviewer")
+  cookieBalance    Float              @default(0)
+  cookiesEarned    Float              @default(0)
+  payoutReqs       PayoutReq[]        @relation("PayoutReqs")
+  payoutApprovals  PayoutReq[]        @relation("PayoutApprovals")
+  yswsReviews      YswsReview[]       @relation("YswsReviewer")
+  appliedAuditTags ShipCertAuditTag[]
+  fraudReports     FraudReport[]      @relation("FraudReporter")
 
   @@map("users")
 }
@@ -176,12 +178,21 @@ model ShipCert {
   yswsReturnedBy   String?
   yswsReturnedAt   DateTime?
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  reviewer    User?        @relation(fields: [reviewerId], references: [id])
-  claimer     User?        @relation("ClaimedBy", fields: [claimerId], references: [id])
-  assignments Assignment[]
-  yswsReviews YswsReview[]
+  repoUrlKey            String?   @db.VarChar(255)
+  duplicateOfShipCertId Int?
+  duplicatesCheckedAt   DateTime?
+
+  duplicateOf ShipCert?  @relation("ShipCertDuplicate", fields: [duplicateOfShipCertId], references: [id])
+  duplicates  ShipCert[] @relation("ShipCertDuplicate")
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  reviewer     User?              @relation(fields: [reviewerId], references: [id])
+  claimer      User?              @relation("ClaimedBy", fields: [claimerId], references: [id])
+  assignments  Assignment[]
+  yswsReviews  YswsReview[]
+  auditTags    ShipCertAuditTag[]
+  fraudReports FraudReport[]
 
   @@index([reviewerId])
   @@index([status])
@@ -192,7 +203,44 @@ model ShipCert {
   @@index([status, projectType])
   @@index([status, yswsReturnedAt, createdAt])
   @@index([status, reviewCompletedAt, reviewerId])
+  @@index([repoUrlKey])
+  @@index([duplicateOfShipCertId])
+  @@index([duplicatesCheckedAt])
   @@map("ship_certs")
+}
+
+model AuditTag {
+  id       String  @id @db.VarChar(64)
+  label    String  @db.VarChar(255)
+  category String  @db.VarChar(32)
+  intent   String  @default("analytics") @db.VarChar(32) // analytics, ysws, fraud, user-pattern
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shipCertTags ShipCertAuditTag[]
+  userSignals  UserAuditSignal[]
+
+  @@index([category])
+  @@index([intent])
+  @@map("audit_tags")
+}
+
+model ShipCertAuditTag {
+  shipCertId  Int
+  tagId       String   @db.VarChar(64)
+  appliedById Int?
+  appliedAt   DateTime @default(now())
+
+  shipCert  ShipCert @relation(fields: [shipCertId], references: [id], onDelete: Cascade)
+  tag       AuditTag @relation(fields: [tagId], references: [id], onDelete: Restrict)
+  appliedBy User?    @relation(fields: [appliedById], references: [id])
+
+  @@id([shipCertId, tagId])
+  @@index([tagId, appliedAt])
+  @@index([shipCertId])
+  @@map("ship_cert_audit_tags")
 }
 
 model YswsReview {
@@ -214,6 +262,41 @@ model YswsReview {
   @@index([status])
   @@index([reviewerId])
   @@map("ysws_reviews")
+}
+
+model UserAuditSignal {
+  id        String   @id @default(cuid())
+  visitorId String   @db.VarChar(50) // ftSlackId of submitter
+  tagId     String   @db.VarChar(64)
+  count     Int      @default(1)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @updatedAt
+
+  tag AuditTag @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@unique([visitorId, tagId])
+  @@index([tagId, lastSeen])
+  @@index([visitorId])
+  @@map("user_audit_signals")
+}
+
+model FraudReport {
+  id           String   @id @default(cuid())
+  shipCertId   Int
+  reportedById Int?
+  reason       String?  @db.Text
+  payload      Json?
+  externalRef  String?  @db.VarChar(255) // id from external fraud platform
+  status       String   @default("pending") @db.VarChar(32)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  shipCert   ShipCert @relation(fields: [shipCertId], references: [id], onDelete: Cascade)
+  reportedBy User?    @relation("FraudReporter", fields: [reportedById], references: [id])
+
+  @@index([shipCertId, createdAt])
+  @@index([status])
+  @@map("fraud_reports")
 }
 
 model Yubikey {

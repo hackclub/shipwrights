@@ -17,6 +17,8 @@ interface Review {
   totalTime: number
   reviewer: string | null
   createdAt: string
+  isDuplicate?: boolean
+  duplicateOfShipCertId?: number | null
 }
 
 interface Stats {
@@ -296,11 +298,18 @@ export function YswsView({ initial }: Props) {
                   #{r.id} • {r.devlogCount} devlogs
                 </div>
               </div>
-              <span
-                className={`px-2 py-1 rounded font-mono text-xs border ml-2 ${sColor(r.status)}`}
-              >
-                {r.status}
-              </span>
+              <div className="flex items-center gap-1 ml-2">
+                {r.isDuplicate && (
+                  <span className="px-2 py-1 rounded font-mono text-xs border bg-orange-900/30 text-orange-400 border-orange-700">
+                    DUP
+                  </span>
+                )}
+                <span
+                  className={`px-2 py-1 rounded font-mono text-xs border ${sColor(r.status)}`}
+                >
+                  {r.status}
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               <div>
@@ -354,11 +363,18 @@ export function YswsView({ initial }: Props) {
                     <div className="text-gray-500 font-mono text-xs">Type: {r.type}</div>
                   </td>
                   <td className="p-4">
-                    <span
-                      className={`inline-block px-2 py-1 rounded font-mono text-xs border ${sColor(r.status)}`}
-                    >
-                      {r.status}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {r.isDuplicate && (
+                        <span className="inline-block px-2 py-1 rounded font-mono text-xs border bg-orange-900/30 text-orange-400 border-orange-700">
+                          DUP
+                        </span>
+                      )}
+                      <span
+                        className={`inline-block px-2 py-1 rounded font-mono text-xs border ${sColor(r.status)}`}
+                      >
+                        {r.status}
+                      </span>
+                    </div>
                   </td>
                   <td className="p-4 text-white font-mono text-sm">{r.devlogCount}</td>
                   <td className="p-4 text-white font-mono text-sm">{fmtTime(r.totalTime)}</td>

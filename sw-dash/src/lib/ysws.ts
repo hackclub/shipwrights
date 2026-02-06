@@ -180,6 +180,8 @@ async function fetchYsws(filters: Filters = {}) {
       totalTime: devlogs.reduce((sum, d) => sum + d.origSecs, 0),
       reviewer: r.reviewer?.username || null,
       createdAt: r.createdAt.toISOString(),
+      isDuplicate: !!r.shipCert.duplicateOfShipCertId,
+      duplicateOfShipCertId: r.shipCert.duplicateOfShipCertId,
     }
   })
 
@@ -341,6 +343,7 @@ export async function getOne(id: number) {
           readmeUrl: true,
           proofVideoUrl: true,
           devTime: true,
+          duplicateOfShipCertId: true,
           reviewer: { select: { id: true, username: true } },
           reviewCompletedAt: true,
           createdAt: true,
@@ -388,10 +391,38 @@ export async function getOne(id: number) {
     }
   }
 
+  let duplicateInfo = null
+  if (review.shipCert.duplicateOfShipCertId) {
+    const original = await prisma.shipCert.findUnique({
+      where: { id: review.shipCert.duplicateOfShipCertId },
+      select: {
+        id: true,
+        ftUsername: true,
+        ftSlackId: true,
+        projectName: true,
+        status: true,
+        createdAt: true,
+        yswsReviews: { select: { id: true }, take: 1 },
+      },
+    })
+    if (original) {
+      duplicateInfo = {
+        originalCertId: original.id,
+        originalProject: original.projectName,
+        originalSubmitter: original.ftUsername,
+        originalStatus: original.status,
+        originalCreatedAt: original.createdAt.toISOString(),
+        originalYswsReviewId: original.yswsReviews[0]?.id ?? null,
+        isCrossUser: original.ftSlackId !== review.shipCert.ftSlackId,
+      }
+    }
+  }
+
   return {
     ...review,
     devlogs: merged,
     aiDeclaration,
     fraudUrls,
+    duplicateInfo,
   }
 }
