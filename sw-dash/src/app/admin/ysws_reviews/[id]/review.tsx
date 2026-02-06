@@ -49,6 +49,16 @@ interface ShipCert {
   createdAt: Date
 }
 
+interface DuplicateInfo {
+  originalCertId: number
+  originalProject: string | null
+  originalSubmitter: string | null
+  originalStatus: string
+  originalCreatedAt: string
+  originalYswsReviewId: number | null
+  isCrossUser: boolean
+}
+
 interface ReviewData {
   id: number
   status: string
@@ -58,6 +68,7 @@ interface ReviewData {
   reviewer: { username: string } | null
   aiDeclaration?: string | null
   fraudUrls?: { billy: string; joe: string } | null
+  duplicateInfo?: DuplicateInfo | null
 }
 
 interface Props {
@@ -226,6 +237,64 @@ export function Review({ data, canEdit }: Props) {
           </button>
         </div>
       </div>
+
+      {data.duplicateInfo && (
+        <div
+          className={`border-4 rounded-3xl p-4 md:p-6 mb-4 md:mb-6 shadow-xl ${data.duplicateInfo.isCrossUser ? 'bg-red-950/30 border-red-700/60' : 'bg-orange-950/30 border-orange-700/60'}`}
+        >
+          <h3
+            className={`font-mono text-sm font-bold mb-2 ${data.duplicateInfo.isCrossUser ? 'text-red-400' : 'text-orange-400'}`}
+          >
+            {data.duplicateInfo.isCrossUser
+              ? 'Cross-User Duplicate Detected'
+              : 'Resubmission Detected'}
+          </h3>
+          <div className="space-y-1 text-sm font-mono">
+            <div>
+              <span className="text-gray-400">Original Project:</span>{' '}
+              <span className="text-white">
+                {data.duplicateInfo.originalProject || 'unknown'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">Submitted by:</span>{' '}
+              <span
+                className={
+                  data.duplicateInfo.isCrossUser ? 'text-red-300 font-bold' : 'text-white'
+                }
+              >
+                {data.duplicateInfo.originalSubmitter || 'unknown'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">Status:</span>{' '}
+              <span className="text-white">{data.duplicateInfo.originalStatus}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Submitted:</span>{' '}
+              <span className="text-white">
+                {new Date(data.duplicateInfo.originalCreatedAt).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Link
+                href={`/admin/ship_certifications/${data.duplicateInfo.originalCertId}`}
+                className="bg-zinc-800 text-amber-400 px-3 py-1.5 rounded-xl font-mono text-xs hover:bg-zinc-700 border border-zinc-600"
+              >
+                View Original Cert #{data.duplicateInfo.originalCertId}
+              </Link>
+              {data.duplicateInfo.originalYswsReviewId && (
+                <Link
+                  href={`/admin/ysws_reviews/${data.duplicateInfo.originalYswsReviewId}`}
+                  className="bg-zinc-800 text-cyan-400 px-3 py-1.5 rounded-xl font-mono text-xs hover:bg-zinc-700 border border-zinc-600"
+                >
+                  View Original YSWS #{data.duplicateInfo.originalYswsReviewId}
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
         <div className="lg:col-span-2 space-y-4 md:space-y-6">

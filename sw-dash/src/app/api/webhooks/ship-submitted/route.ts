@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { bust } from '@/lib/cache'
 import { syslog } from '@/lib/syslog'
 import { checkType } from '@/lib/typecheck'
+import { normalizeRepoUrl } from '@/lib/duplicate-repo'
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
         demoUrl: links?.demo || null,
         repoUrl: links?.repo || null,
         readmeUrl: links?.readme || null,
+        repoUrlKey: normalizeRepoUrl(links?.repo),
         devTime: metadata?.devTime
           ? `${Math.floor(metadata.devTime / 3600)}h ${Math.floor((metadata.devTime % 3600) / 60)}m`
           : null,
