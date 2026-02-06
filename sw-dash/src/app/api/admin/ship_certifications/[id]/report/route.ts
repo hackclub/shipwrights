@@ -22,10 +22,16 @@ export const POST = withParams(PERMS.certs_report)(async ({ user, req, params, i
   if (!baseUrl || !reportKey) {
     if (isDev) {
       console.log('[MOCK] fraud report received:', { ftProjectId, details, user: user.username })
-      await syslog('fraud_report_sent', 200, user, `[MOCK] reported ${ftProjectId} to fraud squad`, {
-        ip,
-        userAgent: ua,
-      })
+      await syslog(
+        'fraud_report_sent',
+        200,
+        user,
+        `[MOCK] reported ${ftProjectId} to fraud squad`,
+        {
+          ip,
+          userAgent: ua,
+        }
+      )
       return NextResponse.json({ ok: true, mock: true })
     }
     console.error('flavortown report config missing')

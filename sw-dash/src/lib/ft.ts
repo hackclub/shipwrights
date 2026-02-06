@@ -51,42 +51,55 @@ async function getProj(ftProjectId: string) {
 }
 
 export async function fetchDevlogs(ftProjectId: string): Promise<FtDevlog[]> {
-  const project = await getProj(ftProjectId)
-  if (!project) return []
-
   const baseUrl = process.env.NEXT_PUBLIC_FLAVORTOWN_URL
   const apiKey = process.env.FLAVORTOWN_YSWS_API_KEY
-  if (!baseUrl || !apiKey) return []
 
-  const devlogIds = project.devlog_ids || []
-  if (!devlogIds.length) return []
+  if (!baseUrl || !apiKey) {
+    console.error('ft ysws config missing bruh')
+    return []
+  }
 
-  const devlogs = await Promise.all(
-    devlogIds.map(async (id: number) => {
-      const devlogUrl = `${baseUrl}/api/v1/devlogs/${id}`
-      try {
-        const devlogRes = await fetch(devlogUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-        })
+  const url = `${baseUrl}/api/v1/projects/${ftProjectId}/devlogs`
 
-        if (!devlogRes.ok) {
-          console.error(`ft devlog ${id} fetch borked: ${devlogRes.status}`)
-          return null
-        }
-
-        return await devlogRes.json()
-      } catch (e) {
-        console.error(`ft devlog ${id} fetch exploded:`, e)
-        return null
-      }
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
     })
-  )
 
-  return devlogs.filter((d): d is FtDevlog => d !== null)
+    if (!res.ok) {
+      const txt = await res.text()
+      console.error(`ft devlog fetch borked: ${res.status} ${txt}`)
+      await syslog(
+        'ft_devlog_fetch_fail',
+        res.status,
+        null,
+        `couldnt fetch devlogs for ${ftProjectId}`,
+        undefined,
+        { metadata: { ftProjectId, url, error: txt }, severity: 'error' }
+      )
+      return []
+    }
+
+    const data = await res.json()
+    return data.devlogs || []
+  } catch (e) {
+    console.error('ft devlog fetch exploded:', e)
+    await syslog(
+      'ft_devlog_fetch_error',
+      500,
+      null,
+      `devlog fetch crashed for ${ftProjectId}`,
+      undefined,
+      {
+        metadata: { ftProjectId, error: e instanceof Error ? e.message : String(e) },
+        severity: 'error',
+      }
+    )
+    return []
+  }
 }
 
 export async function getAiDecl(ftProjectId: string) {

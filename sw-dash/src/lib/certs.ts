@@ -59,9 +59,13 @@ async function fetchStats(lbMode: string) {
   if (lbMode === 'weekly') {
     const n = new Date()
     const day = n.getUTCDay()
-    weekStart = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() - day, 0, 0, 0, 0))
+    weekStart = new Date(
+      Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() - day, 0, 0, 0, 0)
+    )
     weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-    yesterdayEndUTC = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0, 0, 0, 0))
+    yesterdayEndUTC = new Date(
+      Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0, 0, 0, 0)
+    )
   }
 
   const [historyRows, statsRows, leaderRows] = await Promise.all([
@@ -148,9 +152,10 @@ async function fetchStats(lbMode: string) {
   const approvedBeforeToday = toNum(statsRow?.approvedBeforeToday)
   const rejectedBeforeToday = toNum(statsRow?.rejectedBeforeToday)
   const totalJudgedYesterday = approvedBeforeToday + rejectedBeforeToday
-  const approvalRateYesterday = totalJudgedYesterday > 0
-    ? Number(((approvedBeforeToday / totalJudgedYesterday) * 100).toFixed(1))
-    : 0
+  const approvalRateYesterday =
+    totalJudgedYesterday > 0
+      ? Number(((approvedBeforeToday / totalJudgedYesterday) * 100).toFixed(1))
+      : 0
 
   const calcDelta = (current: number, previous: number) => {
     if (previous === 0) return current > 0 ? 100 : 0
@@ -335,10 +340,7 @@ export async function getCerts(filters: Filters = {}) {
   const lbMode = filters.lbMode || 'weekly'
 
   // Fetch stats and list in parallel with separate caches
-  const [statsData, listData] = await Promise.all([
-    getStats(lbMode),
-    getList(filters),
-  ])
+  const [statsData, listData] = await Promise.all([getStats(lbMode), getList(filters)])
 
   return {
     certifications: listData.certifications,

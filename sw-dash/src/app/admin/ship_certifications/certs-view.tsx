@@ -185,11 +185,15 @@ export function CertsView({ initial }: Props) {
           <div className="mb-4">
             <div className="text-gray-400 font-mono text-xs mb-1">Today&apos;s progress</div>
             <div className="flex items-baseline gap-3">
-              <span className={`text-3xl md:text-4xl font-bold font-mono ${(stats.netFlow ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(stats.netFlow ?? 0) >= 0 ? '+' : ''}{stats.netFlow ?? 0}
+              <span
+                className={`text-3xl md:text-4xl font-bold font-mono ${(stats.netFlow ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}
+              >
+                {(stats.netFlow ?? 0) >= 0 ? '+' : ''}
+                {stats.netFlow ?? 0}
               </span>
               <span className="text-gray-400 font-mono text-sm">
-                {(stats.netFlow ?? 0) >= 0 ? 'ahead' : 'behind'} — reviewed {stats.decisionsToday}, received {stats.newShipsToday} new
+                {(stats.netFlow ?? 0) >= 0 ? 'ahead' : 'behind'} — reviewed {stats.decisionsToday},
+                received {stats.newShipsToday} new
               </span>
             </div>
           </div>
@@ -199,7 +203,9 @@ export function CertsView({ initial }: Props) {
             <div>
               <div className="text-gray-500 font-mono text-xs mb-1">In queue</div>
               <div className="flex items-baseline gap-2">
-                <span className={`text-xl font-bold font-mono ${stats.pending > QUEUE_TARGET ? 'text-red-400' : 'text-green-400'}`}>
+                <span
+                  className={`text-xl font-bold font-mono ${stats.pending > QUEUE_TARGET ? 'text-red-400' : 'text-green-400'}`}
+                >
                   {stats.pending}
                 </span>
                 {stats.pending > QUEUE_TARGET ? (
@@ -207,17 +213,12 @@ export function CertsView({ initial }: Props) {
                     ({stats.pending - QUEUE_TARGET} over target)
                   </span>
                 ) : (
-                  <span className="text-green-400/70 font-mono text-xs">
-                    ✓ at target
-                  </span>
+                  <span className="text-green-400/70 font-mono text-xs">✓ at target</span>
                 )}
               </div>
             </div>
 
-            <AvgWaitChart
-              avgQueueTime={stats.avgQueueTime}
-              history={stats.avgWaitHistory || []}
-            />
+            <AvgWaitChart avgQueueTime={stats.avgQueueTime} history={stats.avgWaitHistory || []} />
 
             <div>
               <div className="text-gray-500 font-mono text-xs mb-1">Oldest in queue</div>
@@ -229,7 +230,9 @@ export function CertsView({ initial }: Props) {
                   {stats.oldestInQueue}
                 </Link>
               ) : (
-                <span className="text-xl font-bold font-mono text-white">{stats.oldestInQueue}</span>
+                <span className="text-xl font-bold font-mono text-white">
+                  {stats.oldestInQueue}
+                </span>
               )}
             </div>
 
@@ -272,13 +275,19 @@ export function CertsView({ initial }: Props) {
               leaderboard.slice(0, 10).map((r, i) => {
                 const change = r.rankChange
                 return (
-                  <div key={`${r.name}-${i}`} className="flex justify-between items-center text-xs font-mono bg-zinc-900/50 rounded-lg px-2 py-1.5">
+                  <div
+                    key={`${r.name}-${i}`}
+                    className="flex justify-between items-center text-xs font-mono bg-zinc-900/50 rounded-lg px-2 py-1.5"
+                  >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="text-gray-500 w-4">{i + 1}.</span>
                       <span className="text-white truncate">{r.name}</span>
                       {change !== undefined && change !== 0 && (
-                        <span className={`text-[10px] ${change > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {change > 0 ? '▲' : '▼'}{Math.abs(change)}
+                        <span
+                          className={`text-[10px] ${change > 0 ? 'text-green-400' : 'text-red-400'}`}
+                        >
+                          {change > 0 ? '▲' : '▼'}
+                          {Math.abs(change)}
                         </span>
                       )}
                     </div>

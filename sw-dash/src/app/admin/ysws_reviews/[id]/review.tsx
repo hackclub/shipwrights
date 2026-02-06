@@ -102,6 +102,7 @@ export function Review({ data, canEdit }: Props) {
   const [busy, setBusy] = useState(false)
   const [showReturn, setShowReturn] = useState(false)
   const [returnReasons, setReturnReasons] = useState<string[]>([])
+  const [customReturnReason, setCustomReturnReason] = useState('')
   const [demoOpened, setDemoOpened] = useState(false)
   const [repoOpened, setRepoOpened] = useState(false)
 
@@ -791,7 +792,7 @@ export function Review({ data, canEdit }: Props) {
           <div className="bg-zinc-900 border-2 border-amber-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <h3 className="text-white font-mono text-lg mb-2">Return to Ship Certs</h3>
             <p className="text-gray-400 font-mono text-sm mb-4">why u returning this:</p>
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-4">
               {RETURN_REASONS.map((r) => (
                 <label
                   key={r}
@@ -811,6 +812,17 @@ export function Review({ data, canEdit }: Props) {
                 </label>
               ))}
             </div>
+            <div className="mb-6">
+              <label className="text-gray-400 font-mono text-sm mb-2 block">
+                Additional details (optional):
+              </label>
+              <textarea
+                value={customReturnReason}
+                onChange={(e) => setCustomReturnReason(e.target.value)}
+                className="w-full bg-zinc-800 text-white px-3 py-2 rounded font-mono text-sm h-20 resize-none border border-zinc-600"
+                placeholder="Add any extra context..."
+              />
+            </div>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowReturn(false)}
@@ -820,9 +832,15 @@ export function Review({ data, canEdit }: Props) {
                 nvm
               </button>
               <button
-                onClick={() => submit('return', { returnReason: returnReasons.join(', ') })}
+                onClick={() => {
+                  const allReasons = [...returnReasons]
+                  if (customReturnReason.trim()) {
+                    allReasons.push(customReturnReason.trim())
+                  }
+                  submit('return', { returnReason: allReasons.join(', ') })
+                }}
                 className="bg-orange-700 text-white px-4 py-2 rounded-xl font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={busy || returnReasons.length === 0}
+                disabled={busy || (returnReasons.length === 0 && !customReturnReason.trim())}
               >
                 {busy ? 'returning...' : 'yeet it back'}
               </button>

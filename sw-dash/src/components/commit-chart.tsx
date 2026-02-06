@@ -30,6 +30,28 @@ export function CommitChart({ commits, repoUrl }: Props) {
 
   const repo = repoUrl ? parseRepo(repoUrl) : null
 
+  const getCommitUrl = (sha: string) =>
+    repo ? `https://github.com/${repo.owner}/${repo.repo}/commit/${sha}` : null
+
+  const CommitLink = ({
+    sha,
+    children,
+    className = '',
+  }: {
+    sha: string
+    children: React.ReactNode
+    className?: string
+  }) => {
+    const url = getCommitUrl(sha)
+    return url ? (
+      <a href={url} target="_blank" rel="noopener noreferrer" className={className}>
+        {children}
+      </a>
+    ) : (
+      <>{children}</>
+    )
+  }
+
   const data = sorted.map((c) => ({
     name: c.sha.slice(0, 7),
     adds: c.adds,
@@ -40,16 +62,15 @@ export function CommitChart({ commits, repoUrl }: Props) {
   const CustomTick = (props: any) => {
     const { x, y, payload } = props
     const commit = data.find((d) => d.name === payload.value)
-    if (!commit || !repo) {
+    if (!commit) {
       return (
         <text x={x} y={y + 10} textAnchor="middle" fill="#fff" fontSize={14} fontFamily="monospace">
           {payload.value}
         </text>
       )
     }
-    const url = `https://github.com/${repo.owner}/${repo.repo}/commit/${commit.sha}`
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer">
+      <CommitLink sha={commit.sha}>
         <text
           x={x}
           y={y + 10}
@@ -62,7 +83,7 @@ export function CommitChart({ commits, repoUrl }: Props) {
         >
           {payload.value}
         </text>
-      </a>
+      </CommitLink>
     )
   }
 
@@ -79,7 +100,12 @@ export function CommitChart({ commits, repoUrl }: Props) {
         </div>
         <div className="h-20 flex items-center justify-center border border-zinc-700 rounded-lg">
           <div className="text-center font-mono">
-            <div className="text-gray-400 text-xs">{data[0].name}</div>
+            <CommitLink
+              sha={data[0].sha}
+              className="text-green-500 text-xs hover:text-green-300 underline"
+            >
+              {data[0].name}
+            </CommitLink>
             <div className="flex gap-4 mt-1">
               <span className="text-green-400 text-sm">+{data[0].adds}</span>
               <span className="text-red-400 text-sm">-{data[0].dels}</span>

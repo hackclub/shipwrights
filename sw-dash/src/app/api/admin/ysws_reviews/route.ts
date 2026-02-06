@@ -4,7 +4,7 @@ import { getYsws } from '@/lib/ysws'
 
 export const GET = yswsApi(async (req) => {
   const params = req.nextUrl.searchParams
-  const status = params.get('status') || 'pending'
+  const status = params.get('status') || null
   const sortBy = params.get('sortBy') || 'newest'
   const lbMode = params.get('lbMode') || 'weekly'
   const hours = params.get('hours') ? parseInt(params.get('hours')!) : null

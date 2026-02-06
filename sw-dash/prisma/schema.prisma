@@ -255,7 +255,7 @@ model YswsReview {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  shipCert ShipCert @relation(fields: [shipCertId], references: [id])
+  shipCert ShipCert @relation(fields: [shipCertId], references: [id], onDelete: Cascade)
   reviewer User?    @relation("YswsReviewer", fields: [reviewerId], references: [id])
 
   @@index([shipCertId])

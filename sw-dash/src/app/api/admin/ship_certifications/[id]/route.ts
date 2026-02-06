@@ -86,21 +86,21 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
 
     const history = cert.ftProjectId
       ? await prisma.shipCert.findMany({
-          where: {
-            ftProjectId: cert.ftProjectId,
-            id: { not: cert.id },
-            status: { in: ['approved', 'rejected'] },
-          },
-          include: {
-            reviewer: {
-              select: {
-                username: true,
-              },
+        where: {
+          ftProjectId: cert.ftProjectId,
+          id: { not: cert.id },
+          status: { in: ['approved', 'rejected'] },
+        },
+        include: {
+          reviewer: {
+            select: {
+              username: true,
             },
           },
-          orderBy: { reviewCompletedAt: 'desc' },
-          take: 10,
-        })
+        },
+        orderBy: { reviewCompletedAt: 'desc' },
+        take: 10,
+      })
       : []
 
     return NextResponse.json({
@@ -124,18 +124,18 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       proofVideo: cert.proofVideoUrl,
       reviewer: cert.reviewer
         ? {
-            username: cert.reviewer.username,
-            avatar: cert.reviewer.avatar,
-          }
+          username: cert.reviewer.username,
+          avatar: cert.reviewer.avatar,
+        }
         : null,
       syncedToFt: cert.syncedToFt,
       assignment: cert.assignments[0]
         ? {
-            id: cert.assignments[0].id,
-            status: cert.assignments[0].status,
-            assignee: cert.assignments[0].assignee?.username || null,
-            createdAt: cert.assignments[0].createdAt.toISOString(),
-          }
+          id: cert.assignments[0].id,
+          status: cert.assignments[0].status,
+          assignee: cert.assignments[0].assignee?.username || null,
+          createdAt: cert.assignments[0].createdAt.toISOString(),
+        }
         : null,
       notes: internalNotes.map((note) => ({
         id: note.id,
