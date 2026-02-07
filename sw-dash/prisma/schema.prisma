@@ -149,6 +149,7 @@ model ShipCert {
   ftProjectId String?
   ftSlackId   String?
   ftUsername  String?
+  ftType      String?
 
   projectName String?
   projectType String?
