@@ -47,6 +47,7 @@ export interface Reviewer {
   name: string
   count: number
   rankChange?: number
+  streak?: number
 }
 
 export interface ShipCert {

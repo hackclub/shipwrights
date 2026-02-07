@@ -86,21 +86,21 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
 
     const history = cert.ftProjectId
       ? await prisma.shipCert.findMany({
-        where: {
-          ftProjectId: cert.ftProjectId,
-          id: { not: cert.id },
-          status: { in: ['approved', 'rejected'] },
-        },
-        include: {
-          reviewer: {
-            select: {
-              username: true,
+          where: {
+            ftProjectId: cert.ftProjectId,
+            id: { not: cert.id },
+            status: { in: ['approved', 'rejected'] },
+          },
+          include: {
+            reviewer: {
+              select: {
+                username: true,
+              },
             },
           },
-        },
-        orderBy: { reviewCompletedAt: 'desc' },
-        take: 10,
-      })
+          orderBy: { reviewCompletedAt: 'desc' },
+          take: 10,
+        })
       : []
 
     return NextResponse.json({
@@ -124,18 +124,18 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       proofVideo: cert.proofVideoUrl,
       reviewer: cert.reviewer
         ? {
-          username: cert.reviewer.username,
-          avatar: cert.reviewer.avatar,
-        }
+            username: cert.reviewer.username,
+            avatar: cert.reviewer.avatar,
+          }
         : null,
       syncedToFt: cert.syncedToFt,
       assignment: cert.assignments[0]
         ? {
-          id: cert.assignments[0].id,
-          status: cert.assignments[0].status,
-          assignee: cert.assignments[0].assignee?.username || null,
-          createdAt: cert.assignments[0].createdAt.toISOString(),
-        }
+            id: cert.assignments[0].id,
+            status: cert.assignments[0].status,
+            assignee: cert.assignments[0].assignee?.username || null,
+            createdAt: cert.assignments[0].createdAt.toISOString(),
+          }
         : null,
       notes: internalNotes.map((note) => ({
         id: note.id,
@@ -288,6 +288,99 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
           cookiesEarned: { increment: updateData.cookiesEarned },
         },
       })
+    }
+
+    if (verdict) {
+      const getESTComponents = (date: Date) => {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          hourCycle: 'h23',
+        }).formatToParts(date)
+        const getVal = (type: string) => parseInt(parts.find((p) => p.type === type)?.value || '0')
+
+        return {
+          y: getVal('year'),
+          m: getVal('month') - 1,
+          d: getVal('day'),
+          h: getVal('hour'),
+        }
+      }
+
+      const now = new Date()
+      const { y, m, d } = getESTComponents(now)
+
+      const cand1 = new Date(Date.UTC(y, m, d, 5, 0, 0, 0)) // 5 AM UTC
+      const cand2 = new Date(Date.UTC(y, m, d, 4, 0, 0, 0)) // 4 AM UTC
+
+      const check1 = getESTComponents(cand1)
+
+      let startOfTodayUTC = cand1
+      if (check1.h !== 0) {
+        startOfTodayUTC = cand2
+      }
+
+      const todayCount = await prisma.shipCert.count({
+        where: {
+          reviewerId: certifierId !== undefined ? certifierId : user.id,
+          status: { in: ['approved', 'rejected'] },
+          reviewCompletedAt: {
+            gte: startOfTodayUTC,
+          },
+        },
+      })
+
+      if (todayCount >= 7) {
+        const userIdToUpdate = certifierId !== undefined ? certifierId : user.id
+        const currentUser = await prisma.user.findUnique({
+          where: { id: userIdToUpdate },
+          select: { streak: true, lastReviewDate: true },
+        })
+
+        if (currentUser) {
+          let newStreak = currentUser.streak
+          let shouldUpdate = false
+
+          const todayNormalized = new Date(Date.UTC(y, m, d))
+          const yesterdayNormalized = new Date(todayNormalized)
+          yesterdayNormalized.setDate(yesterdayNormalized.getDate() - 1)
+
+          let lastReviewNormalized = null
+          if (currentUser.lastReviewDate) {
+            const ld = currentUser.lastReviewDate
+
+            lastReviewNormalized = new Date(
+              Date.UTC(ld.getUTCFullYear(), ld.getUTCMonth(), ld.getUTCDate())
+            )
+          }
+
+          if (
+            !lastReviewNormalized ||
+            lastReviewNormalized.getTime() < yesterdayNormalized.getTime()
+          ) {
+            newStreak = 1
+            shouldUpdate = true
+          } else if (lastReviewNormalized.getTime() === yesterdayNormalized.getTime()) {
+            newStreak += 1
+            shouldUpdate = true
+          } else if (lastReviewNormalized.getTime() === todayNormalized.getTime()) {
+            shouldUpdate = false
+          }
+
+          if (shouldUpdate) {
+            await prisma.user.update({
+              where: { id: userIdToUpdate },
+              data: {
+                streak: newStreak,
+                lastReviewDate: todayNormalized,
+              },
+            })
+          }
+        }
+      }
     }
 
     if (

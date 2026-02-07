@@ -274,12 +274,34 @@ export function CertsView({ initial }: Props) {
             {leaderboard.length > 0 ? (
               leaderboard.slice(0, 10).map((r, i) => {
                 const change = r.rankChange
+                const streak = r.streak || 0
+
+                let streakStyle = 'border-transparent'
+                let streakIconColor = 'text-gray-500'
+
+                if (streak >= 17) {
+                  streakStyle = 'border-red-500/40 bg-gradient-to-r from-red-900/30 to-transparent'
+                  streakIconColor = 'text-red-400'
+                } else if (streak >= 7) {
+                  streakStyle =
+                    'border-purple-500/40 bg-gradient-to-r from-purple-900/10 to-transparent'
+                  streakIconColor = 'text-purple-300'
+                } else if (streak >= 5) {
+                  streakStyle =
+                    'border-blue-500/40 bg-gradient-to-r from-blue-900/10 to-transparent'
+                  streakIconColor = 'text-blue-300'
+                } else if (streak >= 1) {
+                  streakStyle =
+                    'border-amber-700/30 bg-gradient-to-r from-amber-900/5 to-transparent'
+                  streakIconColor = 'text-amber-500'
+                }
+
                 return (
                   <div
                     key={`${r.name}-${i}`}
-                    className="flex justify-between items-center text-xs font-mono bg-zinc-900/50 rounded-lg px-2 py-1.5"
+                    className={`flex justify-between items-center text-xs font-mono rounded-lg px-2 py-1.5 border ${streakStyle} ${streak === 0 ? 'bg-zinc-900/50' : ''}`}
                   >
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="text-gray-500 w-4">{i + 1}.</span>
                       <span className="text-white truncate">{r.name}</span>
                       {change !== undefined && change !== 0 && (
@@ -291,7 +313,27 @@ export function CertsView({ initial }: Props) {
                         </span>
                       )}
                     </div>
-                    <span className="text-amber-400 tabular-nums">{r.count}</span>
+                    <div className="flex items-center gap-2">
+                      {streak > 0 && (
+                        <div
+                          className={`flex items-center gap-0.5 ${streakIconColor}`}
+                          title={`${streak} day streak`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            stroke="none"
+                          >
+                            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3a2.684 2.684 0 0 1 2.9 2.5Z" />
+                          </svg>
+                          <span className="text-[10px] font-bold">{streak}</span>
+                        </div>
+                      )}
+                      <span className="text-amber-400 tabular-nums">{r.count}</span>
+                    </div>
                   </div>
                 )
               })
