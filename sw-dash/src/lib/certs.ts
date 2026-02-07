@@ -29,6 +29,7 @@ type LeaderRow = {
   username: string | null
   currentCount: bigint
   prevCount: bigint
+  streak?: number
 }
 
 type TypeGroup = {
@@ -106,6 +107,7 @@ async function fetchStats(lbMode: string) {
           SELECT
             sc.reviewerId AS reviewerId,
             u.username AS username,
+            u.streak AS streak,
             SUM(CASE WHEN sc.reviewCompletedAt >= ${weekStart} AND sc.reviewCompletedAt < ${weekEnd} THEN 1 ELSE 0 END) AS currentCount,
             SUM(CASE WHEN sc.reviewCompletedAt >= ${weekStart} AND sc.reviewCompletedAt < ${yesterdayEndUTC} THEN 1 ELSE 0 END) AS prevCount
           FROM ship_certs sc
@@ -114,12 +116,13 @@ async function fetchStats(lbMode: string) {
             AND sc.status IN ('approved', 'rejected')
             AND sc.reviewCompletedAt >= ${weekStart}
             AND sc.reviewCompletedAt < ${weekEnd}
-          GROUP BY sc.reviewerId, u.username
+          GROUP BY sc.reviewerId, u.username, u.streak
         `
       : prisma.$queryRaw<LeaderRow[]>`
           SELECT
             sc.reviewerId AS reviewerId,
             u.username AS username,
+            u.streak AS streak,
             COUNT(*) AS currentCount,
             SUM(CASE WHEN sc.reviewCompletedAt < ${yesterday} THEN 1 ELSE 0 END) AS prevCount
           FROM ship_certs sc
@@ -127,7 +130,7 @@ async function fetchStats(lbMode: string) {
           WHERE sc.reviewerId IS NOT NULL
             AND sc.status IN ('approved', 'rejected')
             AND sc.reviewCompletedAt IS NOT NULL
-          GROUP BY sc.reviewerId, u.username
+          GROUP BY sc.reviewerId, u.username, u.streak
         `,
   ])
 
@@ -199,7 +202,12 @@ async function fetchStats(lbMode: string) {
   prevLeaderboard.forEach((r, i) => prevRankMap.set(r.id, i + 1))
 
   const currentLeaderboard = leaderRows
-    .map((r) => ({ id: r.reviewerId, name: r.username || 'unknown', count: norm(r.currentCount) }))
+    .map((r) => ({
+      id: r.reviewerId,
+      name: r.username || 'unknown',
+      count: norm(r.currentCount),
+      streak: r.streak || 0,
+    }))
     .filter((r) => lbMode !== 'weekly' || r.name !== 'System')
     .sort((a, b) => b.count - a.count)
 
@@ -211,6 +219,7 @@ async function fetchStats(lbMode: string) {
       name: r.name,
       count: r.count,
       rankChange: rankChange === 0 ? undefined : rankChange,
+      streak: r.streak,
     }
   })
 

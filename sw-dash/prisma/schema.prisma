@@ -36,6 +36,8 @@ model User {
 
   cookieBalance   Float        @default(0)
   cookiesEarned   Float        @default(0)
+  streak          Int          @default(0)
+  lastReviewDate  DateTime?    @db.Date
   payoutReqs      PayoutReq[]  @relation("PayoutReqs")
   payoutApprovals PayoutReq[]  @relation("PayoutApprovals")
   yswsReviews     YswsReview[] @relation("YswsReviewer")
