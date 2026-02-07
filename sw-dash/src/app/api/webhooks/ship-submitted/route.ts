@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'nah who tf are you' }, { status: 401 })
     }
 
-    const { event, data, type: ftType } = body
+    const { event, data } = body
 
     if (event !== 'ship.submitted') {
       await syslog(
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       submittedBy,
       links,
       metadata,
+      type: ftType,
     } = data || {}
 
     if (!ftProjectId || !projectName || !submittedBy?.slackId) {
