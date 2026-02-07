@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       submittedBy,
       links,
       metadata,
+      type: ftType,
     } = data || {}
 
     if (!ftProjectId || !projectName || !submittedBy?.slackId) {
@@ -131,6 +132,7 @@ export async function POST(request: NextRequest) {
         ftProjectId: String(ftProjectId),
         ftSlackId: submittedBy.slackId,
         ftUsername: submittedBy.username || 'unknown',
+        ftType: ftType || null,
         projectName,
         projectType: projectType || null,
         description: description || null,
