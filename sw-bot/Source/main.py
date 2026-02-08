@@ -26,7 +26,7 @@ def msg(event):
     if seen_already(event.get("client_msg_id") or event.get("event_ts")):
         return
     subtype = event.get("subtype")
-    if subtype and subtype not in ["file_share", "message_changed"]:
+    if subtype and subtype not in ["file_share", "message_changed", "thread_broadcast"]:
         return
     channel = event["channel"]
     if subtype == "message_changed":

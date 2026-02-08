@@ -493,6 +493,13 @@ def edit_message(event):
     message_ts = event.get("previous_message").get("ts")
     message = event.get("message").get("text")
     ticket = db.find_ticket(message_ts)
+    if message == 'This message was deleted.':
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text="User has deleted message header, If no messages have been sent please don't send a reply or resolve as this could cause messages to be sent directly in the channel and not threaded."
+        )
+        return
     if event.get("message").get("thread_ts") == event.get("message").get("ts"):
         user_thread_link_resp = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=message_ts)
         user_thread_link = user_thread_link_resp["permalink"]
