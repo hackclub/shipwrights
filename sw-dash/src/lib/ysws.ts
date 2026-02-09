@@ -229,6 +229,18 @@ async function pullMedia(ftMedia: FtDevlog['media']): Promise<Media[]> {
 }
 
 export async function create(shipCertId: number, ftProjectId: string, repoUrl: string | null) {
+  const existing = await prisma.yswsReview.findFirst({
+    where: {
+      shipCert: {
+        ftProjectId,
+      },
+    },
+  })
+
+  if (existing) {
+    throw new Error(`ysws already exists for ft project ${ftProjectId}`)
+  }
+
   const ftDevlogs = await fetchDevlogs(ftProjectId)
 
   const repo = repoUrl ? parseRepo(repoUrl) : null
