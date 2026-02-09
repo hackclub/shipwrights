@@ -270,6 +270,15 @@ model Ticket {
   @@map("tickets")
 }
 
+model TicketUsers {
+  id        Int    @id @default(autoincrement())
+  userId    String @db.VarChar(50)
+  isOptedIn String @db.VarChar(50)
+
+  @@index([userId])
+  @@map("ticket_users")
+}
+
 model TicketMsg {
   id              Int       @id @default(autoincrement())
   ticketId        Int
