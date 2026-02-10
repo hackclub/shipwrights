@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.shipCert.findFirst({
       where: {
         ftProjectId: String(ftProjectId),
-        status: 'pending',
+        status: { in: ['pending', 'approved'] },
       },
     })
 
@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
           ftProjectId,
           projectName,
           existingCertId: existing.id,
+          existingStatus: existing.status,
           submitter: submittedBy.slackId,
         },
       })
