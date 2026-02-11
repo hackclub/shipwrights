@@ -66,6 +66,14 @@ export default async function Admin() {
                   🍪 payouts
                 </Link>
               )}
+              {can(user.role, PERMS.analytics_view) && (
+                <Link
+                  href="/admin/analytics"
+                  className="bg-purple-500/10 border-2 border-dashed border-purple-600 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-mono text-sm px-4 md:px-6 py-3 rounded-2xl transition-all duration-200 hover:bg-purple-500/20 text-center shadow-lg shadow-purple-950/20 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  📊 analytics
+                </Link>
+              )}
             </div>
           </div>
         )}
