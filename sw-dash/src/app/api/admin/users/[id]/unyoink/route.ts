@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { log } from '@/lib/audit'
-import { syslog } from '@/lib/syslog'
+import { log as auditLog } from '@/lib/audit'
+import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { withParams } from '@/lib/api'
@@ -19,10 +19,17 @@ export const POST = withParams(PERMS.users_admin)(async ({ user, params, ip, ua 
       },
     })
 
-    await log(userId, user.id, 'un-yoinked - access restored')
-    await syslog('users_unyoinked', 200, user, `user #${userId} got un-yoinked - can login again`, {
-      ip,
-      userAgent: ua,
+    await auditLog(userId, user.id, 'un-yoinked - access restored')
+    await log({
+      action: 'users_unyoinked',
+      status: 200,
+      user,
+      context: 'access restored, can login again',
+      target: { type: 'user', id: userId },
+      changes: {
+        isActive: { before: false, after: true },
+      },
+      meta: { ip, ua },
     })
 
     return NextResponse.json({ success: true })

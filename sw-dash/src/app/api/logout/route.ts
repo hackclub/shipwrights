@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { needAuth, kill } from '@/lib/auth'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,13 @@ export async function POST(request: NextRequest) {
     }
 
     await kill(token || '')
-    await syslog('auth_logout', 200, user, 'user logged out', { ip, userAgent })
+    await log({
+      action: 'auth_logout_success',
+      status: 200,
+      user,
+      context: 'user logged out',
+      meta: { ip, ua: userAgent },
+    })
 
     const response = NextResponse.json({ message: 'logged out like a boss' })
     response.cookies.delete('session_token')

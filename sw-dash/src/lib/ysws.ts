@@ -229,6 +229,18 @@ async function pullMedia(ftMedia: FtDevlog['media']): Promise<Media[]> {
 }
 
 export async function create(shipCertId: number, ftProjectId: string, repoUrl: string | null) {
+  const existing = await prisma.yswsReview.findFirst({
+    where: {
+      shipCert: {
+        ftProjectId,
+      },
+    },
+  })
+
+  if (existing) {
+    throw new Error(`ysws already exists for ft project ${ftProjectId}`)
+  }
+
   const ftDevlogs = await fetchDevlogs(ftProjectId)
 
   const repo = repoUrl ? parseRepo(repoUrl) : null
@@ -316,6 +328,33 @@ export async function create(shipCertId: number, ftProjectId: string, repoUrl: s
       devlogs: JSON.parse(JSON.stringify(devlogs)),
       commits: JSON.parse(JSON.stringify(commits)),
       decisions: JSON.parse(JSON.stringify(decisions)),
+    },
+  })
+
+  const { log } = await import('./log')
+  await log({
+    action: 'ysws_review_created',
+    status: 200,
+    context: `created with ${devlogs.length} devlogs`,
+    target: { type: 'ysws_review', id: ysws.id },
+    meta: {
+      shipCertId,
+      ftProjectId,
+      devlogCount: devlogs.length,
+      totalDevlogSeconds: devlogs.reduce((sum, d) => sum + d.origSecs, 0),
+      commitCount: commits.reduce((sum, c) => sum + c.commits.length, 0),
+      commits: commits.flatMap((c) =>
+        c.commits.map((commit) => ({
+          sha: commit.sha.slice(0, 7),
+          adds: commit.adds,
+          dels: commit.dels,
+        }))
+      ),
+      devlogs: devlogs.map((d) => ({
+        ftDevlogId: d.ftDevlogId,
+        origMinutes: Math.round(d.origSecs / 60),
+        mediaCount: d.media.length,
+      })),
     },
   })
 

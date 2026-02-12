@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { headers } from 'next/headers'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
@@ -12,14 +12,12 @@ export async function POST(request: NextRequest) {
     const apiKey = headersList.get('x-api-key')
 
     if (!apiKey || apiKey !== process.env.API_KEY) {
-      await syslog(
-        'internal_yoink_denied',
-        403,
-        null,
-        'wrong api key attempt',
-        { ip, userAgent },
-        { severity: 'warn', metadata: { attemptedKey: apiKey?.substring(0, 8) } }
-      )
+      await log({
+        action: 'internal_yoink_denied',
+        status: 403,
+        context: 'wrong api key for internal yoink',
+        meta: { ip, ua: userAgent, attemptedKey: apiKey?.substring(0, 8) },
+      })
       return NextResponse.json({ error: 'nah' }, { status: 403 })
     }
 
@@ -34,14 +32,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      await syslog(
-        'internal_yoink_notfound',
-        404,
-        null,
-        `tried to yoink ${slackId} but user doesnt exist`,
-        { ip, userAgent },
-        { metadata: { slackId } }
-      )
+      await log({
+        action: 'internal_yoink_notfound',
+        status: 404,
+        context: `attempted to yoink ${slackId} but user doesnt exist`,
+        meta: { ip, ua: userAgent, slackId },
+      })
       return NextResponse.json({
         success: false,
         notFound: true,
@@ -62,23 +58,20 @@ export async function POST(request: NextRequest) {
       }),
     ])
 
-    await syslog(
-      'internal_yoink_success',
-      200,
-      null,
-      `user ${user.username} (${slackId}) yoinked via internal api`,
-      { ip, userAgent },
-      {
-        targetId: user.id,
-        targetType: 'user',
-        metadata: {
-          slackId,
-          username: user.username,
-          userId: user.id,
-          apiKeyUsed: apiKey.substring(0, 8),
-        },
-      }
-    )
+    await log({
+      action: 'internal_yoink_success',
+      status: 200,
+      context: `user ${user.username} yoinked via internal api`,
+      target: { type: 'user', id: user.id },
+      meta: {
+        ip,
+        ua: userAgent,
+        slackId,
+        username: user.username,
+        userId: user.id,
+        apiKeyUsed: apiKey.substring(0, 8),
+      },
+    })
 
     return NextResponse.json({
       success: true,

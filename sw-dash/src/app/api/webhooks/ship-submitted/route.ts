@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { bust } from '@/lib/cache'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { checkType } from '@/lib/typecheck'
 
 export async function POST(request: NextRequest) {
@@ -12,42 +12,36 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch (e) {
-    await syslog(
-      'ft_err',
-      400,
-      null,
-      'json parse broke',
-      { ip, userAgent },
-      { severity: 'warn', metadata: { reason: 'parse', body: null } }
-    )
+    await log({
+      action: 'ft_webhook_failed',
+      status: 400,
+      context: 'json parse broke',
+      meta: { ip, ua: userAgent },
+    })
     return NextResponse.json({ error: 'json broke' }, { status: 400 })
   }
 
   try {
     const apiKey = request.headers.get('x-api-key')
     if (apiKey !== process.env.FLAVORTOWN_API_KEY) {
-      await syslog(
-        'ft_err',
-        401,
-        null,
-        'wrong api key',
-        { ip, userAgent },
-        { severity: 'warn', metadata: { reason: 'auth', body, key: apiKey?.substring(0, 8) } }
-      )
+      await log({
+        action: 'ft_webhook_blocked',
+        status: 401,
+        context: 'wrong api key from FT',
+        meta: { ip, ua: userAgent, keyPrefix: apiKey?.substring(0, 8), body },
+      })
       return NextResponse.json({ error: 'nah who tf are you' }, { status: 401 })
     }
 
     const { event, data } = body
 
     if (event !== 'ship.submitted') {
-      await syslog(
-        'ft_err',
-        400,
-        null,
-        'unknown event',
-        { ip, userAgent },
-        { severity: 'warn', metadata: { reason: 'event', body, event } }
-      )
+      await log({
+        action: 'ft_webhook_blocked',
+        status: 400,
+        context: `unknown event type: ${event}`,
+        meta: { ip, ua: userAgent, body, event },
+      })
       return NextResponse.json({ error: 'bruh what event is this' }, { status: 400 })
     }
 
@@ -59,24 +53,21 @@ export async function POST(request: NextRequest) {
       submittedBy,
       links,
       metadata,
+      type: ftType,
     } = data || {}
 
     if (!ftProjectId || !projectName || !submittedBy?.slackId) {
-      await syslog(
-        'ft_err',
-        400,
-        null,
-        'missing core fields',
-        { ip, userAgent },
-        {
-          severity: 'warn',
-          metadata: {
-            reason: 'fields',
-            body,
-            has: { id: !!ftProjectId, name: !!projectName, slack: !!submittedBy?.slackId },
-          },
-        }
-      )
+      await log({
+        action: 'ft_webhook_failed',
+        status: 400,
+        context: 'missing core fields from FT payload',
+        meta: {
+          ip,
+          ua: userAgent,
+          body,
+          missing: { id: !ftProjectId, name: !projectName, slack: !submittedBy?.slackId },
+        },
+      })
       return NextResponse.json(
         { error: 'missing project ID, Project name, and submitted By slack ID fields' },
         { status: 400 }
@@ -84,45 +75,48 @@ export async function POST(request: NextRequest) {
     }
 
     if (!description || !links?.repo || !links?.demo || !links?.readme) {
-      await syslog(
-        'ft_err',
-        400,
-        null,
-        'missing links/desc',
-        { ip, userAgent },
-        {
-          severity: 'warn',
-          metadata: {
-            reason: 'links',
-            body,
-            has: {
-              desc: !!description,
-              repo: !!links?.repo,
-              demo: !!links?.demo,
-              readme: !!links?.readme,
-            },
+      await log({
+        action: 'ft_webhook_failed',
+        status: 400,
+        context: 'missing links or description',
+        meta: {
+          ip,
+          ua: userAgent,
+          body,
+          missing: {
+            desc: !description,
+            repo: !links?.repo,
+            demo: !links?.demo,
+            readme: !links?.readme,
           },
-        }
-      )
+        },
+      })
       return NextResponse.json({ error: 'missing description and links' }, { status: 400 })
     }
 
     const existing = await prisma.shipCert.findFirst({
       where: {
         ftProjectId: String(ftProjectId),
-        status: 'pending',
+        status: { in: ['pending', 'approved'] },
       },
     })
 
     if (existing) {
-      await syslog(
-        'ft_dup_blocked',
-        403,
-        null,
-        `dup blocked: ${projectName} (ft#${ftProjectId}) - already pending`,
-        { ip, userAgent },
-        { metadata: { ftProjectId, existingCertId: existing.id } }
-      )
+      await log({
+        action: 'ft_webhook_blocked',
+        status: 403,
+        context: `duplicate ship - already in queue`,
+        target: { type: 'ship_cert', id: existing.id },
+        meta: {
+          ip,
+          ua: userAgent,
+          ftProjectId,
+          projectName,
+          existingCertId: existing.id,
+          existingStatus: existing.status,
+          submitter: submittedBy.slackId,
+        },
+      })
       return NextResponse.json({ error: 'duplicate ship, already in the queue!' }, { status: 403 })
     }
 
@@ -131,6 +125,7 @@ export async function POST(request: NextRequest) {
         ftProjectId: String(ftProjectId),
         ftSlackId: submittedBy.slackId,
         ftUsername: submittedBy.username || 'unknown',
+        ftType: ftType || null,
         projectName,
         projectType: projectType || null,
         description: description || null,
@@ -144,27 +139,27 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    await syslog(
-      'ft_webhook_received',
-      200,
-      null,
-      `new ship cert from ft: ${projectName}`,
-      { ip, userAgent },
-      {
-        targetId: cert.id,
-        targetType: 'ship_cert',
-        metadata: {
-          ftProjectId,
-          projectName,
-          projectType,
-          slackId: submittedBy.slackId,
-          username: submittedBy.username,
-          demo: links?.demo,
-          repo: links?.repo,
-          readme: links?.readme,
-        },
-      }
-    )
+    await log({
+      action: 'ft_webhook_received',
+      status: 200,
+      context: `new ship from FT: ${projectName}`,
+      target: { type: 'ship_cert', id: cert.id },
+      meta: {
+        ip,
+        ua: userAgent,
+        ftProjectId,
+        projectName,
+        projectType,
+        ftType,
+        submitterSlackId: submittedBy.slackId,
+        submitterUsername: submittedBy.username,
+        demoUrl: links?.demo,
+        repoUrl: links?.repo,
+        readmeUrl: links?.readme,
+        devTime: metadata?.devTime,
+      },
+    })
+
     await bust('cache:certs:*')
 
     try {
@@ -175,52 +170,53 @@ export async function POST(request: NextRequest) {
         demoUrl: links?.demo || '',
         repoUrl: links?.repo || '',
       })
+
       if (!result.debug.error) {
         await prisma.shipCert.update({ where: { id: cert.id }, data: { projectType: result.type } })
-        await syslog(
-          'type_check_done',
-          200,
-          null,
-          `${projectName} -> ${result.type}`,
-          {},
-          { targetId: cert.id, targetType: 'ship_cert', metadata: result.debug }
-        )
+        await log({
+          action: 'ship_cert_type_checked',
+          status: 200,
+          context: `type detected: ${result.type}`,
+          target: { type: 'ship_cert', id: cert.id },
+          meta: { projectName, detectedType: result.type, debug: result.debug },
+        })
       } else {
-        await syslog(
-          'type_check_fail',
-          500,
-          null,
-          `failed: ${projectName}`,
-          {},
-          { targetId: cert.id, targetType: 'ship_cert', severity: 'error', metadata: result.debug }
-        )
+        await log({
+          action: 'ship_cert_type_check_failed',
+          status: 500,
+          context: 'type check returned error',
+          target: { type: 'ship_cert', id: cert.id },
+          meta: { projectName, debug: result.debug },
+        })
       }
     } catch (e) {
-      await syslog(
-        'type_check_crash',
-        500,
-        null,
-        `type check crashed for ${projectName}`,
-        {},
-        {
-          targetId: cert.id,
-          targetType: 'ship_cert',
-          severity: 'error',
-          metadata: { error: (e as Error).message },
-        }
-      )
+      await log({
+        action: 'ship_cert_type_check_failed',
+        status: 500,
+        context: 'type check crashed',
+        target: { type: 'ship_cert', id: cert.id },
+        error: {
+          name: (e as Error).name || 'Error',
+          message: (e as Error).message || 'unknown',
+          stack: (e as Error).stack,
+        },
+        meta: { projectName },
+      })
     }
 
     return NextResponse.json({ status: 'ok' })
   } catch (error: any) {
-    await syslog(
-      'ft_err',
-      500,
-      null,
-      'handler exploded',
-      { ip, userAgent },
-      { severity: 'error', metadata: { reason: 'crash', body, error: error?.message } }
-    )
+    await log({
+      action: 'ft_webhook_failed',
+      status: 500,
+      context: 'webhook handler exploded',
+      error: {
+        name: error?.name || 'Error',
+        message: error?.message || 'unknown',
+        stack: error?.stack,
+      },
+      meta: { ip, ua: userAgent, body },
+    })
     return NextResponse.json({ error: 'something broke on our end' }, { status: 500 })
   }
 }

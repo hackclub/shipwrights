@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO
 from flask_cors import CORS
 from globals import API_KEY
-from globals import PORT as port
+from globals import PORT
 
 app = Flask(__name__)
 
@@ -31,4 +31,4 @@ def note_added():
 
 
 def run_server():
-    socketio.run(app, host='0.0.0.0', port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=PORT, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

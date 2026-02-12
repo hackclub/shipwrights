@@ -398,25 +398,21 @@ def check_type(data: dict) -> dict:
 def format_vibes_message(tickets):
     ticket_data = ""
     for ticket in tickets:
-        ticket_data += f"Ticket question: {ticket['question']}:\n{ticket['messages']}\n\n"
-    return f"""You are a bot designed to return qualitative metrics to the Shipwrights team by extracting user feedback from the day's tickets.
+        ticket_data += f"#{ticket['id']}: {ticket['question']}\n{ticket['messages']}\n\n"
+    return f"""Analyze these support tickets for the Shipwrights team.
 
-## Your Task
-Analyze the provided tickets and determine:
-1. Whether the majority of users had a positive experience (boolean: true or false)
-2. Select a direct quote from a user that represents the day's ticket flow (copy exactly, no modifications)
-3. Provide one actionable recommendation to improve the team based on the tickets
+## Tasks
+1. Were most users happy? (true/false + short reason)
+2. Pick 2-3 user quotes (copy exactly, not from staff)
+3. One improvement suggestion (not about response times - we're volunteers)
 
 ## Important Rules
 - Only reference staff messages prefixed with '?' (these were sent to the user). Messages without '?' are internal discussions and should NOT be mentioned.
 - Do NOT provide recommendations about delays or response times. We are a volunteer team.
 - The quote must be from a USER, not from staff.
 
-## Ticket Data
+## Tickets
 {ticket_data}
 
-## Response Format
-Return ONLY valid JSON with no markdown, no code blocks, no explanation:
-{{"bool": true, "quote_otd": "Exact user quote here", "recommendation": "Your improvement suggestion"}}
-
-Note: Use lowercase true/false for the boolean value."""
+## JSON Response (no markdown)
+{{"positive": {{"result": true, "reason": "short"}}, "quotes": [{{"ticket_id": "123", "text": "quote", "reason": "short"}}], "suggestion": {{"action": "what", "reason": "short"}}}}"""""

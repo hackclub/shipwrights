@@ -151,6 +151,7 @@ model ShipCert {
   ftProjectId String?
   ftSlackId   String?
   ftUsername  String?
+  ftType      String?
 
   projectName String?
   projectType String?
@@ -269,6 +270,15 @@ model Ticket {
   @@map("tickets")
 }
 
+model TicketUser {
+  id        Int     @id @default(autoincrement())
+  userId    String  @db.VarChar(50)
+  isOptedIn Boolean @default(true)
+
+  @@unique([userId])
+  @@map("ticket_users")
+}
+
 model TicketMsg {
   id              Int       @id @default(autoincrement())
   ticketId        Int
@@ -306,7 +316,7 @@ enum Ticket_status {
 }
 
 model SysLog {
-  id         Int      @id @default(autoincrement())
+  id         String   @id @default(cuid())
   userId     Int?
   slackId    String?
   username   String?
@@ -321,7 +331,23 @@ model SysLog {
   targetId   Int?
   targetType String?
   metadata   Json?
-  severity   String?  @default("info")
+  severity   String?  @default("info") // not used anymore, leaving for old logs
+  
+  reqMethod  String?
+  reqUrl     String?  @db.Text
+  reqBody    Json?
+  reqHeaders Json?
+  resStatus  Int?
+  resBody    Json?
+  resHeaders Json?
+  
+  errorName  String?
+  errorMsg   String?  @db.Text
+  errorStack String?  @db.Text
+  
+  changes    Json?
+  duration   Int?
+  
   createdAt  DateTime @default(now())
 
   @@index([userId])
@@ -330,5 +356,6 @@ model SysLog {
   @@index([ip])
   @@index([severity])
   @@index([targetType])
+  @@index([targetType, targetId])
   @@map("sys_logs")
 }

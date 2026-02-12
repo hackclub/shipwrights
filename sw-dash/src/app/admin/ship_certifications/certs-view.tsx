@@ -460,6 +460,12 @@ export function CertsView({ initial }: Props) {
                 <span className="text-gray-500">type:</span>{' '}
                 <span className="text-white">{c.type}</span>
               </div>
+              {c.ftType && (
+                <div>
+                  <span className="text-gray-500">ft type:</span>{' '}
+                  <span className="text-cyan-400">{c.ftType}</span>
+                </div>
+              )}
               <div>
                 <span className="text-gray-500">dev:</span>{' '}
                 <span className="text-white">{c.devTime}</span>
@@ -511,6 +517,9 @@ export function CertsView({ initial }: Props) {
                     </Link>
                     <div className="text-gray-500 font-mono text-xs">FT #{c.ftProjectId}</div>
                     <div className="text-gray-500 font-mono text-xs">Type: {c.type}</div>
+                    {c.ftType && (
+                      <div className="text-cyan-400 font-mono text-xs">FT Type: {c.ftType}</div>
+                    )}
                     {c.customBounty && (
                       <div className="mt-1">
                         <span className="bg-orange-900/30 text-orange-300 px-2 py-0.5 rounded font-mono text-xs border border-orange-700">

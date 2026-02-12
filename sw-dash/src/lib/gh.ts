@@ -1,4 +1,4 @@
-import { syslog } from './syslog'
+import { log } from './log'
 
 const GH_TOKEN = process.env.GITHUB_TOKEN
 
@@ -51,7 +51,6 @@ export async function fetchCommits(
     for (const c of commits) {
       await new Promise((r) => setTimeout(r, 100))
       const stats = await fetchStats(owner, repo, c.sha)
-      console.log(`commit ${c.sha.slice(0, 7)}: +${stats.adds} -${stats.dels}`)
       result.push({
         sha: c.sha,
         msg: c.commit.message.split('\n')[0].slice(0, 200),
@@ -65,9 +64,16 @@ export async function fetchCommits(
     return result
   } catch (e) {
     console.error('gh fetch exploded:', e)
-    await syslog('gh_fetch_error', 500, null, `gh fetch crashed for ${owner}/${repo}`, undefined, {
-      severity: 'error',
-      metadata: { owner, repo, error: e instanceof Error ? e.message : String(e) },
+    await log({
+      action: 'gh_fetch_failed',
+      status: 500,
+      context: `gh fetch crashed for ${owner}/${repo}`,
+      error: {
+        name: e instanceof Error ? e.name : 'Error',
+        message: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined,
+      },
+      meta: { owner, repo },
     })
     return []
   }

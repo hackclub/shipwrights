@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db'
 import { parseId } from '@/lib/utils'
 import { push } from '@/lib/push-server'
 import { msgs } from '@/lib/notifs'
+import { log } from '@/lib/log'
 
 const s3 = new S3Client({
   region: 'auto',
@@ -108,6 +109,22 @@ export const PATCH = api(PERMS.payouts_edit)(async ({ user, req }) => {
     }
   } catch {}
 
+  await log({
+    action: 'payout_approved',
+    status: 200,
+    user,
+    context: `${final} cookies paid to ${payout.user.username}`,
+    target: { type: 'user', id: payout.userId },
+    meta: {
+      payoutId,
+      amount: payout.amount,
+      bonus: bonusAmt,
+      bonusReason,
+      finalAmount: final,
+      proofUrl,
+    },
+  })
+
   return NextResponse.json(updated)
 })
 
@@ -131,7 +148,7 @@ export const PUT = api(PERMS.payouts_edit)(async ({ req }) => {
   return NextResponse.json({ uploadUrl, publicUrl })
 })
 
-export const DELETE = api(PERMS.payouts_edit)(async ({ req }) => {
+export const DELETE = api(PERMS.payouts_edit)(async ({ user, req }) => {
   const { id } = await req.json()
   const payoutId = parseId(String(id), 'payout')
 
@@ -139,6 +156,11 @@ export const DELETE = api(PERMS.payouts_edit)(async ({ req }) => {
 
   const payout = await prisma.payoutReq.findUnique({ where: { id: payoutId } })
   if (!payout) return NextResponse.json({ error: 'not found' }, { status: 404 })
+
+  const payoutUser = await prisma.user.findUnique({
+    where: { id: payout.userId },
+    select: { id: true, username: true },
+  })
 
   if (payout.status === 'approved') {
     await prisma.$transaction([
@@ -148,6 +170,19 @@ export const DELETE = api(PERMS.payouts_edit)(async ({ req }) => {
       }),
       prisma.payoutReq.delete({ where: { id: payoutId } }),
     ])
+
+    await log({
+      action: 'payout_refunded',
+      status: 200,
+      user,
+      context: `refunded ${payout.amount} cookies to ${payoutUser?.username}`,
+      target: { type: 'user', id: payout.userId },
+      meta: {
+        payoutId,
+        amount: payout.amount,
+        wasApproved: true,
+      },
+    })
   } else {
     await prisma.payoutReq.delete({ where: { id: payoutId } })
   }

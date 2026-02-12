@@ -4,7 +4,7 @@ import { PERMS } from '@/lib/perms'
 import { push } from '@/lib/push-server'
 import { msgs } from '@/lib/notifs'
 import { bust } from '@/lib/cache'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { withParams } from '@/lib/api'
 
 export const POST = withParams(PERMS.support_edit)(async ({ user, params, ip, ua }) => {
@@ -48,23 +48,21 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, params, ip, ua
     }
   }
 
-  await syslog(
-    'ticket_closed',
-    200,
+  await log({
+    action: 'ticket_closed',
+    status: 200,
     user,
-    `closed ticket sw-${id}`,
-    { ip, userAgent: ua },
-    {
-      targetId: id,
-      targetType: 'ticket',
-      metadata: {
-        ticketId: id,
-        userId: ticket.userId,
-        userName: ticket.userName,
-        assignees: assigneeIds,
-      },
-    }
-  )
+    context: `closed ticket sw-${id}`,
+    target: { type: 'ticket', id },
+    meta: {
+      ip,
+      ua,
+      ticketId: id,
+      userId: ticket.userId,
+      userName: ticket.userName,
+      assignees: assigneeIds,
+    },
+  })
 
   const botUrl = process.env.NEXT_PUBLIC_BOT_URL
   const botKey = process.env.SW_BOT_KEY || ''

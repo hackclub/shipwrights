@@ -4,6 +4,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from summary import send_reminder
 from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL
+from cache import cache
 
 
 slack_app = App(token=BOT_TOKEN, signing_secret=os.getenv("SLACK_SIGNING_SECRET"), process_before_response=True)
@@ -26,11 +27,12 @@ def msg(event):
     if seen_already(event.get("client_msg_id") or event.get("event_ts")):
         return
     subtype = event.get("subtype")
-    if subtype and subtype not in ["file_share", "message_changed"]:
+    if subtype and subtype not in ["file_share", "message_changed", "thread_broadcast"]:
         return
     channel = event["channel"]
     if subtype == "message_changed":
-        if channel != USER_CHANNEL:
+        if channel != USER_CHANNEL or event.get("previous_message").get("ts") in cache.ignorable:
+            cache.ignorable.remove(event.get("previous_message").get("ts"))
             return
         relay.edit_message(event)
         return
@@ -47,7 +49,7 @@ def render_app_home(event):
     user_id = event.get("user")
     if not user_id:
         return
-    if user_id in db.get_authorized_users():
+    if user_id in cache.get_shipwrights():
         home.publish_home(user_id, home.show_home())
         return
     home.publish_home(user_id, home.not_user())
@@ -61,7 +63,7 @@ def send_paraphrased(client, body, ack):
     user_info = helpers.get_user_info(client, user_id)
     ticket_id = payload["ticket_id"]
     paraphrased = payload["paraphrased"]
-    ticket = db.get_ticket(ticket_id)
+    ticket = cache.get_ticket_by_id(ticket_id)
     if ticket.get("status") == "closed":
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL,
@@ -104,6 +106,19 @@ def edit_message(ack, body, client):
     message_ts = payload["ts"]
     helpers.show_edit_modal(client, body, message_ts)
 
+@slack_app.action("modify_opt")
+def modify_opt(ack, body, client):
+    ack()
+    payload = json.loads(body["actions"][0]["value"])
+    user_id = body["user"]["id"]
+    cache.modify_user_opt(user_id, int(payload["opt"]))
+    client.chat_postEphemeral(
+        text=f"Successfully {'opted in!' if payload == '1' else 'opted out!'}",
+        thread_ts=payload["thread_ts"],
+        channel=USER_CHANNEL,
+        user=user_id,
+    )
+
 @slack_app.action("resolve_detected")
 def resolve_detected(ack, body, client):
     ack()
@@ -111,10 +126,10 @@ def resolve_detected(ack, body, client):
     ticket_id = payload["ticket_id"]
     reply = payload["reply"]
     user_id = body["user"]["id"]
-    ticket = db.get_ticket(ticket_id)
+    ticket = cache.get_ticket_by_id(ticket_id)
     user_info = helpers.get_user_info(client, user_id)
     if ticket["status"] == "open":
-        db.close_ticket(ticket_id)
+        cache.close_ticket(ticket_id)
         db.claim_ticket(ticket_id, user_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
@@ -151,10 +166,10 @@ def resolve_detected(ack, body, client):
 def resolve_ticket(ack, body, client):
     ack()
     ticket_id = json.loads(body["actions"][0]["value"])
-    ticket = db.get_ticket(ticket_id)
+    ticket = cache.get_ticket_by_id(ticket_id)
     user_id = body["user"]["id"]
     if (helpers.is_shipwright(user_id) and user_id != ticket["userId"]) and ticket["status"] == "open":
-        db.close_ticket(ticket_id)
+        cache.close_ticket(ticket_id)
         db.claim_ticket(ticket_id, user_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
@@ -176,10 +191,11 @@ def resolve_ticket(ack, body, client):
             timestamp=ticket["userThreadTs"],
             name="checks-passed-octicon"
         )
-        ai.summarize_ticket(ticket_id)
+        if cache.get_user_opt_in(ticket["userId"]):
+            ai.summarize_ticket(ticket_id)
 
     elif (user_id == ticket["userId"] and not helpers.is_shipwright(user_id)) and ticket["status"] == "open":
-        db.close_ticket(ticket_id)
+        cache.close_ticket(ticket_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
@@ -200,7 +216,8 @@ def resolve_ticket(ack, body, client):
             timestamp=ticket["userThreadTs"],
             name="checks-passed-octicon"
         )
-        ai.summarize_ticket(ticket_id)
+        if cache.get_user_opt_in(ticket["userId"]):
+            ai.summarize_ticket(ticket_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
@@ -234,9 +251,9 @@ def resolve_ticket(ack, body, client):
 def claim_ticket(body, client, ack):
     ack()
     ticket_id = json.loads(body["actions"][0]["value"])
-    ticket = db.get_ticket(ticket_id)
+    ticket = cache.get_ticket_by_id(ticket_id)
     user_id = body["user"]["id"]
-    if db.is_claimed(ticket_id):
+    if cache.is_ticket_claimed(ticket_id):
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
@@ -262,6 +279,7 @@ def edited_message(ack, client, view):
     ack()
     message_ts = view["private_metadata"]
     user_input = view["state"]["values"]["input_block"]["user_input"]["value"]
+    cache.ignorable.append(message_ts)
     client.chat_update(
         channel=USER_CHANNEL,
         ts=message_ts,

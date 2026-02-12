@@ -1,7 +1,6 @@
 import os, requests, json, logging
 import db, helpers
-import flask
-from flask import jsonify, request
+from flask import jsonify, request, Flask
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = flask.Flask(__name__)
+app = Flask(__name__)
 
 @app.before_request
 def require_api_key():
@@ -337,6 +336,7 @@ def get_vibes():
             },
             json={
                 "model": AI_MODEL,
+                "max_tokens": 1000,
                 "messages": [
                     {
                         "role": "user",
@@ -380,10 +380,16 @@ def get_vibes():
         logger.error(f"Raw content that failed to parse: {content}")
         return jsonify({"error": "AI returned invalid JSON", "raw_content": content}), 500
 
-    if not all(key in ai_response for key in ['bool', 'quote_otd', 'recommendation']):
+    if not all(key in ai_response for key in ['positive', 'quotes', 'suggestion']):
         logger.error(f"Missing required fields. Got: {ai_response.keys()}")
         return jsonify({"error": "Missing required fields in AI response", "raw_content": content}), 500
     logger.info("Successfully processed qualitative metrics")
+    for i, quote in enumerate(ai_response["quotes"]):
+        ticket_id = quote["ticket_id"].lstrip("#")
+        thread = db.get_ticket_ts(ticket_id)
+        if thread:
+            ai_response["quotes"][i]["link"] = "https://hackclub.slack.com/archives/C099P9FQQ91/p" + thread[:10] + thread[11:]
+
     return jsonify(ai_response), 200
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { log } from '@/lib/audit'
-import { syslog } from '@/lib/syslog'
+import { log as auditLog } from '@/lib/audit'
+import { log } from '@/lib/log'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { badSkills } from '@/lib/skills'
@@ -58,6 +58,7 @@ export const POST = withParams()(async ({ user, req, params, ip, ua }) => {
 
     const target = await prisma.user.findUnique({
       where: { id: userId },
+      select: { skills: true },
     })
 
     if (!target) {
@@ -70,14 +71,18 @@ export const POST = withParams()(async ({ user, req, params, ip, ua }) => {
     })
 
     if (!isSelf) {
-      await log(userId, user.id, 'skills updated', skills.join(', '))
-      await syslog(
-        'users_skills_updated',
-        200,
+      await auditLog(userId, user.id, 'skills updated', skills.join(', '))
+      await log({
+        action: 'users_skills_updated',
+        status: 200,
         user,
-        `user #${userId} - skills: ${skills.join(', ')}`,
-        { ip, userAgent: ua }
-      )
+        context: `skills updated`,
+        target: { type: 'user', id: userId },
+        changes: {
+          skills: { before: target.skills, after: skills },
+        },
+        meta: { ip, ua, skills },
+      })
     }
 
     return NextResponse.json({ success: true })

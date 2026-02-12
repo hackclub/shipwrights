@@ -3,7 +3,7 @@ import { verifyAuthenticationResponse } from '@simplewebauthn/server'
 import { prisma } from '@/lib/db'
 import { createSession } from '@/lib/auth'
 import { rateLimit } from '@/lib/ratelimit'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 
 const authLimiter = rateLimit('webauthn-auth', 10, 60 * 1000)
 
@@ -91,7 +91,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await syslog('auth_login_success', 200, user, `yubikey login`, { ip, userAgent })
+    await log({
+      action: 'auth_login_success',
+      status: 200,
+      user,
+      context: 'yubikey webauthn login',
+      meta: { ip, ua: userAgent, keyName: securityKey.name },
+    })
 
     const response = NextResponse.json({ success: true })
     response.cookies.set('session_token', sessionToken, {

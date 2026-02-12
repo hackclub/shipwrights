@@ -30,6 +30,7 @@ export const PERMS = {
 
   eng_full: 'eng_full',
   logs_full: 'logs_full',
+  analytics_view: 'analytics_view',
 
   billy_btn: 'billy_btn',
   joe_btn: 'joe_btn',

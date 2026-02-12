@@ -33,6 +33,39 @@ def get_ticket_messages(ticket_id):
         cursor.close()
         conn.close()
 
+def get_ticket_ts(ticket_id):
+    conn = db_pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
+            SELECT userThreadTs FROM tickets WHERE id = %s
+            """, (ticket_id,)
+        )
+        result = cursor.fetchone()
+        return result['userThreadTs'] if result else None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_ticket_messages(ticket_id):
+    conn = db_pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
+            SELECT msg, isStaff
+            FROM ticket_msgs
+            WHERE ticketId = %s
+            ORDER BY createdAt ASC
+            """,
+            (ticket_id,)
+        )
+        return cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
 def get_ticket_question(ticket_id):
     conn = db_pool.get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -73,7 +106,7 @@ def get_recent_tickets():
             result.append({
                 'id': ticket['id'],
                 'question': ticket['question'],
-                'messages': format_messages(messages)
+                'messages': format_messages(messages, False)
             })
 
         return result

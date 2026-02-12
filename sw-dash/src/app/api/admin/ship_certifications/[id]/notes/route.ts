@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
 import { push } from '@/lib/push-server'
 import { msgs } from '@/lib/notifs'
@@ -30,7 +30,7 @@ export const POST = withParams(PERMS.certs_edit)(async ({ user, req, params, ip,
 
     const shipCert = await prisma.shipCert.findUnique({
       where: { id: shipId },
-      select: { internalNotes: true },
+      select: { internalNotes: true, projectName: true },
     })
 
     if (!shipCert) {
@@ -64,9 +64,18 @@ export const POST = withParams(PERMS.certs_edit)(async ({ user, req, params, ip,
       },
     })
 
-    await syslog('certs_note_added', 200, user, `ship #${shipId} - note: ${note.trim()}`, {
-      ip,
-      userAgent: ua,
+    await log({
+      action: 'ship_cert_note_added',
+      status: 200,
+      user,
+      context: note.trim().substring(0, 100),
+      target: { type: 'ship_cert', id: shipId },
+      meta: {
+        ip,
+        ua,
+        note: note.trim(),
+        projectName: shipCert.projectName,
+      },
     })
 
     const mentionRegex = /@(\w+)/g
@@ -124,4 +133,37 @@ export const POST = withParams(PERMS.certs_edit)(async ({ user, req, params, ip,
   } catch {
     return NextResponse.json({ error: 'shit hit the fan saving note' }, { status: 500 })
   }
+})
+
+export const DELETE = withParams(PERMS.certs_edit)(async ({ user, req, params, ip, ua }) => {
+  const id = parseInt(params.id)
+  const { noteId } = await req.json()
+
+  const cert = await prisma.shipCert.findUnique({
+    where: { id },
+    select: { internalNotes: true, projectName: true },
+  })
+
+  if (!cert) return NextResponse.json({ error: 'cert not found' }, { status: 404 })
+
+  const notes = cert.internalNotes ? JSON.parse(cert.internalNotes) : []
+  const deleted = notes.find((n: InternalNote) => n.id === noteId)
+
+  if (!deleted) return NextResponse.json({ error: 'note not found' }, { status: 404 })
+
+  await prisma.shipCert.update({
+    where: { id },
+    data: { internalNotes: JSON.stringify(notes.filter((n: InternalNote) => n.id !== noteId)) },
+  })
+
+  await log({
+    action: 'ship_cert_note_removed',
+    status: 200,
+    user,
+    context: deleted.note.substring(0, 100),
+    target: { type: 'ship_cert', id },
+    meta: { ip, ua, note: deleted.note, projectName: cert.projectName },
+  })
+
+  return NextResponse.json({ ok: true })
 })

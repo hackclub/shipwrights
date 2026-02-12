@@ -1,6 +1,6 @@
 import webpush from 'web-push'
 import { prisma } from './db'
-import { syslog } from './syslog'
+import { log } from './log'
 
 let vapidReady = false
 function ensureVapid() {
@@ -79,10 +79,13 @@ export async function push(
           (err as { statusCode?: number }).statusCode === 404
         ) {
           await del(sub.endpoint)
-          await syslog('push_expired', 410, user, 'push sub expired and deleted', undefined, {
-            targetId: userId,
-            targetType: 'user',
-            metadata: { endpoint: sub.endpoint.substring(0, 50) },
+          await log({
+            action: 'push_expired',
+            status: 410,
+            user,
+            context: 'push sub expired, deleted',
+            target: { type: 'user', id: userId },
+            meta: { endpoint: sub.endpoint.substring(0, 50) },
           })
         }
         throw err
@@ -93,26 +96,22 @@ export async function push(
   const successCount = results.filter((r) => r.status === 'fulfilled').length
   const failCount = results.filter((r) => r.status === 'rejected').length
 
-  await syslog(
-    'push_sent',
-    200,
+  await log({
+    action: 'push_sent',
+    status: 200,
     user,
-    `sent "${data.title}" to ${successCount}/${subs.length} devices`,
-    undefined,
-    {
-      targetId: userId,
-      targetType: 'user',
-      metadata: {
-        title: data.title,
-        body: data.body,
-        url: data.url,
-        tag: data.tag,
-        successCount,
-        failCount,
-        totalSubs: subs.length,
-      },
-    }
-  )
+    context: `sent "${data.title}" to ${successCount}/${subs.length} devices`,
+    target: { type: 'user', id: userId },
+    meta: {
+      title: data.title,
+      body: data.body,
+      url: data.url,
+      tag: data.tag,
+      successCount,
+      failCount,
+      totalSubs: subs.length,
+    },
+  })
 
   return results
 }
@@ -129,22 +128,18 @@ export async function blast(
 ) {
   const results = await Promise.allSettled(userIds.map((userId) => push(userId, data)))
 
-  await syslog(
-    'push_blast',
-    200,
-    null,
-    `mass push "${data.title}" to ${userIds.length} users`,
-    undefined,
-    {
-      metadata: {
-        title: data.title,
-        body: data.body,
-        url: data.url,
-        recipientCount: userIds.length,
-        userIds,
-      },
-    }
-  )
+  await log({
+    action: 'push_blast',
+    status: 200,
+    context: `mass push "${data.title}" to ${userIds.length} users`,
+    meta: {
+      title: data.title,
+      body: data.body,
+      url: data.url,
+      recipientCount: userIds.length,
+      userIds,
+    },
+  })
 
   return results
 }

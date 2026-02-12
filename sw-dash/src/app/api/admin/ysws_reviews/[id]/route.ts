@@ -4,7 +4,7 @@ import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { bust } from '@/lib/cache'
 import { getOne } from '@/lib/ysws'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { parseId, idErr } from '@/lib/utils'
 import { syncFt } from '@/lib/flavortown-client'
 
@@ -33,7 +33,19 @@ export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({ user, req, para
   const { action, devlogs: updates, returnReason } = body
 
   if (action === 'complete' || action === 'return') {
-    const review = await prisma.yswsReview.findUnique({ where: { id: yswsId } })
+    const review = await prisma.yswsReview.findUnique({
+      where: { id: yswsId },
+      include: {
+        shipCert: {
+          select: {
+            ftProjectId: true,
+            projectName: true,
+            projectType: true,
+            ftUsername: true,
+          },
+        },
+      },
+    })
     if (!review) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
     let decisions = (review.decisions as Decision[] | null) || []
@@ -74,17 +86,62 @@ export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({ user, req, para
           yswsReturnedAt: new Date(),
         },
       })
+
+      await log({
+        action: 'ship_cert_returned',
+        status: 200,
+        user,
+        context: `returned from YSWS: ${returnReason}`,
+        target: { type: 'ship_cert', id: review.shipCertId },
+        meta: {
+          ip,
+          ua,
+          yswsReviewId: yswsId,
+          returnReason,
+          ftProjectId: review.shipCert.ftProjectId,
+          projectName: review.shipCert.projectName,
+          projectType: review.shipCert.projectType,
+          ftUsername: review.shipCert.ftUsername,
+        },
+      })
     }
 
-    await syslog(
-      action === 'complete' ? 'ysws_complete' : 'ysws_return',
-      200,
+    const action_name = action === 'complete' ? 'ysws_reviews_approved' : 'ysws_reviews_returned'
+    const totalApproved = decisions
+      .filter((d) => d.status === 'approved')
+      .reduce((sum, d) => sum + (d.approvedMins || 0), 0)
+    const totalRejected = decisions
+      .filter((d) => d.status === 'rejected')
+      .reduce((sum, d) => sum + (d.approvedMins || 0), 0)
+
+    await log({
+      action: action_name,
+      status: 200,
       user,
-      `${action}d ysws #${yswsId}`,
-      { ip, userAgent: ua }
-    )
-    await bust('cache:ysws:*')
-    await bust('cache:certs:*')
+      context:
+        action === 'return'
+          ? `returned to ship certs: ${returnReason}`
+          : `approved ${totalApproved}m`,
+      target: { type: 'ysws_review', id: yswsId },
+      changes: {
+        status: { before: review.status, after: action === 'complete' ? 'done' : 'returned' },
+      },
+      meta: {
+        ip,
+        ua,
+        shipCertId: review.shipCertId,
+        returnReason: action === 'return' ? returnReason : null,
+        totalApprovedMins: totalApproved,
+        totalRejectedMins: totalRejected,
+        decisions: decisions.map((d) => ({
+          ftDevlogId: d.ftDevlogId,
+          status: d.status,
+          approvedMins: d.approvedMins,
+        })),
+      },
+    })
+    bust('cache:ysws:*')
+    bust('cache:certs:*')
     return NextResponse.json({ ok: true })
   }
 

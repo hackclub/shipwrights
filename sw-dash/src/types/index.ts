@@ -3,6 +3,7 @@ export interface Cert {
   ftProjectId: string | null
   project: string | null
   type: string
+  ftType: string | null
   verdict: string
   certifier: string
   createdAt: string

@@ -1,7 +1,7 @@
 import json, requests, tempfile, time, os
 import db, ai
 from globals import STAFF_CHANNEL, USER_CHANNEL, BOT_TOKEN, DASH_URL, PORT, MACROS, client
-
+from cache import cache
 
 def send_files(event, dest_channel, dest_ts):
     files = event.get("files") or []
@@ -62,7 +62,7 @@ def handle_staff_reply(event):
     if not thread:
         return
 
-    ticket = db.find_ticket(thread)
+    ticket = cache.find_ticket_by_ts(thread)
     if not ticket:
         return
 
@@ -220,7 +220,7 @@ def handle_staff_reply(event):
                     }
                 ]
             )
-            db.close_ticket(ticket["id"])
+            cache.close_ticket(ticket["id"])
             client.chat_postMessage(
                 channel=STAFF_CHANNEL,
                 thread_ts=ticket["staffThreadTs"],
@@ -242,6 +242,14 @@ def handle_staff_reply(event):
                 name="checks-passed-octicon"
             )
 
+    elif text.strip().lower().split(' ')[0] in ["!tldr", "!ai"] and not cache.get_user_opt_in(ticket["userId"]):
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text="User has opted out of AI use."
+        )
+        return
+
     elif text.strip().lower().startswith('!tldr'):
         ai.summarize_ticket(ticket["id"])
 
@@ -250,7 +258,7 @@ def handle_staff_reply(event):
         ai.paraphrase_message(ticket["id"], clean_text)
 
     elif text.strip().lower().startswith('!reopen'):
-        db.open_ticket(ticket["id"])
+        cache.open_ticket(ticket["id"])
         client.chat_postMessage(
             channel=USER_CHANNEL,
             thread_ts=ticket["userThreadTs"],
@@ -276,7 +284,7 @@ def handle_staff_reply(event):
     elif text.strip().lower().startswith('!resolve'):
         if ticket["status"] != "open":
             return
-        db.close_ticket(ticket["id"])
+        cache.close_ticket(ticket["id"])
         db.claim_ticket(ticket["id"], user_id)
         try:
             client.reactions_add(
@@ -331,7 +339,7 @@ def handle_client_reply(event):
     if not text and not files:
         return True
 
-    ticket = db.find_ticket(event["thread_ts"])
+    ticket = cache.find_ticket_by_ts(event["thread_ts"])
     if ticket and ticket.get("status", None) != "closed":
         user_info = client.users_info(user=user_id)
         user_name = user_info["user"]["profile"].get("display_name") or user_info["user"]["profile"].get(
@@ -384,7 +392,7 @@ def create_ticket(event):
     user_id = event["user"]
     text = event.get("text", "")
     files = event.get("files", [])
-
+    user_opt_in = cache.get_user_opt_in(user_id)
     if not text and not files:
         return
 
@@ -487,12 +495,40 @@ def create_ticket(event):
                 },
             ]
         )
-        ai.detect_ticket(ticket_id)
+        client.chat_postEphemeral(
+            channel=USER_CHANNEL,
+            thread_ts=event["ts"],
+            text="AI Notice.",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn",
+                             "text": "*Hey There!*\nIt looks like you're currently *opted into* _Ticket AI_.\nWe use AI to improve your ticket experience and to give faster responses.\n_This is *optional* but may result in *longer* wait times if you decide to opt out._" if user_opt_in else "*Hey There!*\nIt looks like you're currently *opted out* of _Ticket AI_.\nWe use AI to improve your ticket experience and to give *faster* responses.\n_This is *optional* but may result in shorter wait times if you decide to opt in._"},
+                    "accessory": {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Opt Out" if user_opt_in else "Opt In"},
+                        "style": "primary",
+                        "value": json.dumps({"opt":'0' if user_opt_in else '1', "thread_ts":str(event["ts"])}),
+                        "action_id": "modify_opt"
+                    }
+                },
+            ],
+            user=user_id,
+        )
+        if user_opt_in:
+            ai.detect_ticket(ticket_id)
 
 def edit_message(event):
     message_ts = event.get("previous_message").get("ts")
     message = event.get("message").get("text")
-    ticket = db.find_ticket(message_ts)
+    ticket = cache.find_ticket_by_ts(message_ts)
+    if message == 'This message was deleted.':
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text="User has deleted message header, If no messages have been sent please don't send a reply or resolve as this could cause messages to be sent directly in the channel and not threaded."
+        )
+        return
     if event.get("message").get("thread_ts") == event.get("message").get("ts"):
         user_thread_link_resp = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=message_ts)
         user_thread_link = user_thread_link_resp["permalink"]

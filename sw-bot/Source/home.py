@@ -1,12 +1,13 @@
 import db
 from ai import get_metrics
 from globals import client
+from cache import cache
 
 def publish_home(user_id, view):
 	client.views_publish(user_id=user_id, view=view)
 
 def not_user():
-	shipwrights = db.get_shipwrights()
+	shipwrights = cache.get_shipwrights()
 	shipwright_list = ""
 	for shipwrights in enumerate(shipwrights):
 		shipwright_list += f" <@{shipwrights[1]}>, "

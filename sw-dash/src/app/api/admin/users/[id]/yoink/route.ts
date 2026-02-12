@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { log } from '@/lib/audit'
-import { syslog } from '@/lib/syslog'
+import { log as auditLog } from '@/lib/audit'
+import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { withParams } from '@/lib/api'
@@ -27,10 +27,18 @@ export const POST = withParams(PERMS.users_admin)(async ({ user, params, ip, ua 
       }),
     ])
 
-    await log(userId, user.id, 'yoinked - all access removed')
-    await syslog('users_yoinked', 200, user, `user #${userId} got yoinked - role set to observer`, {
-      ip,
-      userAgent: ua,
+    await auditLog(userId, user.id, 'yoinked - all access removed')
+    await log({
+      action: 'users_yoinked',
+      status: 200,
+      user,
+      context: 'access removed, role -> observer',
+      target: { type: 'user', id: userId },
+      changes: {
+        isActive: { before: true, after: false },
+        role: { before: 'unknown', after: 'observer' },
+      },
+      meta: { ip, ua },
     })
 
     return NextResponse.json({ success: true })

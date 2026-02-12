@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { api } from '@/lib/api'
 import { PERMS } from '@/lib/perms'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { prisma } from '@/lib/db'
 import { getSlackUser } from '@/lib/slack'
 
@@ -53,13 +53,26 @@ export const POST = api(PERMS.users_add)(async ({ user, req, ip, ua }) => {
     },
   })
 
-  await syslog(
-    'user_added',
-    200,
+  await log({
+    action: 'users_added',
+    status: 200,
     user,
-    `added ${username} (${slackId}) as ${role} via ${source}${fraudDone ? ` - fraud by ${fraudById}` : ''}`,
-    { ip, userAgent: ua }
-  )
+    context: `added ${username} as ${role} via ${source}`,
+    target: { type: 'user', id: newUser.id },
+    meta: {
+      ip,
+      ua,
+      slackId,
+      username,
+      ftuid,
+      role,
+      source,
+      fraudDone,
+      fraudBy: fraudById,
+      notes,
+      isActive,
+    },
+  })
 
   await prisma.auditLog.create({
     data: {

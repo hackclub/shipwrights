@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { log } from '@/lib/audit'
-import { syslog } from '@/lib/syslog'
+import { log as auditLog } from '@/lib/audit'
+import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { withParams } from '@/lib/api'
@@ -19,15 +19,27 @@ export const POST = withParams(PERMS.users_edit)(async ({ user, req, params, ip,
       return NextResponse.json({ error: 'notes gotta be a string' }, { status: 400 })
     }
 
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { staffNotes: true },
+    })
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: { staffNotes },
     })
 
-    await log(userId, user.id, 'updated staff notes', staffNotes)
-    await syslog('users_notes_updated', 200, user, `user #${userId} - notes: ${staffNotes}`, {
-      ip,
-      userAgent: ua,
+    await auditLog(userId, user.id, 'updated staff notes', staffNotes)
+    await log({
+      action: 'users_notes_updated',
+      status: 200,
+      user,
+      context: 'staff notes updated',
+      target: { type: 'user', id: userId },
+      changes: {
+        staffNotes: { before: target?.staffNotes, after: staffNotes },
+      },
+      meta: { ip, ua, notes: staffNotes.substring(0, 100) },
     })
 
     return NextResponse.json({

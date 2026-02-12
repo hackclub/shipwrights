@@ -1,6 +1,7 @@
-import views, db
+import views
 from collections import defaultdict
 from datetime import datetime, timedelta
+from cache import cache
 
 rate_limits = defaultdict(list)
 MAX_REQS = 30
@@ -43,7 +44,7 @@ def get_user_info(client, user_id):
     return None
 
 def is_shipwright(user_id):
-    if user_id in db.get_shipwrights():
+    if user_id in cache.get_shipwrights():
         return True
     return False
 

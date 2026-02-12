@@ -106,14 +106,14 @@ def get_ticket(ticket_id):
         cursor.close()
         db.close()
 
-def find_ticket(staff_thread):
+def find_ticket(thread):
     db = get_db()
     if not db:
         return None
     
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT * FROM tickets WHERE staffThreadTs = %s OR userThreadTs = %s", (staff_thread, staff_thread))
+        cursor.execute("SELECT * FROM tickets WHERE staffThreadTs = %s OR userThreadTs = %s", (thread, thread))
         return cursor.fetchone()
     except Exception as e:
         print(f"ticket lookup failed: {e}")
@@ -142,24 +142,6 @@ def claim_ticket(ticket_id, closer):
         cursor.close()
         db.close()
 
-def is_claimed(ticket_id):
-    db = get_db()
-    if not db:
-        return False
-
-    cursor = db.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT closedBy FROM tickets WHERE id = %s", (ticket_id,))
-        ticket = cursor.fetchone()
-        if not ticket:
-            return False
-        return ticket.get("closedBy") is not None
-    except Exception as e:
-        print(f"couldn't check if ticket is claimed: {e}")
-        return False
-    finally:
-        cursor.close()
-        db.close()
 
 def close_ticket(ticket_id):
     db = get_db()
@@ -181,56 +163,6 @@ def close_ticket(ticket_id):
         cursor.close()
         db.close()
 
-def can_close(slack_id):
-    db = get_db()
-    if not db:
-        return False
-    
-    cursor = db.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            "SELECT role FROM users WHERE slackId = %s AND isActive = 1",
-            (slack_id,)
-        )
-        user = cursor.fetchone()
-        if not user:
-            return False
-        
-        role = user.get("role", "")
-        allowed = ["shipwright", "captain", "megawright"]
-        return role in allowed
-    except Exception as e:
-        print(f"perm check failed: {e}")
-        return False
-    finally:
-        cursor.close()
-        db.close()
-
-
-def get_user_auth(user_id):
-    db = get_db()
-    if not db:
-        print("DB not connected")
-        return
-
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT role FROM users WHERE slackId = %s AND isActive = 1", (user_id,))
-    user = cursor.fetchone()
-    cursor.close()
-    db.close()
-    return user
-
-def get_authorized_users():
-    db = get_db()
-    if not db:
-        return
-
-    cursor = db.cursor()
-    cursor.execute("SELECT slackId FROM users WHERE isActive = 1")
-    authorized_ids = {row[0] for row in cursor.fetchall()}
-    cursor.close()
-    db.close()
-    return authorized_ids
 
 def shipped_projects(time="all", status="approved"):
     db = get_db()
@@ -457,6 +389,60 @@ def open_ticket(ticket_id):
         return True
     except Exception as e:
         print(f"couldn't close ticket: {e}")
+        return False
+    finally:
+        cursor.close()
+        db.close()
+
+def get_ticket_user(user_id):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM ticket_users WHERE userId = %s", (user_id,))
+        row = cursor.fetchone()
+        return row if row else None
+    except Exception as e:
+        print(f"couldn't get ticket user info: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
+def create_ticket_user(user_id):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO ticket_users (userId, isOptedIn) VALUES (%s, %s)",
+            (user_id, True)
+        )
+        db.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        print(f"couldn't create ticket user: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
+def update_ticket_user_opt(user_id, state: bool):
+    db = get_db()
+    if not db:
+        return False
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "UPDATE ticket_users SET isOptedIn = %s WHERE userId = %s",
+            (state, user_id)
+        )
+        db.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"couldn't update ticket user opt in: {e}")
         return False
     finally:
         cursor.close()

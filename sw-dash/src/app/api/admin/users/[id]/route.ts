@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { log } from '@/lib/audit'
-import { syslog } from '@/lib/syslog'
+import { log as auditLog } from '@/lib/audit'
+import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { parseId, idErr } from '@/lib/utils'
@@ -67,16 +67,25 @@ export const PATCH = withParams(PERMS.users_edit)(async ({ user, req, params, ip
     const updateData: { role?: string } = {}
     if (role !== undefined) updateData.role = role
 
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: updateData,
     })
 
     if (role !== undefined) {
-      await log(userId, user.id, `role changed to ${role}`)
-      await syslog('users_role_changed', 200, user, `user #${userId} - new role: ${role}`, {
-        ip,
-        userAgent: ua,
+      await auditLog(userId, user.id, `role changed to ${role}`)
+      await log({
+        action: 'users_role_changed',
+        status: 200,
+        user,
+        context: `role changed to ${role}`,
+        target: { type: 'user', id: userId },
+        changes: {
+          role: { before: target?.role, after: role },
+        },
+        meta: { ip, ua },
       })
     }
 
@@ -116,8 +125,15 @@ export const DELETE = withParams(PERMS.users_admin)(async ({ user, params, ip, u
       where: { id: userId },
     })
 
-    await log(userId, user.id, 'user deleted')
-    await syslog('users_deleted', 200, user, `user #${userId} deleted`, { ip, userAgent: ua })
+    await auditLog(userId, user.id, 'user deleted')
+    await log({
+      action: 'users_deleted',
+      status: 200,
+      user,
+      context: 'user deleted',
+      target: { type: 'user', id: userId },
+      meta: { ip, ua },
+    })
 
     await bust('cache:users')
     await bust('cache:admin*')

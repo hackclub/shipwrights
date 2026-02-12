@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSession } from '@/lib/auth'
 import { rateLimit } from '@/lib/ratelimit'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { prisma } from '@/lib/db'
 
 const loginLimiter = rateLimit('slack-callback', 5, 60 * 1000)
@@ -32,7 +32,12 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      await syslog('auth_login_fail', 401, null, 'oauth error', { ip, userAgent })
+      await log({
+        action: 'auth_login_failed',
+        status: 401,
+        context: 'oauth error',
+        meta: { ip, ua: userAgent, error },
+      })
 
       return NextResponse.redirect(
         new URL('/?error=no_access_get_fucked', process.env.NEXTAUTH_URL!)
@@ -48,7 +53,12 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      await syslog('auth_login_fail', 400, null, 'no code', { ip, userAgent })
+      await log({
+        action: 'auth_login_failed',
+        status: 400,
+        context: 'no code in params',
+        meta: { ip, ua: userAgent },
+      })
 
       return NextResponse.redirect(new URL('/?error=invalid_request', process.env.NEXTAUTH_URL!))
     }
@@ -79,7 +89,12 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      await syslog('auth_login_fail', 401, null, 'token exchange failed', { ip, userAgent })
+      await log({
+        action: 'auth_login_failed',
+        status: 401,
+        context: 'slack token exchange failed',
+        meta: { ip, ua: userAgent, tokenError: tokenData.error },
+      })
 
       return NextResponse.redirect(
         new URL('/?error=token_exchange_failed', process.env.NEXTAUTH_URL!)
@@ -105,18 +120,18 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      await syslog(
-        'auth_login_fail',
-        401,
-        {
+      await log({
+        action: 'auth_login_failed',
+        status: 401,
+        user: {
           slackId: userInfo.sub,
           username: userInfo.name,
           email: userInfo.email,
           avatar: userInfo.picture,
         },
-        'user info failed',
-        { ip, userAgent }
-      )
+        context: 'slack userinfo fetch failed',
+        meta: { ip, ua: userAgent },
+      })
 
       return NextResponse.redirect(new URL('/?error=user_info_failed', process.env.NEXTAUTH_URL!))
     }
@@ -136,18 +151,18 @@ export async function GET(request: NextRequest) {
         },
       })
 
-      await syslog(
-        'auth_login_denied',
-        403,
-        {
+      await log({
+        action: 'auth_login_denied',
+        status: 403,
+        user: {
           slackId: userInfo.sub,
           username: userInfo.name,
           email: userInfo.email,
           avatar: userInfo.picture,
         },
-        'not authorized',
-        { ip, userAgent }
-      )
+        context: 'user not in db or inactive',
+        meta: { ip, ua: userAgent, email: userInfo.email },
+      })
 
       return NextResponse.redirect(new URL('/?error=naughty_fucker', process.env.NEXTAUTH_URL!))
     }
@@ -164,10 +179,10 @@ export async function GET(request: NextRequest) {
 
     const sessionToken = await createSession(authorizedUser.id, userAgent, ip)
 
-    await syslog(
-      'auth_login_success',
-      200,
-      {
+    await log({
+      action: 'auth_login_success',
+      status: 200,
+      user: {
         id: authorizedUser.id,
         slackId: authorizedUser.slackId,
         username: authorizedUser.username,
@@ -175,9 +190,9 @@ export async function GET(request: NextRequest) {
         email: userInfo.email,
         avatar: userInfo.picture,
       },
-      'logged in',
-      { ip, userAgent }
-    )
+      context: 'slack oauth login',
+      meta: { ip, ua: userAgent, email: userInfo.email },
+    })
 
     const response = NextResponse.redirect(new URL('/admin', process.env.NEXTAUTH_URL!))
     response.cookies.set('session_token', sessionToken, {
@@ -199,7 +214,12 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    await syslog('auth_login_error', 500, null, 'shit broke during login', { ip, userAgent })
+    await log({
+      action: 'auth_login_failed',
+      status: 500,
+      context: 'uncaught error during login',
+      meta: { ip, ua: userAgent },
+    })
 
     return NextResponse.redirect(new URL('/?error=server_bumbum', process.env.NEXTAUTH_URL!))
   }

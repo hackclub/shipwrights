@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withParams } from '@/lib/api'
 import { PERMS } from '@/lib/perms'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { parseId, idErr } from '@/lib/utils'
 
 export const POST = withParams(PERMS.certs_report)(async ({ user, req, params, ip, ua }) => {
@@ -21,20 +21,16 @@ export const POST = withParams(PERMS.certs_report)(async ({ user, req, params, i
 
   if (!baseUrl || !reportKey) {
     if (isDev) {
-      console.log('[MOCK] fraud report received:', { ftProjectId, details, user: user.username })
-      await syslog(
-        'fraud_report_sent',
-        200,
+      await log({
+        action: 'fraud_report_sent',
+        status: 200,
         user,
-        `[MOCK] reported ${ftProjectId} to fraud squad`,
-        {
-          ip,
-          userAgent: ua,
-        }
-      )
+        context: `Reported ${ftProjectId} to fraud squad`,
+        target: { type: 'ship_cert', id: shipId },
+        meta: { ip, ua, ftProjectId, details },
+      })
       return NextResponse.json({ ok: true, mock: true })
     }
-    console.error('flavortown report config missing')
     return NextResponse.json({ error: 'report config missing' }, { status: 500 })
   }
 
@@ -55,30 +51,45 @@ export const POST = withParams(PERMS.certs_report)(async ({ user, req, params, i
     if (!response.ok) {
       const text = await response.text()
       console.error(`fraud report failed: ${response.status} ${text}`)
-      await syslog(
-        'fraud_report_failed',
-        response.status,
+      await log({
+        action: 'fraud_report_failed',
+        status: response.status,
         user,
-        `failed to report ${ftProjectId}`,
-        {
-          ip,
-          userAgent: ua,
-        }
-      )
+        context: `failed to report ${ftProjectId}`,
+        target: { type: 'ship_cert', id: shipId },
+        res: {
+          status: response.status,
+          body: text,
+        },
+        meta: { ip, ua, ftProjectId, details },
+      })
       return NextResponse.json({ error: 'report failed' }, { status: 500 })
     }
 
-    await syslog('fraud_report_sent', 200, user, `reported ${ftProjectId} to fraud squad`, {
-      ip,
-      userAgent: ua,
+    await log({
+      action: 'fraud_report_sent',
+      status: 200,
+      user,
+      context: `reported ${ftProjectId} to fraud squad`,
+      target: { type: 'ship_cert', id: shipId },
+      meta: { ip, ua, ftProjectId, details: details.substring(0, 100) },
     })
 
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('fraud report borked:', error)
-    await syslog('fraud_report_error', 500, user, `fraud report crashed for ${ftProjectId}`, {
-      ip,
-      userAgent: ua,
+    await log({
+      action: 'fraud_report_failed',
+      status: 500,
+      user,
+      context: `fraud report crashed for ${ftProjectId}`,
+      target: { type: 'ship_cert', id: shipId },
+      error: {
+        name: error instanceof Error ? error.name : 'Error',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      meta: { ip, ua, ftProjectId },
     })
     return NextResponse.json({ error: 'report error' }, { status: 500 })
   }

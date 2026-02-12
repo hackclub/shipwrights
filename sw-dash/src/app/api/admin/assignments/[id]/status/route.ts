@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { reportError } from '@/lib/error-tracking'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { withParams } from '@/lib/api'
 
 export const PATCH = withParams()(async ({ user, req, params, ip, ua }) => {
@@ -48,23 +48,24 @@ export const PATCH = withParams()(async ({ user, req, params, ip, ua }) => {
       },
     })
 
-    await syslog(
-      'assignment_status_updated',
-      200,
+    await log({
+      action: 'assignment_status_updated',
+      status: 200,
       user,
-      `changed status from ${oldStatus} to ${newStatus}`,
-      { ip, userAgent: ua },
-      {
-        targetId: numId,
-        targetType: 'assignment',
-        metadata: {
-          oldStatus,
-          newStatus,
-          assigneeId: assignment.assigneeId,
-          userId: assignment.userId,
-        },
-      }
-    )
+      context: `changed status: ${oldStatus} -> ${newStatus}`,
+      target: { type: 'assignment', id: numId },
+      changes: {
+        status: { before: oldStatus, after: newStatus },
+      },
+      meta: {
+        ip,
+        ua,
+        oldStatus,
+        newStatus,
+        assigneeId: assignment.assigneeId,
+        userId: assignment.userId,
+      },
+    })
 
     return NextResponse.json({
       success: true,

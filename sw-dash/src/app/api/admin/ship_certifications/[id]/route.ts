@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { parseId, idErr } from '@/lib/utils'
 import { syncFt } from '@/lib/flavortown-client'
 import { bust } from '@/lib/cache'
@@ -255,14 +255,15 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
 
     if (projectType !== undefined) {
       updateData.projectType = projectType
-      await syslog(
-        'certs_type_override',
-        200,
+      await log({
+        action: 'ship_cert_type_override',
+        status: 200,
         user,
-        `type -> ${projectType}`,
-        { ip, userAgent: ua },
-        { targetId: shipId, targetType: 'ship_cert' }
-      )
+        context: `type changed to ${projectType}`,
+        target: { type: 'ship_cert', id: shipId },
+        changes: { projectType: { before: cert.projectType, after: projectType } },
+        meta: { ip, ua },
+      })
     }
 
     if (customBounty !== undefined) {
@@ -270,6 +271,16 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
         return NextResponse.json({ error: 'u aint got bounty perms' }, { status: 403 })
       }
       updateData.customBounty = customBounty
+
+      await log({
+        action: 'ship_cert_bounty_set',
+        status: 200,
+        user,
+        context: `custom bounty set to ${customBounty || 'null'}`,
+        target: { type: 'ship_cert', id: shipId },
+        changes: { customBounty: { before: cert.customBounty, after: customBounty } },
+        meta: { ip, ua },
+      })
     }
 
     const updated = await prisma.shipCert.update({
@@ -423,15 +434,30 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       }
     }
 
-    const logContext = []
-    if (verdict) logContext.push(`verdict: ${verdict}`)
-    if (proofVideoUrl) logContext.push('uploaded proof video')
-    if (reviewFeedback) logContext.push(`feedback: ${reviewFeedback}`)
-
-    if (logContext.length > 0) {
-      await syslog('certs_decision', 200, user, `ship #${shipId} - ${logContext.join(', ')}`, {
-        ip,
-        userAgent: ua,
+    if (verdict) {
+      const action = `ship_cert_${verdict.toLowerCase()}`
+      await log({
+        action,
+        status: 200,
+        user,
+        context: reviewFeedback || `cert ${verdict.toLowerCase()}`,
+        target: { type: 'ship_cert', id: shipId },
+        changes: {
+          status: { before: cert.status, after: verdict.toLowerCase() },
+          ...(proofVideoUrl
+            ? { proofVideoUrl: { before: cert.proofVideoUrl, after: proofVideoUrl } }
+            : {}),
+        },
+        meta: {
+          ip,
+          ua,
+          ftProjectId: updated.ftProjectId,
+          projectName: updated.projectName,
+          proofVideoUrl,
+          feedback: reviewFeedback,
+          cookiesEarned: updateData.cookiesEarned,
+          payoutMulti: updateData.payoutMulti,
+        },
       })
     }
 

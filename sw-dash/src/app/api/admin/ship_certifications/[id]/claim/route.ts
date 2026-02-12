@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { PERMS, can } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { parseId, idErr } from '@/lib/utils'
-import { syslog } from '@/lib/syslog'
+import { log } from '@/lib/log'
 import { bust } from '@/lib/cache'
 import { withParams } from '@/lib/api'
 
@@ -145,23 +145,21 @@ export const POST = withParams(PERMS.certs_edit)(async ({ user, params, ip, ua }
       },
     })
 
-    await syslog(
-      'ship_cert_claimed',
-      200,
+    await log({
+      action: 'ship_cert_claimed',
+      status: 200,
       user,
-      `claimed ${cert.projectName}`,
-      { ip, userAgent: ua },
-      {
-        targetId: shipId,
-        targetType: 'ship_cert',
-        metadata: {
-          projectName: cert.projectName,
-          ftProjectId: cert.ftProjectId,
-          ftSlackId: cert.ftSlackId,
-          previousClaimer: cert.claimerId,
-        },
-      }
-    )
+      context: `claimed ${cert.projectName}`,
+      target: { type: 'ship_cert', id: shipId },
+      meta: {
+        ip,
+        ua,
+        projectName: cert.projectName,
+        ftProjectId: cert.ftProjectId,
+        ftSlackId: cert.ftSlackId,
+        previousClaimer: cert.claimerId,
+      },
+    })
 
     await bust('cache:certs:*')
 

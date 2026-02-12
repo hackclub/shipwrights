@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { nuke } from '@/lib/auth'
-import { log } from '@/lib/audit'
-import { syslog } from '@/lib/syslog'
+import { log as auditLog } from '@/lib/audit'
+import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { withParams } from '@/lib/api'
@@ -28,14 +28,18 @@ export const POST = withParams(PERMS.users_edit)(async ({ user, req, params, ip,
       await nuke(userId)
     }
 
-    await log(userId, user.id, isActive ? 'account enabled' : 'account disabled')
-    await syslog(
-      isActive ? 'users_enabled' : 'users_disabled',
-      200,
+    await auditLog(userId, user.id, isActive ? 'account enabled' : 'account disabled')
+    await log({
+      action: isActive ? 'users_enabled' : 'users_disabled',
+      status: 200,
       user,
-      `user #${userId} ${isActive ? 'enabled' : 'disabled'}`,
-      { ip, userAgent: ua }
-    )
+      context: `account ${isActive ? 'enabled' : 'disabled'}`,
+      target: { type: 'user', id: userId },
+      changes: {
+        isActive: { before: !isActive, after: isActive },
+      },
+      meta: { ip, ua },
+    })
 
     return NextResponse.json({
       success: true,

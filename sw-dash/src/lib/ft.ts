@@ -1,4 +1,4 @@
-import { syslog } from './syslog'
+import { log } from './log'
 
 interface FtMedia {
   url: string
@@ -32,15 +32,19 @@ async function getProj(ftProjectId: string) {
     })
 
     if (!projectRes.ok) {
+      if (projectRes.status === 404) return null
+
       const txt = await projectRes.text()
-      await syslog(
-        'ft_project_fetch_fail',
-        projectRes.status,
-        null,
-        `couldnt fetch project ${ftProjectId}`,
-        undefined,
-        { metadata: { ftProjectId, url: projectUrl, error: txt }, severity: 'error' }
-      )
+      await log({
+        action: 'ft_project_fetch_failed',
+        status: projectRes.status,
+        context: `couldnt fetch project ${ftProjectId}`,
+        res: {
+          status: projectRes.status,
+          body: txt,
+        },
+        meta: { ftProjectId, url: projectUrl },
+      })
       return null
     }
 
@@ -72,14 +76,16 @@ export async function fetchDevlogs(ftProjectId: string): Promise<FtDevlog[]> {
     if (!res.ok) {
       const txt = await res.text()
       console.error(`ft devlog fetch borked: ${res.status} ${txt}`)
-      await syslog(
-        'ft_devlog_fetch_fail',
-        res.status,
-        null,
-        `couldnt fetch devlogs for ${ftProjectId}`,
-        undefined,
-        { metadata: { ftProjectId, url, error: txt }, severity: 'error' }
-      )
+      await log({
+        action: 'ft_devlog_fetch_failed',
+        status: res.status,
+        context: `couldnt fetch devlogs for ${ftProjectId}`,
+        res: {
+          status: res.status,
+          body: txt,
+        },
+        meta: { ftProjectId, url },
+      })
       return []
     }
 
@@ -87,17 +93,17 @@ export async function fetchDevlogs(ftProjectId: string): Promise<FtDevlog[]> {
     return data.devlogs || []
   } catch (e) {
     console.error('ft devlog fetch exploded:', e)
-    await syslog(
-      'ft_devlog_fetch_error',
-      500,
-      null,
-      `devlog fetch crashed for ${ftProjectId}`,
-      undefined,
-      {
-        metadata: { ftProjectId, error: e instanceof Error ? e.message : String(e) },
-        severity: 'error',
-      }
-    )
+    await log({
+      action: 'ft_devlog_fetch_failed',
+      status: 500,
+      context: `devlog fetch crashed for ${ftProjectId}`,
+      error: {
+        name: e instanceof Error ? e.name : 'Error',
+        message: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined,
+      },
+      meta: { ftProjectId },
+    })
     return []
   }
 }

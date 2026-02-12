@@ -1,21 +1,21 @@
 import { prisma } from './db'
 
 const RATES: Record<string, number> = {
-  'Web App': 0.6,
-  'Chat Bot': 0.6,
-  Extension: 0.75,
-  CLI: 0.8,
-  Cargo: 0.8,
-  'Desktop App (Windows)': 1,
-  'Minecraft Mods': 0.8,
-  'Android App': 0.8,
-  'iOS App': 0.8,
-  'Steam Games': 0.8,
-  PyPI: 0.8,
-  'Desktop App (Linux)': 1.1,
-  'Desktop App (macOS)': 1.1,
-  Hardware: 1.1,
-  Other: 1.1,
+  'Web App': 0.75,
+  'Chat Bot': 0.75,
+  Extension: 0.94,
+  CLI: 1,
+  Cargo: 1,
+  'Desktop App (Windows)': 1.25,
+  'Minecraft Mods': 1,
+  'Android App': 1,
+  'iOS App': 1,
+  'Steam Games': 1,
+  PyPI: 1,
+  'Desktop App (Linux)': 1.4,
+  'Desktop App (macOS)': 1.4,
+  Hardware: 1.4,
+  Other: 1.4,
 }
 
 const MULTI = [1.75, 1.5, 1.25]
