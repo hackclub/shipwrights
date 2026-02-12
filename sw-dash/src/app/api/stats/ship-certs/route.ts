@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCerts } from '@/lib/certs'
 import { prisma } from '@/lib/db'
+import { reportError } from '@/lib/error-tracking'
 
 export async function GET(req: NextRequest) {
   const key = req.headers.get('x-api-key')
@@ -10,9 +11,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = new Date()
-    const sevenDaysAgo = new Date(now)
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-    sevenDaysAgo.setHours(0, 0, 0, 0)
+    const windowStart = new Date(now)
+    windowStart.setDate(windowStart.getDate() - 6)
+    windowStart.setHours(0, 0, 0, 0)
 
     const [data, pendingCerts, reviewStats, shipStats] = await Promise.all([
       getCerts({}),
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
           AVG(TIMESTAMPDIFF(SECOND, createdAt, reviewCompletedAt)) as avgWaitSeconds,
           COUNT(*) as reviewCount
         FROM ship_certs
-        WHERE reviewCompletedAt >= ${sevenDaysAgo}
+        WHERE reviewCompletedAt >= ${windowStart}
           AND status IN ('approved', 'rejected')
         GROUP BY DATE(reviewCompletedAt)
         ORDER BY date ASC
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
           DATE(createdAt) as date,
           COUNT(*) as shipCount
         FROM ship_certs
-        WHERE createdAt >= ${sevenDaysAgo}
+        WHERE createdAt >= ${windowStart}
         GROUP BY DATE(createdAt)
         ORDER BY date ASC
       `,
@@ -108,7 +109,8 @@ export async function GET(req: NextRequest) {
       reviewsPerDay: reviewsPerDay,
       shipsPerDay: shipsPerDay,
     })
-  } catch {
+  } catch (err) {
+    reportError(err instanceof Error ? err : new Error(String(err)), { endpoint: 'ship-certs' })
     return NextResponse.json({ error: 'shit broke' }, { status: 500 })
   }
 }
