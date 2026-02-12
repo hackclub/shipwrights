@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date()
     const windowStart = new Date(now)
-    windowStart.setDate(windowStart.getDate() - 6)
+    windowStart.setDate(windowStart.getDate() - 29)
     windowStart.setHours(0, 0, 0, 0)
 
     const [data, pendingCerts, reviewStats, shipStats] = await Promise.all([
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     const reviewsPerDay: Record<string, number> = {}
     const shipsPerDay: Record<string, number> = {}
 
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const day = new Date(now)
       day.setDate(day.getDate() - i)
       day.setHours(0, 0, 0, 0)
