@@ -154,7 +154,8 @@ export function Review({ data, canEdit }: Props) {
     }
   }
 
-  const getLocal = (id: string) => local.find((d) => d.id === id)!
+  const getLocal = (id: string) =>
+    local.find((d) => d.id === id) ?? { id, status: 'pending', approvedMins: 0, notes: '' }
 
   const submitReport = async () => {
     if (!reportReason.trim()) return

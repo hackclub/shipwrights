@@ -5,6 +5,7 @@ import { fetchDevlogs } from '@/lib/ft'
 import { parseRepo, fetchCommits } from '@/lib/gh'
 import { grab, upload } from '@/lib/r2'
 import { PERMS } from '@/lib/perms'
+import { log } from '@/lib/log'
 
 const ftBase = process.env.NEXT_PUBLIC_FLAVORTOWN_URL || ''
 
@@ -26,7 +27,7 @@ async function pullMedia(ftMedia: any[]) {
   return out
 }
 
-export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params }) => {
+export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params, user }) => {
   const yswsId = parseInt(params.id)
   if (!yswsId) return NextResponse.json({ error: 'invalid id' }, { status: 400 })
 
@@ -39,20 +40,18 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params }) => {
     return NextResponse.json({ error: 'not found' }, { status: 404 })
   }
 
-  console.log(`refreshing ysws ${yswsId} for project ${review.shipCert.ftProjectId}`)
-
   const ftDevlogs = await fetchDevlogs(review.shipCert.ftProjectId)
-  console.log(`fetched ${ftDevlogs.length} devlogs from FT`)
-
   const repo = review.shipCert.repoUrl ? parseRepo(review.shipCert.repoUrl) : null
 
   const sorted = ftDevlogs
     .filter((d) => d.created_at)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
-  const devlogs = []
-  const commits = []
-  const decisions = []
+  const existingDecisions = (review.decisions as any[]) || []
+
+  const devlogs: any[] = []
+  const commits: any[] = []
+  const decisions: any[] = []
 
   if (sorted.length > 0 && repo) {
     const oldest = new Date(sorted[0].created_at)
@@ -62,14 +61,10 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params }) => {
       const until = new Date(d.created_at)
       const ftDevlogId = String(d.id)
 
-      console.log(`devlog ${ftDevlogId}: has ${d.media?.length || 0} media items`)
-
       const [fetched, media] = await Promise.all([
         fetchCommits(repo.owner, repo.repo, prevTs, until),
         pullMedia(d.media),
       ])
-
-      console.log(`devlog ${ftDevlogId}: pulled ${media.length} media to r2`)
 
       devlogs.push({
         ftDevlogId,
@@ -91,21 +86,19 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params }) => {
         })),
       })
 
+      const existing = existingDecisions.find((x: any) => x.ftDevlogId === ftDevlogId)
       decisions.push({
         ftDevlogId,
-        status: 'pending',
-        approvedMins: null,
-        notes: null,
+        status: existing?.status || 'pending',
+        approvedMins: existing?.approvedMins ?? null,
+        notes: existing?.notes ?? null,
       })
 
       prevTs = until
     }
   } else {
-    console.log('no repo or no sorted devlogs, using simple path')
     for (const d of ftDevlogs) {
-      console.log(`devlog ${d.id}: has ${d.media?.length || 0} media items`)
       const media = await pullMedia(d.media)
-      console.log(`devlog ${d.id}: pulled ${media.length} media to r2`)
       const ftDevlogId = String(d.id)
 
       devlogs.push({
@@ -118,16 +111,15 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params }) => {
 
       commits.push({ ftDevlogId, commits: [] })
 
+      const existing = existingDecisions.find((x: any) => x.ftDevlogId === ftDevlogId)
       decisions.push({
         ftDevlogId,
-        status: 'pending',
-        approvedMins: null,
-        notes: null,
+        status: existing?.status || 'pending',
+        approvedMins: existing?.approvedMins ?? null,
+        notes: existing?.notes ?? null,
       })
     }
   }
-
-  console.log(`updating db with ${devlogs.length} devlogs`)
 
   await prisma.yswsReview.update({
     where: { id: yswsId },
@@ -138,7 +130,31 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params }) => {
     },
   })
 
-  console.log('refresh done')
+  await log({
+    action: 'ysws_force_reload',
+    status: 200,
+    user,
+    target: { id: yswsId, type: 'ysws_review' },
+    context: `force reloaded ${devlogs.length} devlogs for project ${review.shipCert.ftProjectId}`,
+    meta: {
+      ftProjectId: review.shipCert.ftProjectId,
+      ftProjectUrl: `${ftBase}/projects/${review.shipCert.ftProjectId}`,
+      repoUrl: review.shipCert.repoUrl,
+      devlogs: devlogs.map((d, i) => ({
+        ftDevlogId: d.ftDevlogId,
+        ftDevlogUrl: `${ftBase}/projects/${review.shipCert.ftProjectId}/devlogs/${d.ftDevlogId}`,
+        descPreview: d.desc?.slice(0, 100) || null,
+        origSecs: d.origSecs,
+        mediaCount: d.media?.length || 0,
+        mediaUrls: d.media?.map((m: any) => m.url) || [],
+        commitCount: commits[i]?.commits?.length || 0,
+        decision: decisions.find((x) => x.ftDevlogId === d.ftDevlogId)?.status || 'pending',
+      })),
+      totalMedia: devlogs.reduce((s, d) => s + (d.media?.length || 0), 0),
+      totalCommits: commits.reduce((s, c) => s + c.commits.length, 0),
+      preservedDecisions: decisions.filter((d) => d.status !== 'pending').length,
+    },
+  })
 
   return NextResponse.json({ success: true })
 })
