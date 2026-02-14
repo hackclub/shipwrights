@@ -6,7 +6,7 @@ from cache import cache
 
 def get_ticket_summary(ticket_id):
     return json.loads(requests.get(
-    url="https://ai.review.hackclub.com/tickets/summery",
+    url="https://ai.review.hackclub.com/tickets/summary",
     headers={"X-API-Key": SWAI_KEY},
     json={"ticket_id": str(ticket_id)}
 ).text)
