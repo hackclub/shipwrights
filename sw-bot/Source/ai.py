@@ -4,15 +4,15 @@ from globals import SWAI_KEY, MACROS, STAFF_CHANNEL,client
 from cache import cache
 
 
-def get_ticket_summery(ticket_id):
+def get_ticket_summary(ticket_id):
     return json.loads(requests.get(
-    url="https://ai.review.hackclub.com/tickets/summery",
+    url="https://ai.review.hackclub.com/tickets/summary",
     headers={"X-API-Key": SWAI_KEY},
     json={"ticket_id": str(ticket_id)}
 ).text)
 
 def summarize_ticket(ticket_id):
-    summary = get_ticket_summery(ticket_id)
+    summary = get_ticket_summary(ticket_id)
     ticket = cache.get_ticket_by_id(ticket_id)
     client.chat_postMessage(
         channel=STAFF_CHANNEL,
@@ -23,7 +23,7 @@ def summarize_ticket(ticket_id):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "AI Ticket Summery :rac_woah:",
+                    "text": "AI Ticket Summary :rac_woah:",
                     "emoji": True
                 }
             },
@@ -34,7 +34,7 @@ def summarize_ticket(ticket_id):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"_Status: {summary.get('status', 'Unknown')}_ :rac_info:\n\n*Summery*: {summary.get('summary', 'AI decided you dont deserve a summary :rac_ded:')}\n*Recommended Action*: {summary.get('suggested_action') if summary.get('suggested_action').strip() else 'idk bro'}"
+                    "text": f"_Status: {summary.get('status', 'Unknown')}_ :rac_info:\n\n*Summary*: {summary.get('summary', 'AI decided you dont deserve a summary :rac_ded:')}\n*Recommended Action*: {summary.get('suggested_action') if summary.get('suggested_action').strip() else 'idk bro'}"
                 }
             },
             {
@@ -45,7 +45,7 @@ def summarize_ticket(ticket_id):
                 "elements": [
                     {
                         "type": "plain_text",
-                        "text": "This summery is made by AI so please validate any information given.",
+                        "text": "This summary is made by AI so please validate any information given.",
                         "emoji": True
                     }
                 ]
