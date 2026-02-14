@@ -83,7 +83,7 @@ class Cache:
 
     def open_ticket(self, ticket_id):
         if ticket_id in self.tickets.keys():
-            self.tickets["id"]["status"] = "open"
+            self.tickets[ticket_id]["status"] = "open"
             db.open_ticket(ticket_id)
         else:
             ticket_data = db.get_ticket(ticket_id)
