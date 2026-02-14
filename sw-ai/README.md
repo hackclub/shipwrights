@@ -42,7 +42,7 @@ All endpoints (except `/health`) need `X-API-Key` header.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
-| GET | `/tickets/summery` | Get ticket summary |
+| GET | `/tickets/summary` | Get ticket summary |
 | GET | `/tickets/complete` | Rewrite staff message |
 | GET | `/tickets/detect` | Check if ticket is in scope |
 | POST | `/projects/type` | Classify project type |
