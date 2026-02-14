@@ -268,8 +268,8 @@ def claim_ticket(body, client, ack):
             text=f"*This ticket has been claimed by <@{user_id}>!*"
         )
 
-@slack_app.command("/swsummery")
-def trigger_summery(command, ack):
+@slack_app.command("/swsummary")
+def trigger_summary(command, ack):
     ack()
     if command.get("user_id") == "U092F9A8VMY":
         send_reminder()

@@ -14,7 +14,7 @@ def message_blocks():
 			"type": "header",
 			"text": {
 				"type": "plain_text",
-				"text": "Guess what time it is! That's right daily summery time!! :yay:",
+				"text": "Guess what time it is! That's right daily summary time!! :yay:",
 				"emoji": True
 			}
 		},

@@ -27,8 +27,8 @@ def health():
     return jsonify({"status": "ok", "message": "up and running!"}), 200
 
 
-@app.get("/tickets/summery")
-def ticket_summery():
+@app.get("/tickets/summary")
+def ticket_summary():
     ticket_id = request.json.get("ticket_id")
     logger.info(f"Processing ticket_id: {ticket_id}")
     ticket_messages = db.get_ticket_messages(ticket_id)
