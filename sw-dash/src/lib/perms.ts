@@ -34,6 +34,7 @@ export const PERMS = {
 
   billy_btn: 'billy_btn',
   joe_btn: 'joe_btn',
+  spot_check: 'spot_check',
 }
 
 export const NO_ACCESS_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'

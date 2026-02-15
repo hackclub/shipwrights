@@ -41,6 +41,10 @@ model User {
   payoutReqs      PayoutReq[]  @relation("PayoutReqs")
   payoutApprovals PayoutReq[]  @relation("PayoutApprovals")
   yswsReviews     YswsReview[] @relation("YswsReviewer")
+  
+  spotStaff    SpotCheck[] @relation("Staff")
+  spotReviewed SpotCheck[] @relation("Reviewed")
+  spotResolved SpotCheck[] @relation("Resolved")
 
   @@map("users")
 }
@@ -185,6 +189,13 @@ model ShipCert {
   claimer     User?        @relation("ClaimedBy", fields: [claimerId], references: [id])
   assignments Assignment[]
   yswsReviews YswsReview[]
+  spotChecks  SpotCheck[]
+
+  spotChecked   Boolean   @default(false)
+  spotCheckedAt DateTime?
+  spotCheckedBy Int?
+  spotPassed    Boolean?
+  spotRemoved   Boolean   @default(false)
 
   @@index([reviewerId])
   @@index([status])
@@ -359,3 +370,36 @@ model SysLog {
   @@index([targetType, targetId])
   @@map("sys_logs")
 }
+
+model SpotCheck {
+  id         Int      @id @default(autoincrement())
+  caseId     String   @unique
+  certId     Int
+  staffId    Int
+  reviewerId Int
+  
+  decision   String
+  status     String   @default("unresolved")
+  
+  notes      String?  @db.Text
+  reasoning  String?  @db.Text
+  
+  lbRemoved  Boolean  @default(false)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  resolvedAt DateTime?
+  resolvedBy Int?
+  
+  cert     ShipCert @relation(fields: [certId], references: [id])
+  staff    User     @relation("Staff", fields: [staffId], references: [id])
+  reviewed User     @relation("Reviewed", fields: [reviewerId], references: [id])
+  resolver User?    @relation("Resolved", fields: [resolvedBy], references: [id])
+  
+  @@index([certId])
+  @@index([staffId])
+  @@index([reviewerId])
+  @@index([status])
+  @@map("spot_checks")
+}
+

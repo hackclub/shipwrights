@@ -74,6 +74,14 @@ export default async function Admin() {
                   📊 analytics
                 </Link>
               )}
+              {can(user.role, PERMS.spot_check) && (
+                <Link
+                  href="/admin/spot_checks"
+                  className="bg-cyan-500/10 border-2 border-dashed border-cyan-600 hover:border-cyan-400 text-cyan-400 hover:text-cyan-300 font-mono text-sm px-4 md:px-6 py-3 rounded-2xl transition-all duration-200 hover:bg-cyan-500/20 text-center shadow-lg shadow-cyan-950/20 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  🔍 spot checks
+                </Link>
+              )}
             </div>
           </div>
         )}

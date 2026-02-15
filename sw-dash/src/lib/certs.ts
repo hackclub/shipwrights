@@ -114,6 +114,7 @@ async function fetchStats(lbMode: string) {
           LEFT JOIN users u ON u.id = sc.reviewerId
           WHERE sc.reviewerId IS NOT NULL
             AND sc.status IN ('approved', 'rejected')
+            AND sc.spotRemoved = false
             AND sc.reviewCompletedAt >= ${weekStart}
             AND sc.reviewCompletedAt < ${weekEnd}
           GROUP BY sc.reviewerId, u.username, u.streak
@@ -129,6 +130,7 @@ async function fetchStats(lbMode: string) {
           LEFT JOIN users u ON u.id = sc.reviewerId
           WHERE sc.reviewerId IS NOT NULL
             AND sc.status IN ('approved', 'rejected')
+            AND sc.spotRemoved = false
             AND sc.reviewCompletedAt IS NOT NULL
           GROUP BY sc.reviewerId, u.username, u.streak
         `,
