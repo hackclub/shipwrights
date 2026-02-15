@@ -305,7 +305,6 @@ export default async function Stats() {
             <div className="text-center pt-2 border-t border-purple-900/20">
               <p className="text-gray-500 font-mono text-xs">
                 Base × Multipliers = Total.{' '}
-                <span className="text-purple-500 font-bold">Max 6.0 🍪</span>
               </p>
             </div>
           </div>

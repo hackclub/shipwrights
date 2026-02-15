@@ -19,7 +19,6 @@ const RATES: Record<string, number> = {
 }
 
 const RANK_MULTI = [1.75, 1.5, 1.25]
-const CAP = 6
 
 export function getBounty(type: string | null): number {
   if (!type) return 1
@@ -159,7 +158,6 @@ export interface CalcResult {
   streakMulti: number
   dailyMulti: number
   customBounty: number
-  capped: boolean
 }
 
 export async function calc(input: CalcInput): Promise<CalcResult> {
@@ -177,9 +175,7 @@ export async function calc(input: CalcInput): Promise<CalcResult> {
 
   const dailyMulti = await getDailyMulti(userId)
 
-  let computed = base * waitMulti * verdictMulti * rankMulti * dailyMulti
-  const capped = computed > CAP
-  if (capped) computed = CAP
+  const computed = base * waitMulti * verdictMulti * rankMulti * dailyMulti
 
   const flat = customBounty || 0
   const total = computed + flat
@@ -193,7 +189,6 @@ export async function calc(input: CalcInput): Promise<CalcResult> {
     streakMulti,
     dailyMulti,
     customBounty: flat,
-    capped,
   }
 }
 
