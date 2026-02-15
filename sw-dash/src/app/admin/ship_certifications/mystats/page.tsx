@@ -225,41 +225,87 @@ export default async function Stats() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-purple-900/40 rounded-3xl p-4 md:p-6 shadow-xl">
-            <h2 className="text-purple-400 font-mono text-base md:text-lg mb-4">Bounty Rates</h2>
-            <div className="space-y-2">
-              {Object.entries(RATES)
-                .sort((a, b) => b[1] - a[1])
-                .map(([type, bounty]) => (
-                  <div
-                    key={type}
-                    className="flex justify-between text-sm font-mono py-1 border-b border-purple-900/20 last:border-0"
-                  >
-                    <span className="text-gray-300">{type}</span>
-                    <span className="text-purple-300 font-bold">{bounty} 🍪</span>
-                  </div>
-                ))}
+          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-purple-900/40 rounded-3xl p-4 md:p-6 shadow-xl space-y-6">
+            <div className="flex items-center justify-between border-b border-purple-900/30 pb-4">
+              <h2 className="text-purple-400 font-mono text-xl md:text-2xl font-bold">
+                Dynamic Payouts
+              </h2>
             </div>
-            <div className="bg-purple-900/20 rounded-xl p-3 mt-4">
-              <div className="text-purple-300 font-mono text-xs font-bold mb-2">Multipliers</div>
-              <div className="space-y-1 text-xs font-mono">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">1st on lb:</span>
-                  <span className="text-purple-300">1.75x bounty</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">2nd on lb:</span>
-                  <span className="text-purple-300">1.5x bounty</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">3rd on lb:</span>
-                  <span className="text-purple-300">1.25x bounty</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">4th+ on lb:</span>
-                  <span className="text-purple-300">1x bounty</span>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-gray-500 font-mono text-xs font-bold uppercase tracking-wider">
+                  Base Rates
+                </h3>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <span className="text-gray-300 font-mono text-sm">Desktop, Mobile, Other</span>
+                    <span className="text-purple-400 font-mono font-bold text-lg">1.5 🍪</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <span className="text-gray-300 font-mono text-sm">CLI, Games, Hardware</span>
+                    <span className="text-purple-400 font-mono font-bold text-lg">1.0 🍪</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <span className="text-gray-300 font-mono text-sm">Web Apps, Bots</span>
+                    <span className="text-purple-400 font-mono font-bold text-lg">0.6 🍪</span>
+                  </div>
                 </div>
               </div>
+
+              <div className="space-y-2 pt-2 border-t border-purple-900/20">
+                <h3 className="text-gray-500 font-mono text-xs font-bold uppercase tracking-wider">
+                  Multipliers
+                </h3>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-gray-300 font-mono text-sm font-bold">
+                        First Review
+                      </span>
+                      <span className="text-gray-500 font-mono text-xs">
+                        1.5x for your 1st review of the day
+                      </span>
+                    </div>
+                    <span className="text-purple-400 font-mono font-bold">1.5x</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-gray-300 font-mono text-sm font-bold">
+                        Old Projects
+                      </span>
+                      <span className="text-gray-500 font-mono text-xs">
+                        1.5x if &gt;7 days, 1.2x if &gt;24h
+                      </span>
+                    </div>
+                    <span className="text-purple-400 font-mono font-bold">1.5x</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-gray-300 font-mono text-sm font-bold">Daily Grind</span>
+                      <span className="text-gray-500 font-mono text-xs">
+                        1.2x after 7 reviews, 1.3x after 15
+                      </span>
+                    </div>
+                    <span className="text-purple-400 font-mono font-bold">1.3x</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="text-gray-300 font-mono text-sm font-bold">Weekly Rank</span>
+                      <span className="text-gray-500 font-mono text-xs">
+                        1.75x (1st), 1.5x (2nd), 1.25x (3rd)
+                      </span>
+                    </div>
+                    <span className="text-purple-400 font-mono font-bold">1.75x</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center pt-2 border-t border-purple-900/20">
+              <p className="text-gray-500 font-mono text-xs">
+                Base × Multipliers = Total.{' '}
+              </p>
             </div>
           </div>
         </div>
