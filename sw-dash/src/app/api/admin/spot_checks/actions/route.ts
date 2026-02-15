@@ -4,7 +4,12 @@ import { withParams } from '@/lib/api'
 import { PERMS } from '@/lib/perms'
 import { log } from '@/lib/log'
 
-export const POST = withParams<Record<string, never>>(PERMS.spot_check)(async ({ req, user, ip, ua }) => {
+export const POST = withParams<Record<string, never>>(PERMS.spot_check)(async ({
+  req,
+  user,
+  ip,
+  ua,
+}) => {
   try {
     const { action, ...data } = await req.json()
 

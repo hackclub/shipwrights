@@ -18,7 +18,7 @@ export default async function Profile({ params }: Params) {
   const userId = parseInt(id, 10)
   if (isNaN(userId)) notFound()
 
-  const [user, keys, logs, stats] = await Promise.all([
+  const [user, keys, logs, stats, totalPayouts] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -53,6 +53,12 @@ export default async function Profile({ params }: Params) {
       ])
       return { total, approved, rejected }
     })(),
+    prisma.payoutReq
+      .aggregate({
+        where: { userId, status: 'approved' },
+        _sum: { finalAmount: true },
+      })
+      .then((r) => r._sum.finalAmount || 0),
   ])
 
   if (!user) notFound()
@@ -97,6 +103,7 @@ export default async function Profile({ params }: Params) {
           keys={keysData}
           logs={logsData}
           stats={stats}
+          totalPayouts={totalPayouts}
           currentUser={{
             id: currentUser.id,
             username: currentUser.username,
