@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ status: 'ok' })
+    return NextResponse.json({ status: 'ok', shipCertId: cert.id })
   } catch (error: any) {
     await log({
       action: 'ft_webhook_failed',
