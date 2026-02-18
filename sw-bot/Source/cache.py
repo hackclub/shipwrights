@@ -2,6 +2,7 @@ import json
 import db
 
 class Cache:
+
     def __init__(self):
         self.ticket_users = {}
         self.tickets = {}
@@ -118,6 +119,23 @@ class Cache:
                 print("URGENT: Killing ticket cache...")
                 self.tickets = {}
                 return None
+
+    def claim_ticket(self, ticket_id, claimer):
+        if ticket_id in self.tickets.keys():
+            self.tickets[ticket_id]["closedBy"] = claimer
+            db.claim_ticket(ticket_id, claimer)
+        else:
+            ticket_data = db.get_ticket(ticket_id)
+            if ticket_data:
+                ticket_data["closedBy"] = claimer
+                self.ticket_data_saver(ticket_data)
+                db.claim_ticket(ticket_id, claimer)
+            else:
+                print(f"URGENT: Something went wrong. Someone tried claiming a ticket and that ticket simply doesn't exist in cache nor db... Ticket ID:{ticket_id}, Cache Dump:{json.dumps(self.tickets)}")
+                print("URGENT: Killing ticket cache...")
+                self.tickets = {}
+        return
+
     def get_shipwrights(self):
         if self.shipwrights:
             return self.shipwrights

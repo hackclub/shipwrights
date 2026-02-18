@@ -261,7 +261,7 @@ def claim_ticket(body, client, ack):
             text=f"*This ticket is already claimed by <@{ticket['closedBy']}>!*"
         )
     else:
-        db.claim_ticket(ticket_id, user_id)
+        cache.claim_ticket(ticket_id, user_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
