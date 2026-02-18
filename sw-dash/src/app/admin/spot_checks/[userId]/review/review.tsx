@@ -10,6 +10,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
 
   const [certs, setCerts] = useState<any[]>([])
   const [idx, setIdx] = useState(0)
+  const [reviewed, setReviewed] = useState(0)
   const [loading, setLoading] = useState(false)
   const [showReject, setShowReject] = useState<'full' | 'keep' | null>(null)
 
@@ -110,6 +111,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
   }
 
   const next = () => {
+    setReviewed((r) => r + 1)
     if (idx + 1 < certs.length) {
       setIdx(idx + 1)
     } else {
@@ -184,7 +186,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
       <div className="flex h-full flex-col items-center justify-center p-8">
         <div className="text-4xl mb-4">🎉</div>
         <h2 className="text-2xl font-mono font-bold text-amber-400 mb-2">done</h2>
-        <p className="text-amber-300/60 font-mono text-sm mb-6">checked all {idx} certs</p>
+        <p className="text-amber-300/60 font-mono text-sm mb-6">checked all {reviewed} certs</p>
         <Link
           href="/admin/spot_checks"
           className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
