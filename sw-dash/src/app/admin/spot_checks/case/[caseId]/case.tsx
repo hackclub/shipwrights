@@ -11,6 +11,7 @@ export default function Case({ caseId }: { caseId: string }) {
   const [showFp, setShowFp] = useState(false)
   const [fpReason, setFpReason] = useState('')
   const [marking, setMarking] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const load = () => {
     fetch(`/api/admin/spot_checks/case/${caseId}`)
@@ -66,6 +67,26 @@ export default function Case({ caseId }: { caseId: string }) {
     } finally {
       setMarking(false)
     }
+  }
+
+  const copy = () => {
+    const certUrl = `${window.location.origin}/admin/ship_certifications/${cert.id}/edit`
+    const text = [
+      `-- Case details --`,
+      `Case number: ${spot.caseId}`,
+      `Reviewer: ${reviewed.username}`,
+      `The reason for rejection: ${spot.reasoning}`,
+      ``,
+      `-- Cert details --`,
+      `Video: ${cert.proofVideoUrl || 'none'}`,
+      `Project: ${cert.projectName}`,
+      `Verdict: ${cert.status}`,
+      `Feedback: ${cert.reviewFeedback}`,
+      `Cert link: ${certUrl}`,
+    ].join('\n')
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const resolved = spot.status === 'resolved'
@@ -215,7 +236,15 @@ export default function Case({ caseId }: { caseId: string }) {
 
           <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl shadow-2xl overflow-hidden">
             <div className="p-6">
-              <h3 className="font-mono font-bold text-amber-500 mb-4">original cert & review</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-mono font-bold text-amber-500">original cert &amp; review</h3>
+                <button
+                  onClick={copy}
+                  className="font-mono text-xs text-amber-500/60 hover:text-amber-300 border border-amber-900/40 hover:border-amber-700/50 px-3 py-1 rounded-xl transition-colors"
+                >
+                  {copied ? 'copied!' : 'copy deets'}
+                </button>
+              </div>
 
               <div className="space-y-3 font-mono text-sm mb-6">
                 <div className="flex justify-between pb-3 border-b border-amber-900/20">
