@@ -42,6 +42,7 @@ interface Props {
   keys: Key[]
   logs: Log[]
   stats: Stats | null
+  totalPayouts: number
   currentUser: { id: number; username: string; role: string }
 }
 
@@ -68,7 +69,14 @@ const roleColor = (r: string) => {
   }
 }
 
-export function UserProfile({ user: init, keys: k, logs: l, stats: s, currentUser }: Props) {
+export function UserProfile({
+  user: init,
+  keys: k,
+  logs: l,
+  stats: s,
+  totalPayouts,
+  currentUser,
+}: Props) {
   const [user, setUser] = useState(init)
   const [keys, setKeys] = useState(k)
   const [logs, setLogs] = useState(l)
@@ -371,7 +379,7 @@ export function UserProfile({ user: init, keys: k, logs: l, stats: s, currentUse
         </div>
 
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 shadow-2xl">
-          <h3 className="text-amber-400 font-mono text-sm mb-3">role & status</h3>
+          <h3 className="text-amber-400 font-mono text-sm mb-3">role & details & status</h3>
           <div className="space-y-3">
             <div>
               <span className="text-amber-300/50 font-mono text-xs block mb-1">role</span>
@@ -404,6 +412,10 @@ export function UserProfile({ user: init, keys: k, logs: l, stats: s, currentUse
                   {user.isActive ? 'yes' : 'no'}
                 </span>
               )}
+            </div>
+            <div>
+              <span className="text-amber-300/50 font-mono text-xs block mb-1">total paid</span>
+              <span className="text-green-400 font-mono text-sm">{totalPayouts.toFixed(2)} 🍪</span>
             </div>
           </div>
         </div>

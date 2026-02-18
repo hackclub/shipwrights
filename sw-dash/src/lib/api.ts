@@ -20,7 +20,7 @@ type Ctx = {
   ua: string
 }
 
-type CtxWithParams<P> = Ctx & { params: P }
+type CtxWithParams<P> = Ctx & { params: P; can: (perm: string) => boolean }
 
 type Handler = (ctx: Ctx) => Promise<NextResponse>
 type HandlerWithParams<P> = (ctx: CtxWithParams<P>) => Promise<NextResponse>
@@ -67,7 +67,14 @@ export function withParams<P = { id: string }>(perm?: string) {
       const { ip, ua } = getMeta(req)
       const p = await params
 
-      return handler({ user: user as User, req, ip, ua, params: p })
+      return handler({
+        user: user as User,
+        req,
+        ip,
+        ua,
+        params: p,
+        can: (perm: string) => can(user.role, perm),
+      })
     }
 }
 
@@ -111,6 +118,7 @@ export function yswsApiWithParams<P = { id: string }>(perm?: string) {
           ip,
           ua,
           params: p,
+          can: () => true,
         })
       }
 
@@ -130,6 +138,13 @@ export function yswsApiWithParams<P = { id: string }>(perm?: string) {
 
       const { ip, ua } = getMeta(req)
 
-      return handler({ user: user as User, req, ip, ua, params: p })
+      return handler({
+        user: user as User,
+        req,
+        ip,
+        ua,
+        params: p,
+        can: (perm: string) => can(user.role, perm),
+      })
     }
 }

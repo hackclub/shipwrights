@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
     body = await request.json()
   } catch (e) {
     await log({
-      action: 'ft_webhook_failed',
+      action: 'ft_ship_failed',
       status: 400,
-      context: 'json parse broke',
+      context: 'json broke',
       meta: { ip, ua: userAgent },
     })
     return NextResponse.json({ error: 'json broke' }, { status: 400 })
@@ -25,24 +25,12 @@ export async function POST(request: NextRequest) {
     const apiKey = request.headers.get('x-api-key')
     if (apiKey !== process.env.FLAVORTOWN_API_KEY) {
       await log({
-        action: 'ft_webhook_blocked',
+        action: 'ft_ship_blocked',
         status: 401,
-        context: 'wrong api key from FT',
-        meta: { ip, ua: userAgent, keyPrefix: apiKey?.substring(0, 8), body },
+        context: 'wrong api key',
+        meta: { ip, ua: userAgent, keyPrefix: apiKey?.substring(0, 8) },
       })
-      return NextResponse.json({ error: 'nah who tf are you' }, { status: 401 })
-    }
-
-    const { event, data } = body
-
-    if (event !== 'ship.submitted') {
-      await log({
-        action: 'ft_webhook_blocked',
-        status: 400,
-        context: `unknown event type: ${event}`,
-        meta: { ip, ua: userAgent, body, event },
-      })
-      return NextResponse.json({ error: 'bruh what event is this' }, { status: 400 })
+      return NextResponse.json({ error: 'who tf are you' }, { status: 401 })
     }
 
     const {
@@ -54,35 +42,30 @@ export async function POST(request: NextRequest) {
       links,
       metadata,
       type: ftType,
-    } = data || {}
+    } = body || {}
 
     if (!ftProjectId || !projectName || !submittedBy?.slackId) {
       await log({
-        action: 'ft_webhook_failed',
+        action: 'ft_ship_failed',
         status: 400,
-        context: 'missing core fields from FT payload',
+        context: 'missing core fields',
         meta: {
           ip,
           ua: userAgent,
-          body,
           missing: { id: !ftProjectId, name: !projectName, slack: !submittedBy?.slackId },
         },
       })
-      return NextResponse.json(
-        { error: 'missing project ID, Project name, and submitted By slack ID fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'missing project ID, name, or slack ID' }, { status: 400 })
     }
 
     if (!description || !links?.repo || !links?.demo || !links?.readme) {
       await log({
-        action: 'ft_webhook_failed',
+        action: 'ft_ship_failed',
         status: 400,
         context: 'missing links or description',
         meta: {
           ip,
           ua: userAgent,
-          body,
           missing: {
             desc: !description,
             repo: !links?.repo,
@@ -91,7 +74,7 @@ export async function POST(request: NextRequest) {
           },
         },
       })
-      return NextResponse.json({ error: 'missing description and links' }, { status: 400 })
+      return NextResponse.json({ error: 'missing description or links' }, { status: 400 })
     }
 
     const existing = await prisma.shipCert.findFirst({
@@ -103,9 +86,9 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       await log({
-        action: 'ft_webhook_blocked',
-        status: 403,
-        context: `duplicate ship - already in queue`,
+        action: 'ft_ship_blocked',
+        status: 409,
+        context: 'duplicate ship - already exists',
         target: { type: 'ship_cert', id: existing.id },
         meta: {
           ip,
@@ -117,7 +100,10 @@ export async function POST(request: NextRequest) {
           submitter: submittedBy.slackId,
         },
       })
-      return NextResponse.json({ error: 'duplicate ship, already in the queue!' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'duplicate ship - already in queue', shipCertId: existing.id },
+        { status: 409 }
+      )
     }
 
     const cert = await prisma.shipCert.create({
@@ -140,8 +126,8 @@ export async function POST(request: NextRequest) {
     })
 
     await log({
-      action: 'ft_webhook_received',
-      status: 200,
+      action: 'ft_ship_submitted',
+      status: 201,
       context: `new ship from FT: ${projectName}`,
       target: { type: 'ship_cert', id: cert.id },
       meta: {
@@ -153,70 +139,60 @@ export async function POST(request: NextRequest) {
         ftType,
         submitterSlackId: submittedBy.slackId,
         submitterUsername: submittedBy.username,
-        demoUrl: links?.demo,
-        repoUrl: links?.repo,
-        readmeUrl: links?.readme,
-        devTime: metadata?.devTime,
       },
     })
 
     await bust('cache:certs:*')
 
-    try {
-      const result = await checkType({
-        title: projectName,
-        desc: description || '',
-        readmeUrl: links?.readme || '',
-        demoUrl: links?.demo || '',
-        repoUrl: links?.repo || '',
+    checkType({
+      title: projectName,
+      desc: description || '',
+      readmeUrl: links?.readme || '',
+      demoUrl: links?.demo || '',
+      repoUrl: links?.repo || '',
+    })
+      .then(async (result) => {
+        if (!result.debug.error) {
+          await prisma.shipCert.update({
+            where: { id: cert.id },
+            data: { projectType: result.type },
+          })
+          await log({
+            action: 'ship_cert_type_checked',
+            status: 200,
+            context: `type detected: ${result.type}`,
+            target: { type: 'ship_cert', id: cert.id },
+            meta: { projectName, detectedType: result.type },
+          })
+        }
       })
-
-      if (!result.debug.error) {
-        await prisma.shipCert.update({ where: { id: cert.id }, data: { projectType: result.type } })
-        await log({
-          action: 'ship_cert_type_checked',
-          status: 200,
-          context: `type detected: ${result.type}`,
-          target: { type: 'ship_cert', id: cert.id },
-          meta: { projectName, detectedType: result.type, debug: result.debug },
-        })
-      } else {
+      .catch(async (e) => {
         await log({
           action: 'ship_cert_type_check_failed',
           status: 500,
-          context: 'type check returned error',
+          context: 'type check crashed',
           target: { type: 'ship_cert', id: cert.id },
-          meta: { projectName, debug: result.debug },
+          error: {
+            name: (e as Error).name || 'Error',
+            message: (e as Error).message || 'unknown',
+            stack: (e as Error).stack,
+          },
         })
-      }
-    } catch (e) {
-      await log({
-        action: 'ship_cert_type_check_failed',
-        status: 500,
-        context: 'type check crashed',
-        target: { type: 'ship_cert', id: cert.id },
-        error: {
-          name: (e as Error).name || 'Error',
-          message: (e as Error).message || 'unknown',
-          stack: (e as Error).stack,
-        },
-        meta: { projectName },
       })
-    }
 
-    return NextResponse.json({ status: 'ok', shipCertId: cert.id })
+    return NextResponse.json({ status: 'ok', shipCertId: cert.id }, { status: 201 })
   } catch (error: any) {
     await log({
-      action: 'ft_webhook_failed',
+      action: 'ft_ship_failed',
       status: 500,
-      context: 'webhook handler exploded',
+      context: 'shit exploded',
       error: {
         name: error?.name || 'Error',
         message: error?.message || 'unknown',
         stack: error?.stack,
       },
-      meta: { ip, ua: userAgent, body },
+      meta: { ip, ua: userAgent },
     })
-    return NextResponse.json({ error: 'something broke on our end' }, { status: 500 })
+    return NextResponse.json({ error: 'oops server broke' }, { status: 500 })
   }
 }

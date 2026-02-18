@@ -63,6 +63,7 @@ interface ReviewData {
 interface Props {
   data: ReviewData
   canEdit: boolean
+  canUndo: boolean
 }
 
 interface LocalDevlog {
@@ -86,7 +87,7 @@ const RETURN_REASONS = [
   'Other certification-related issues',
 ]
 
-export function Review({ data, canEdit }: Props) {
+export function Review({ data, canEdit, canUndo }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [showReturn, setShowReturn] = useState(false)
@@ -108,6 +109,7 @@ export function Review({ data, canEdit }: Props) {
   const [reportBusy, setReportBusy] = useState(false)
   const [refreshBusy, setRefreshBusy] = useState(false)
   const [showRefreshWarn, setShowRefreshWarn] = useState(false)
+  const [undoBusy, setUndoBusy] = useState(false)
 
   const totalSecs = data.devlogs.reduce((s, d) => s + d.origSecs, 0)
   const avgSecs = data.devlogs.length > 0 ? totalSecs / data.devlogs.length : 0
@@ -194,6 +196,22 @@ export function Review({ data, canEdit }: Props) {
       })
   }
 
+  const undo = async () => {
+    setUndoBusy(true)
+    try {
+      const res = await fetch(`/api/admin/ysws_reviews/${data.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'undo' }),
+      })
+      if (res.ok) {
+        router.refresh()
+      }
+    } finally {
+      setUndoBusy(false)
+    }
+  }
+
   return (
     <div className="w-full">
       <Link
@@ -213,6 +231,15 @@ export function Review({ data, canEdit }: Props) {
           </h2>
         </div>
         <div className="shrink-0 flex gap-2">
+          {canUndo && data.status === 'done' && (
+            <button
+              onClick={undo}
+              disabled={undoBusy}
+              className="bg-amber-950/30 text-amber-400 border-2 border-amber-700/60 hover:bg-amber-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {undoBusy ? 'undoing...' : 'undo review'}
+            </button>
+          )}
           <button
             onClick={() => setShowRefreshWarn(true)}
             disabled={refreshBusy}

@@ -1,4 +1,6 @@
 import os, math, json
+from datetime import datetime, timedelta
+import pytz
 from dotenv import load_dotenv
 from mysql.connector import pooling
 
@@ -30,6 +32,16 @@ def _format_seconds(seconds):
     if secs or not parts:
         parts.append(f"{secs}s")
     return " ".join(parts)
+
+def _get_est_day_range_utc(days_back=1):
+    """Return (start_utc, next_day_start_utc) for the EST calendar day `days_back` days ago.
+    E.g. days_back=1 gives yesterday 00:00 EST and today 00:00 EST in UTC."""
+    est = pytz.timezone("US/Eastern")
+    now_est = datetime.now(est)
+    target_date = (now_est - timedelta(days=days_back)).date()
+    start_est = est.localize(datetime.combine(target_date, datetime.min.time()))
+    next_day_est = start_est + timedelta(days=1)
+    return start_est.astimezone(pytz.utc).replace(tzinfo=None), next_day_est.astimezone(pytz.utc).replace(tzinfo=None)
 
 def _period_where_clause(period):
     p = (period or "all").lower()
@@ -289,13 +301,15 @@ def recent_reviews():
         return {"yesterday": 0, "day_before": 0}
     cursor = db.cursor()
     try:
+        y_start, y_end = _get_est_day_range_utc(1)
+        db_start, db_end = _get_est_day_range_utc(2)
         cursor.execute("""
             SELECT 
-                SUM(CASE WHEN reviewCompletedAt >= (NOW() - INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS yesterday,
-                SUM(CASE WHEN reviewCompletedAt >= (NOW() - INTERVAL 48 HOUR) AND reviewCompletedAt < (NOW() - INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS day_before
+                SUM(CASE WHEN reviewCompletedAt >= %s AND reviewCompletedAt < %s THEN 1 ELSE 0 END) AS yesterday,
+                SUM(CASE WHEN reviewCompletedAt >= %s AND reviewCompletedAt < %s THEN 1 ELSE 0 END) AS day_before
             FROM ship_certs
             WHERE reviewCompletedAt IS NOT NULL
-        """)
+        """, (y_start, y_end, db_start, db_end))
         row = cursor.fetchone()
         return {
             "yesterday": int(row[0] or 0),
@@ -315,11 +329,12 @@ def shipped_yesterday():
         return 0
     cursor = db.cursor()
     try:
+        y_start, y_end = _get_est_day_range_utc(1)
         cursor.execute("""
             SELECT COUNT(*)
             FROM ship_certs
-            WHERE createdAt >= (NOW() - INTERVAL 24 HOUR)
-        """)
+            WHERE createdAt >= %s AND createdAt < %s
+        """, (y_start, y_end))
         row = cursor.fetchone()
         return int(row[0] or 0)
     except Exception as e:
@@ -336,17 +351,18 @@ def top_reviewer_yesterday():
         return {"slack_ids": [], "counts": []}
     cursor = db.cursor()
     try:
+        y_start, y_end = _get_est_day_range_utc(1)
         cursor.execute("""
             SELECT u.slackId, COUNT(*) AS review_count
             FROM ship_certs s
             JOIN users u ON s.reviewerId = u.id
-            WHERE s.reviewCompletedAt >= (NOW() - INTERVAL 24 HOUR)
+            WHERE s.reviewCompletedAt >= %s AND s.reviewCompletedAt < %s
               AND s.reviewCompletedAt IS NOT NULL
               AND s.reviewerId IS NOT NULL
             GROUP BY s.reviewerId
             ORDER BY review_count DESC
             LIMIT 3
-        """)
+        """, (y_start, y_end))
         rows = cursor.fetchall()
         slack_ids = [row[0] for row in rows]
         counts = [row[1] for row in rows]

@@ -27,6 +27,7 @@ export const PERMS = {
   ysws_view: 'ysws_view',
   ysws_edit: 'ysws_edit',
   ysws_admin: 'ysws_admin',
+  ysws_override: 'ysws_override',
 
   eng_full: 'eng_full',
   logs_full: 'logs_full',
@@ -34,6 +35,7 @@ export const PERMS = {
 
   billy_btn: 'billy_btn',
   joe_btn: 'joe_btn',
+  spot_check: 'spot_check',
 }
 
 export const NO_ACCESS_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
@@ -133,6 +135,7 @@ export function can(userRole: string, perm: string): boolean {
     [PERMS.payouts_edit]: PERMS.payouts_admin,
     [PERMS.ysws_view]: PERMS.ysws_admin,
     [PERMS.ysws_edit]: PERMS.ysws_admin,
+    [PERMS.ysws_override]: PERMS.ysws_admin,
   }
 
   const requiredAdmin = permMap[perm]

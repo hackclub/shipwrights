@@ -32,7 +32,11 @@ export default async function YswsPage({ params }: Props) {
 
   return (
     <main className="bg-grid min-h-screen w-full p-4 md:p-8">
-      <Review data={data} canEdit={can(user.role, PERMS.ysws_edit)} />
+      <Review
+        data={data}
+        canEdit={can(user.role, PERMS.ysws_edit)}
+        canUndo={can(user.role, PERMS.ysws_override)}
+      />
     </main>
   )
 }

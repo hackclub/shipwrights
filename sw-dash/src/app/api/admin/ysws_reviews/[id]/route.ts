@@ -25,12 +25,57 @@ export const GET = yswsApiWithParams(PERMS.ysws_view)(async ({ params }) => {
   return NextResponse.json(review)
 })
 
-export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({ user, req, params, ip, ua }) => {
+export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({
+  user,
+  req,
+  params,
+  ip,
+  ua,
+  can,
+}) => {
   const yswsId = parseId(params.id, 'ysws')
   if (!yswsId) return idErr('ysws')
 
   const body = await req.json()
   const { action, devlogs: updates, returnReason } = body
+
+  if (action === 'undo') {
+    if (!can(PERMS.ysws_override)) {
+      return NextResponse.json({ error: 'nah' }, { status: 403 })
+    }
+
+    const review = await prisma.yswsReview.findUnique({
+      where: { id: yswsId },
+      select: { status: true, shipCertId: true },
+    })
+    if (!review) return NextResponse.json({ error: 'not found' }, { status: 404 })
+
+    await prisma.yswsReview.update({
+      where: { id: yswsId },
+      data: {
+        status: 'pending',
+        reviewerId: null,
+        returnReason: null,
+        decisions: [],
+      },
+    })
+
+    await log({
+      action: 'ysws_review_undone',
+      status: 200,
+      user,
+      context: 'reset review to pending',
+      target: { type: 'ysws_review', id: yswsId },
+      changes: {
+        status: { before: review.status, after: 'pending' },
+      },
+      meta: { ip, ua, shipCertId: review.shipCertId },
+    })
+
+    bust('cache:ysws:*')
+    bust('cache:certs:*')
+    return NextResponse.json({ ok: true })
+  }
 
   if (action === 'complete' || action === 'return') {
     const review = await prisma.yswsReview.findUnique({
