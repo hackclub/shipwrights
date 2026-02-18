@@ -158,7 +158,15 @@ def resolve_detected(ack, body, client):
             timestamp=ticket["userThreadTs"],
             name="checks-passed-octicon"
         )
-        ai.summarize_ticket(ticket_id)
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text=reply,
+            username=f"{user_info['username']} | AI Auto Detection",
+            icon_url=user_info["pfp"],
+        )
+        if cache.get_user_opt_in(ticket["userId"]):
+            ai.summarize_ticket(ticket_id)
     else:
         helpers.show_unauthorized_close(client, body)
 
