@@ -12,10 +12,17 @@ export default async function Payouts() {
 
   const [reqs, stats] = await Promise.all([
     prisma.payoutReq.findMany({
-      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ status: 'desc' }, { createdAt: 'desc' }],
       include: {
         user: {
-          select: { id: true, username: true, avatar: true, slackId: true, cookieBalance: true },
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+            slackId: true,
+            cookieBalance: true,
+            ftuid: true,
+          },
         },
         admin: { select: { id: true, username: true, avatar: true } },
       },

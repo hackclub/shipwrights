@@ -11,7 +11,7 @@ export const GET = withParams<{ userId: string }>(PERMS.spot_check)(async ({ par
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, avatar: true, role: true },
+      select: { id: true, username: true, avatar: true, role: true, slackId: true, ftuid: true },
     })
 
     if (!user) return NextResponse.json({ error: 'user not found' }, { status: 404 })

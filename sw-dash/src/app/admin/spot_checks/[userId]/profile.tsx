@@ -44,16 +44,31 @@ export default function Profile({ userId }: { userId: string }) {
             </div>
           )}
           <h1 className="text-2xl font-mono font-bold text-amber-200 mb-1">{user.username}</h1>
-          <p className="text-amber-500/60 font-mono text-xs uppercase tracking-wider mb-6">
-            {user.role}
+          <p className="text-amber-500/60 font-mono text-xs uppercase tracking-wider mb-2">
+            Role: {user.role}
           </p>
+          {user.slackId && (
+            <p className="text-amber-300/50 font-mono text-xs mb-4">Slack ID: {user.slackId}</p>
+          )}
 
-          <Link
-            href={`/admin/spot_checks/${user.id}/review`}
-            className="block w-full bg-blue-500/10 border-2 border-dashed border-blue-600 hover:border-blue-400 text-blue-400 hover:text-blue-300 font-mono text-sm px-4 py-3 rounded-2xl transition-all hover:bg-blue-500/20 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            start spot check
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link
+              href={`/admin/spot_checks/${user.id}/review`}
+              className="block w-full bg-blue-500/10 border-2 border-dashed border-blue-600 hover:border-blue-400 text-blue-400 hover:text-blue-300 font-mono text-sm px-4 py-3 rounded-2xl transition-all hover:bg-blue-500/20 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              start spot check
+            </Link>
+            {user.ftuid && (
+              <a
+                href={`${process.env.NEXT_PUBLIC_FLAVORTOWN_URL}/admin/users/${user.ftuid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full bg-purple-500/10 border-2 border-dashed border-purple-600 hover:border-purple-400 text-purple-400 hover:text-purple-300 font-mono text-sm px-4 py-3 rounded-2xl transition-all hover:bg-purple-500/20 hover:scale-[1.02] active:scale-[0.98] text-center"
+              >
+                FT admin
+              </a>
+            )}
+          </div>
         </div>
 
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-6 shadow-2xl">

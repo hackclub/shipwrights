@@ -22,6 +22,7 @@ interface Req {
     avatar: string | null
     slackId: string
     cookieBalance: number
+    ftuid?: string | null
   }
   admin: { id: number; username: string; avatar: string | null } | null
 }
@@ -45,13 +46,15 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
     setTimeout(() => setCopied(false), 1500)
   }
 
-  const ago = (d: Date) => {
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000)
-    if (diff < 60) return 'now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-    return `${Math.floor(diff / 86400)}d`
-  }
+  const fmt = (d: Date) =>
+    new Date(d).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
 
   const approve = async () => {
     if (!modal) return
@@ -136,8 +139,9 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-amber-900/30 bg-zinc-900/50">
+              <th className="text-left p-4 text-amber-400 font-mono text-sm">#</th>
               <th className="text-left p-4 text-amber-400 font-mono text-sm">user</th>
-              <th className="text-left p-4 text-amber-400 font-mono text-sm">slack</th>
+              <th className="text-left p-4 text-amber-400 font-mono text-sm">status</th>
               <th className="text-right p-4 text-amber-400 font-mono text-sm">amount</th>
               <th className="text-right p-4 text-amber-400 font-mono text-sm">balance</th>
               <th className="text-left p-4 text-amber-400 font-mono text-sm">admin</th>
@@ -148,6 +152,7 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
           <tbody>
             {reqs.map((r) => (
               <tr key={r.id} className="border-b border-amber-900/20 hover:bg-amber-950/20">
+                <td className="p-4 text-amber-500/60 font-mono text-xs">#swp-{r.id}</td>
                 <td className="p-4">
                   <div className="flex items-center gap-2">
                     {r.user.avatar && (
@@ -162,7 +167,17 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
                     <span className="text-white font-mono text-sm">{r.user.username}</span>
                   </div>
                 </td>
-                <td className="p-4 text-gray-400 font-mono text-xs">{r.user.slackId}</td>
+                <td className="p-4">
+                  <span
+                    className={`font-mono text-xs px-2 py-0.5 rounded-lg border ${
+                      r.status === 'pending'
+                        ? 'bg-yellow-900/30 text-yellow-400 border-yellow-700/50'
+                        : 'bg-green-900/30 text-green-400 border-green-700/50'
+                    }`}
+                  >
+                    {r.status === 'pending' ? 'pending' : 'paid'}
+                  </span>
+                </td>
                 <td className="p-4 text-right text-green-400 font-mono font-bold">
                   {(r.status === 'approved' ? r.finalAmount || r.amount : r.amount).toFixed(1)} 🍪
                 </td>
@@ -192,7 +207,7 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
                   )}
                 </td>
                 <td className="p-4 text-right text-gray-500 font-mono text-xs">
-                  {ago(r.createdAt)}
+                  {fmt(r.createdAt)}
                 </td>
                 <td className="p-4 text-right flex gap-2 justify-end">
                   {r.status === 'pending' ? (
@@ -223,7 +238,7 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
             ))}
             {reqs.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-gray-500 font-mono">
+                <td colSpan={8} className="p-8 text-center text-gray-500 font-mono">
                   no requests yet
                 </td>
               </tr>
@@ -259,7 +274,19 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
                 </div>
                 <div className="flex justify-between font-mono text-sm">
                   <span className="text-gray-400">user:</span>
-                  <span className="text-white">{modal.user.username}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white">{modal.user.username}</span>
+                    {modal.user.ftuid && (
+                      <a
+                        href={`${process.env.NEXT_PUBLIC_FLAVORTOWN_URL}/admin/users/${modal.user.ftuid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-purple-400 hover:text-purple-300 border border-purple-700/50 px-1.5 py-0.5 rounded"
+                      >
+                        FT
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between font-mono text-sm">
                   <span className="text-gray-400">requested:</span>
@@ -347,7 +374,19 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
             <div className="bg-zinc-800/50 rounded-xl p-4 space-y-2 mb-4">
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-gray-400">user:</span>
-                <span className="text-white">{view.user.username}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white">{view.user.username}</span>
+                  {view.user.ftuid && (
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_FLAVORTOWN_URL}/admin/users/${view.user.ftuid}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-purple-400 hover:text-purple-300 border border-purple-700/50 px-1.5 py-0.5 rounded"
+                    >
+                      FT
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-gray-400">requested:</span>
@@ -385,7 +424,7 @@ export default function PayoutsTable({ reqs: init }: { reqs: Req[] }) {
               <div className="flex justify-between font-mono text-sm">
                 <span className="text-gray-400">when:</span>
                 <span className="text-gray-500">
-                  {view.approvedAt ? ago(view.approvedAt) : '-'}
+                  {view.approvedAt ? fmt(view.approvedAt) : '-'}
                 </span>
               </div>
             </div>
