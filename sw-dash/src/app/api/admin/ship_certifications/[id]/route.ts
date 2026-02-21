@@ -235,9 +235,18 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       }
 
       if (verdict.toLowerCase() === 'approved' || verdict.toLowerCase() === 'rejected') {
-        const payout = await calc(user.id, cert.projectType, cert.customBounty)
+        const payout = await calc({
+          userId: user.id,
+          projectType: cert.projectType,
+          verdict: verdict.toLowerCase() as 'approved' | 'rejected',
+          certCreatedAt: cert.createdAt,
+          customBounty: cert.customBounty,
+        })
         updateData.cookiesEarned = payout.cookies
-        updateData.payoutMulti = payout.multi
+
+        const effectiveMulti =
+          payout.base > 0 ? (payout.cookies - (payout.customBounty || 0)) / payout.base : 0
+        updateData.payoutMulti = Number(effectiveMulti.toFixed(2))
       }
     }
 
