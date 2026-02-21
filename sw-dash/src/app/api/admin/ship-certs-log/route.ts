@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { getUser } from '@/lib/server-auth'
 import { can, PERMS } from '@/lib/perms'
 import { log } from '@/lib/log'
 
@@ -11,19 +10,15 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const authHeader = req.headers.get('Authorization')
 
-  let user = null
-
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const key = authHeader.replace('Bearer ', '')
-    user = await prisma.user.findUnique({
-      where: { swApiKey: key },
-      select: { id: true, role: true, username: true },
-    })
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'need a Bearer key fam' }, { status: 401 })
   }
 
-  if (!user) {
-    user = await getUser()
-  }
+  const key = authHeader.replace('Bearer ', '')
+  const user = await prisma.user.findUnique({
+    where: { swApiKey: key },
+    select: { id: true, role: true, username: true },
+  })
 
   if (!user || !can(user.role, PERMS.certs_view)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
