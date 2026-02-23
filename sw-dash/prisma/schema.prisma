@@ -41,7 +41,7 @@ model User {
   payoutReqs      PayoutReq[]  @relation("PayoutReqs")
   payoutApprovals PayoutReq[]  @relation("PayoutApprovals")
   yswsReviews     YswsReview[] @relation("YswsReviewer")
-  
+
   spotStaff    SpotCheck[] @relation("Staff")
   spotReviewed SpotCheck[] @relation("Reviewed")
   spotResolved SpotCheck[] @relation("Resolved")
@@ -290,6 +290,14 @@ model TicketUser {
   @@map("ticket_users")
 }
 
+model metricsHistory {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  output    Json?
+
+  @@map("metrics_history")
+}
+
 model TicketMsg {
   id              Int       @id @default(autoincrement())
   ticketId        Int
@@ -327,39 +335,39 @@ enum Ticket_status {
 }
 
 model SysLog {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   userId     Int?
   slackId    String?
   username   String?
   role       String?
   action     String
-  context    String?  @db.Text
+  context    String? @db.Text
   statusCode Int
   ip         String?
-  userAgent  String?  @db.Text
+  userAgent  String? @db.Text
   email      String?
   avatar     String?
   targetId   Int?
   targetType String?
   metadata   Json?
-  severity   String?  @default("info") // not used anymore, leaving for old logs
-  
+  severity   String? @default("info") // not used anymore, leaving for old logs
+
   reqMethod  String?
-  reqUrl     String?  @db.Text
+  reqUrl     String? @db.Text
   reqBody    Json?
   reqHeaders Json?
   resStatus  Int?
   resBody    Json?
   resHeaders Json?
-  
+
   errorName  String?
-  errorMsg   String?  @db.Text
-  errorStack String?  @db.Text
-  
-  changes    Json?
-  duration   Int?
-  
-  createdAt  DateTime @default(now())
+  errorMsg   String? @db.Text
+  errorStack String? @db.Text
+
+  changes  Json?
+  duration Int?
+
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([action])
@@ -372,35 +380,34 @@ model SysLog {
 }
 
 model SpotCheck {
-  id         Int      @id @default(autoincrement())
-  caseId     String   @unique
+  id         Int    @id @default(autoincrement())
+  caseId     String @unique
   certId     Int
   staffId    Int
   reviewerId Int
-  
-  decision   String
-  status     String   @default("unresolved")
-  
-  notes      String?  @db.Text
-  reasoning  String?  @db.Text
-  
-  lbRemoved  Boolean  @default(false)
-  fpReason   String?  @db.Text
-  
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+
+  decision String
+  status   String @default("unresolved")
+
+  notes     String? @db.Text
+  reasoning String? @db.Text
+
+  lbRemoved Boolean @default(false)
+  fpReason  String? @db.Text
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   resolvedAt DateTime?
   resolvedBy Int?
-  
+
   cert     ShipCert @relation(fields: [certId], references: [id])
   staff    User     @relation("Staff", fields: [staffId], references: [id])
   reviewed User     @relation("Reviewed", fields: [reviewerId], references: [id])
   resolver User?    @relation("Resolved", fields: [resolvedBy], references: [id])
-  
+
   @@index([certId])
   @@index([staffId])
   @@index([reviewerId])
   @@index([status])
   @@map("spot_checks")
 }
-
