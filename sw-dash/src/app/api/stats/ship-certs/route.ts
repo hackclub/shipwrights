@@ -14,8 +14,9 @@ export async function GET(req: NextRequest) {
     const windowStart = new Date(now)
     windowStart.setDate(windowStart.getDate() - 29)
     windowStart.setHours(0, 0, 0, 0)
-
-    const [data, pendingCerts, reviewStats, shipStats] = await Promise.all([
+    const metricsWindowStart = new Date(now)
+    metricsWindowStart.setDate(metricsWindowStart.getDate() - 30)
+    const [data, pendingCerts, reviewStats, shipStats, metricsHistory] = await Promise.all([
       getCerts({}),
       prisma.shipCert.findMany({
         where: { status: 'pending', yswsReturnedAt: null },
@@ -42,6 +43,20 @@ export async function GET(req: NextRequest) {
         GROUP BY DATE(createdAt)
         ORDER BY date ASC
       `,
+      prisma.metricsHistory.findMany({
+        where: {
+          createdAt: {
+            gte: metricsWindowStart,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        select: {
+          id: true,
+          createdAt: true,
+          output: true,
+        },
+      }),
     ])
 
     let oldestWait = '-'
@@ -108,6 +123,7 @@ export async function GET(req: NextRequest) {
       oldestInQueue: oldestWait,
       reviewsPerDay: reviewsPerDay,
       shipsPerDay: shipsPerDay,
+      metricsHistory: metricsHistory,
     })
   } catch (err) {
     reportError(err instanceof Error ? err : new Error(String(err)), { endpoint: 'ship-certs' })
