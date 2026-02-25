@@ -58,8 +58,8 @@ export default async function Logs() {
                 <th className="text-left p-4 text-amber-400 font-mono text-sm">project</th>
                 <th className="text-left p-4 text-amber-400 font-mono text-sm">reviewer</th>
                 <th className="text-left p-4 text-amber-400 font-mono text-sm">type</th>
-                <th className="text-right p-4 text-amber-400 font-mono text-sm">rate</th>
-                <th className="text-right p-4 text-amber-400 font-mono text-sm">multi</th>
+                <th className="text-right p-4 text-amber-400 font-mono text-sm">base rate</th>
+                <th className="text-right p-4 text-amber-400 font-mono text-sm">eff. multi</th>
                 <th className="text-right p-4 text-amber-400 font-mono text-sm">when</th>
                 <th className="text-right p-4 text-amber-400 font-mono text-sm">cookies</th>
               </tr>
