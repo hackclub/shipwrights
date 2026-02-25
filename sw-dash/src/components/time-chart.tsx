@@ -23,7 +23,7 @@ export function TimeChart({ devlogs }: Props) {
   return (
     <div className="h-48 w-full mt-4">
       <div className="text-purple-400 font-mono text-xs mb-3">Time per devlog (hours)</div>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
           <XAxis type="number" tick={{ fontSize: 10, fill: '#888' }} />
           <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#888' }} width={70} />
@@ -43,6 +43,7 @@ export function TimeChart({ devlogs }: Props) {
             radius={[0, 4, 4, 0]}
             fill="#dc2626"
             activeBar={{ fill: '#f87171' }}
+            isAnimationActive={false}
           />
         </BarChart>
       </ResponsiveContainer>

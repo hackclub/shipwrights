@@ -269,7 +269,10 @@ export function YswsView({ initial }: Props) {
           <div className="space-y-2">
             {devlogLeaderboard.length > 0 ? (
               devlogLeaderboard.slice(0, 10).map((r, i) => (
-                <div key={r.reviewerId} className="flex justify-between items-center text-sm font-mono">
+                <div
+                  key={r.reviewerId}
+                  className="flex justify-between items-center text-sm font-mono"
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">{i + 1}.</span>
                     <span className="text-white truncate max-w-[120px] md:max-w-none">
@@ -283,7 +286,9 @@ export function YswsView({ initial }: Props) {
                 </div>
               ))
             ) : (
-              <div className="text-gray-500 font-mono text-sm min-h-[20px]">no devlog reviews yet...</div>
+              <div className="text-gray-500 font-mono text-sm min-h-[20px]">
+                no devlog reviews yet...
+              </div>
             )}
           </div>
         </div>

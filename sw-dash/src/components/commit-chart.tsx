@@ -16,92 +16,89 @@ interface Props {
   repoUrl?: string
 }
 
+const parseRepo = (url: string) => {
+  const m = url.match(/github\.com\/([^/]+)\/([^/]+)/)
+  return m ? { owner: m[1], repo: m[2].replace(/\.git$/, '') } : null
+}
+
+function CommitLink({
+  sha,
+  repoUrl,
+  children,
+  className = '',
+}: {
+  sha: string
+  repoUrl?: string
+  children: React.ReactNode
+  className?: string
+}) {
+  const repo = repoUrl ? parseRepo(repoUrl) : null
+  const url = repo ? `https://github.com/${repo.owner}/${repo.repo}/commit/${sha}` : null
+  return url ? (
+    <a href={url} target="_blank" rel="noopener noreferrer" className={className}>
+      {children}
+    </a>
+  ) : (
+    <>{children}</>
+  )
+}
+
+function Tick({ x, y, payload, data, repoUrl }: any) {
+  const commit = data?.find((d: any) => d.name === payload.value)
+  const repo = commit && repoUrl ? parseRepo(repoUrl) : null
+  const url = repo ? `https://github.com/${repo.owner}/${repo.repo}/commit/${commit.sha}` : null
+  const text = (
+    <text
+      x={x}
+      y={y + 10}
+      textAnchor="middle"
+      fill="#22c55e"
+      fontSize={14}
+      fontFamily="monospace"
+      style={{ textDecoration: url ? 'underline' : 'none', cursor: url ? 'pointer' : 'default' }}
+    >
+      {payload.value}
+    </text>
+  )
+  return url ? (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      {text}
+    </a>
+  ) : (
+    text
+  )
+}
+
 export function CommitChart({ commits, repoUrl }: Props) {
-  if (!commits.length) {
-    return <div className="text-gray-500 font-mono text-xs">no commits</div>
-  }
+  if (!commits.length) return <div className="text-gray-500 font-mono text-xs">no commits</div>
 
   const sorted = [...commits].sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-
-  const parseRepo = (url: string) => {
-    const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/)
-    return match ? { owner: match[1], repo: match[2].replace(/\.git$/, '') } : null
-  }
-
-  const repo = repoUrl ? parseRepo(repoUrl) : null
-
-  const getCommitUrl = (sha: string) =>
-    repo ? `https://github.com/${repo.owner}/${repo.repo}/commit/${sha}` : null
-
-  const CommitLink = ({
-    sha,
-    children,
-    className = '',
-  }: {
-    sha: string
-    children: React.ReactNode
-    className?: string
-  }) => {
-    const url = getCommitUrl(sha)
-    return url ? (
-      <a href={url} target="_blank" rel="noopener noreferrer" className={className}>
-        {children}
-      </a>
-    ) : (
-      <>{children}</>
-    )
-  }
-
   const data = sorted.map((c) => ({
     name: c.sha.slice(0, 7),
     adds: c.adds,
     dels: c.dels,
     sha: c.sha,
   }))
-
-  const CustomTick = (props: any) => {
-    const { x, y, payload } = props
-    const commit = data.find((d) => d.name === payload.value)
-    if (!commit) {
-      return (
-        <text x={x} y={y + 10} textAnchor="middle" fill="#fff" fontSize={14} fontFamily="monospace">
-          {payload.value}
-        </text>
-      )
-    }
-    return (
-      <CommitLink sha={commit.sha}>
-        <text
-          x={x}
-          y={y + 10}
-          textAnchor="middle"
-          fill="#22c55e"
-          fontSize={14}
-          fontFamily="monospace"
-          className="cursor-pointer hover:fill-green-300"
-          style={{ textDecoration: 'underline', cursor: 'pointer' }}
-        >
-          {payload.value}
-        </text>
-      </CommitLink>
-    )
-  }
-
   const totalAdds = commits.reduce((s, c) => s + c.adds, 0)
   const totalDels = commits.reduce((s, c) => s + c.dels, 0)
+
+  const meta = (
+    <div className="flex gap-4 text-xs font-mono">
+      <span className="text-green-400">+{totalAdds}</span>
+      <span className="text-red-400">-{totalDels}</span>
+      <span className="text-gray-400">{commits.length} commits</span>
+    </div>
+  )
 
   if (data.length === 1) {
     return (
       <div className="space-y-3">
-        <div className="flex gap-4 text-xs font-mono">
-          <span className="text-green-400">+{totalAdds}</span>
-          <span className="text-red-400">-{totalDels}</span>
-          <span className="text-gray-400">{commits.length} commits</span>
-        </div>
+        {meta}
         <div className="h-20 flex items-center justify-center border border-zinc-700 rounded-lg">
           <div className="text-center font-mono">
             <CommitLink
               sha={data[0].sha}
+              repoUrl={repoUrl}
               className="text-green-500 text-xs hover:text-green-300 underline"
             >
               {data[0].name}
@@ -118,15 +115,14 @@ export function CommitChart({ commits, repoUrl }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-4 text-xs font-mono">
-        <span className="text-green-400">+{totalAdds}</span>
-        <span className="text-red-400">-{totalDels}</span>
-        <span className="text-gray-400">{commits.length} commits</span>
-      </div>
+      {meta}
       <div className="h-32 w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <LineChart data={data} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis dataKey="name" tick={<CustomTick />} />
+            <XAxis
+              dataKey="name"
+              tick={(props) => <Tick {...props} data={data} repoUrl={repoUrl} />}
+            />
             <YAxis tick={{ fontSize: 14, fill: '#fff' }} width={45} />
             <Tooltip
               contentStyle={{
@@ -144,6 +140,7 @@ export function CommitChart({ commits, repoUrl }: Props) {
               strokeWidth={0}
               dot={{ r: 5, fill: '#22c55e' }}
               activeDot={{ r: 7, fill: '#22c55e' }}
+              isAnimationActive={false}
             />
             <Line
               dataKey="dels"
@@ -151,6 +148,7 @@ export function CommitChart({ commits, repoUrl }: Props) {
               strokeWidth={0}
               dot={{ r: 5, fill: '#ef4444' }}
               activeDot={{ r: 7, fill: '#ef4444' }}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
