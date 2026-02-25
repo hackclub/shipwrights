@@ -631,26 +631,52 @@ export function Form({ shipId }: Props) {
                       href={`/admin/ship_certifications/${h.id}/edit`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block bg-zinc-950/50 border-2 border-amber-900/30 rounded-2xl p-3 hover:border-amber-700/50 transition-colors"
+                      className={`block border-2 rounded-2xl p-3 transition-colors ${
+                        h.isCurrent
+                          ? 'bg-amber-950/30 border-amber-600/60 hover:border-amber-500'
+                          : 'bg-zinc-950/50 border-amber-900/30 hover:border-amber-700/50'
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-0.5 rounded font-mono text-xs ${
-                              h.verdict === 'approved'
-                                ? 'bg-green-900/30 text-green-400'
-                                : 'bg-red-900/30 text-red-400'
-                            }`}
-                          >
-                            {h.verdict}
-                          </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {h.returned ? (
+                            <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
+                              RETURNED
+                            </span>
+                          ) : (
+                            <span
+                              className={`px-2 py-0.5 rounded font-mono text-xs ${
+                                h.verdict === 'approved'
+                                  ? 'bg-green-900/30 text-green-400'
+                                  : h.verdict === 'rejected'
+                                    ? 'bg-red-900/30 text-red-400'
+                                    : 'bg-yellow-900/30 text-yellow-400'
+                              }`}
+                            >
+                              {h.verdict}
+                            </span>
+                          )}
                           <span className="text-gray-500 font-mono text-xs">#{h.id}</span>
+                          {h.isCurrent && (
+                            <span className="text-amber-400 font-mono text-xs">
+                              ← you&apos;re here
+                            </span>
+                          )}
                         </div>
                         <span className="text-gray-500 font-mono text-xs">
                           {h.completedAt ? new Date(h.completedAt).toLocaleDateString() : '-'}
                         </span>
                       </div>
-                      <div className="text-white font-mono text-xs mb-1">by {h.certifier}</div>
+                      <div className="text-white font-mono text-xs mb-1">
+                        {h.returned
+                          ? `returned by ${h.returnedBy || 'unknown'}`
+                          : `by ${h.certifier}`}
+                      </div>
+                      {h.returned && h.returnReason && (
+                        <div className="text-purple-300/80 font-mono text-xs mb-1 line-clamp-1">
+                          {h.returnReason}
+                        </div>
+                      )}
                       {h.feedback && (
                         <div className="text-gray-400 font-mono text-xs line-clamp-2">
                           {h.feedback}

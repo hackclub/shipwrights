@@ -103,6 +103,10 @@ export interface ShipCert {
     certifier: string
     completedAt: string | null
     feedback?: string | null
+    returned?: boolean
+    returnReason?: string | null
+    returnedBy?: string | null
+    isCurrent?: boolean
   }[]
 }
 

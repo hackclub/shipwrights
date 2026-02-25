@@ -88,8 +88,6 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       ? await prisma.shipCert.findMany({
           where: {
             ftProjectId: cert.ftProjectId,
-            id: { not: cert.id },
-            status: { in: ['approved', 'rejected'] },
           },
           include: {
             reviewer: {
@@ -98,8 +96,8 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
               },
             },
           },
-          orderBy: { reviewCompletedAt: 'desc' },
-          take: 10,
+          orderBy: { createdAt: 'desc' },
+          take: 20,
         })
       : []
 
@@ -159,6 +157,10 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
         certifier: h.reviewer?.username || 'unknown',
         completedAt: h.reviewCompletedAt?.toISOString() || null,
         feedback: h.reviewFeedback,
+        returned: !!h.yswsReturnedAt,
+        returnReason: h.yswsReturnReason,
+        returnedBy: h.yswsReturnedBy,
+        isCurrent: h.id === cert.id,
       })),
     })
   } catch {
