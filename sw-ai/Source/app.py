@@ -116,7 +116,9 @@ def get_vibes():
     logger.info(f"Processing today's qualitative metrics.")
     if VIBES_CACHE["created_at"] and VIBES_CACHE["content"]:
         if VIBES_CACHE["created_at"] < datetime.now() - timedelta(hours=5):
+            logger.info(f"Using cached qualitative metrics.")
             return jsonify(VIBES_CACHE["content"]), 200
+            print(VIBES_CACHE)
 
     vibes_message = format_vibes_message(get_recent_tickets(), get_context_tickets())
     response = get_ai_response(content=vibes_message, tokens=2500, timeout=180, keys=['positive', 'quotes', 'suggestion'])
