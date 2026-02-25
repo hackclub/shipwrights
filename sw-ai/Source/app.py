@@ -1,4 +1,5 @@
 import threading
+from datetime import datetime, timedelta
 from helpers import *
 from db import *
 from flask import jsonify, request, Flask
@@ -113,6 +114,9 @@ def project_summary():
 @app.get("/metrics/qualitative")
 def get_vibes():
     logger.info(f"Processing today's qualitative metrics.")
+    if VIBES_CACHE["created_at"] and VIBES_CACHE["content"]:
+        if VIBES_CACHE["created_at"] < datetime.now() - timedelta(hours=5):
+            return jsonify(VIBES_CACHE["content"]), 200
 
     vibes_message = format_vibes_message(get_recent_tickets(), get_context_tickets())
     response = get_ai_response(content=vibes_message, tokens=2500, timeout=180, keys=['positive', 'quotes', 'suggestion'])
@@ -126,7 +130,8 @@ def get_vibes():
         thread = get_ticket_ts(ticket_id)
         if thread:
             ai_response["quotes"][i]["link"] = "https://hackclub.slack.com/archives/C099P9FQQ91/p" + thread[:10] + thread[11:]
-
+    VIBES_CACHE["content"] = ai_response
+    VIBES_CACHE["created_at"] = datetime.now()
     return jsonify(ai_response), 200
 
 if __name__ == "__main__":

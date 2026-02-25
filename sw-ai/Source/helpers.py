@@ -14,6 +14,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+VIBES_CACHE = {
+    "created_at": None,
+    "content": None
+}
+
 TYPES = [
   "CLI",
   "Cargo",
