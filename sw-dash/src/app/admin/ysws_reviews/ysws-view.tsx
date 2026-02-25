@@ -36,6 +36,16 @@ interface Reviewer {
   count: number
 }
 
+interface DevlogReviewer {
+  reviewerId: number
+  username: string
+  avatar: string | null
+  devlogCount: number
+  approvedCount: number
+  rejectedCount: number
+  reviewCount: number
+}
+
 interface Props {
   initial: {
     reviews: Review[]
@@ -70,6 +80,7 @@ export function YswsView({ initial }: Props) {
   const [reviews, setReviews] = useState(initial.reviews)
   const [stats, setStats] = useState(initial.stats)
   const [leaderboard, setLeaderboard] = useState(initial.leaderboard)
+  const [devlogLeaderboard, setDevlogLeaderboard] = useState<DevlogReviewer[]>([])
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [lbMode, setLbMode] = useState('weekly')
@@ -109,6 +120,21 @@ export function YswsView({ initial }: Props) {
     }
     load()
   }, [status, sortBy, lbMode, mounted, load])
+
+  const loadDevlogStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ysws_reviews/devlog-stats')
+      if (!res.ok) return
+      const data = await res.json()
+      setDevlogLeaderboard(data.leaderboard || [])
+    } catch {
+      // silently fail
+    }
+  }, [])
+
+  useEffect(() => {
+    loadDevlogStats()
+  }, [])
 
   const FilterBtn = ({
     val,
@@ -152,7 +178,7 @@ export function YswsView({ initial }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
         <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl min-h-[200px]">
           <h2 className="text-amber-400 font-mono text-base md:text-lg mb-4">Stats</h2>
           <div className="space-y-3">
@@ -233,6 +259,31 @@ export function YswsView({ initial }: Props) {
               ))
             ) : (
               <div className="text-gray-500 font-mono text-sm min-h-[20px]">no reviews yet...</div>
+            )}
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl min-h-[200px]">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-amber-400 font-mono text-base md:text-lg">Devlog Reviews</h2>
+          </div>
+          <div className="space-y-2">
+            {devlogLeaderboard.length > 0 ? (
+              devlogLeaderboard.slice(0, 10).map((r, i) => (
+                <div key={r.reviewerId} className="flex justify-between items-center text-sm font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">{i + 1}.</span>
+                    <span className="text-white truncate max-w-[120px] md:max-w-none">
+                      {r.username}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400">{r.devlogCount}</span>
+                    <span className="text-gray-500 text-xs">devlogs</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-gray-500 font-mono text-sm min-h-[20px]">no devlog reviews yet...</div>
             )}
           </div>
         </div>
