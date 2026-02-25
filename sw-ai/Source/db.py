@@ -102,7 +102,7 @@ def save_metrics_history(data, created_at=None):
     cursor = conn.cursor(dictionary=True)
     try:
         payload = json.dumps(data, ensure_ascii=False)
-        if created_at is not None:
+        if created_at:
             cursor.execute(
                 "INSERT INTO metrics_history (createdAt, output) VALUES (%s, %s)",
                 (created_at, payload),
@@ -111,10 +111,12 @@ def save_metrics_history(data, created_at=None):
             cursor.execute("INSERT INTO metrics_history (output) VALUES (%s)", (payload,))
         conn.commit()
         return cursor.lastrowid
-    except Exception as err:
+    except Exception as e:
+        print(f"Error saving metrics: {e}")
         try:
             conn.rollback()
-        except Exception:
+        except Exception as e:
+            print(f"Rolling back transaction: {e}")
             pass
         return None
     finally:

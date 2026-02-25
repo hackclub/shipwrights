@@ -32,7 +32,8 @@ def save_metrics():
         )
         resp.raise_for_status()
         result = resp.json()
-    except requests.exceptions.RequestException:
+    except Exception as e:
+        print(f"Error saving metrics: {e}")
         return None
 
     try:
@@ -53,7 +54,8 @@ def save_metrics():
 
         cleaned = helpers.clean_json_response(content)
         ai_response = json.loads(cleaned)
-    except Exception:
+    except Exception as e:
+        print(f"Error saving metrics: {e}")
         return None
 
     payload = {
@@ -65,12 +67,13 @@ def save_metrics():
     try:
         saved = save_metrics_history(payload, created_at=today)
         return saved
-    except Exception:
+    except Exception as e:
+        print(f"Error saving metrics: {e}")
         return None
 
 
 def history_loop():
-    schedule.every().day.at("00:00", "US/Eastern").do(save_metrics)
+    schedule.every().day.at("12:15", "US/Eastern").do(save_metrics)
     while True:
         schedule.run_pending()
         time.sleep(30)
