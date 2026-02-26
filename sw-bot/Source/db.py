@@ -463,3 +463,19 @@ def update_ticket_user_opt(user_id, state: bool):
     finally:
         cursor.close()
         db.close()
+
+def get_project_by_ft_id(ft_project_id):
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor(dictionary=True, buffered=True)
+    try:
+        cursor.execute("SELECT * FROM ship_certs WHERE ftProjectId = %s ORDER BY id DESC LIMIT 1", (ft_project_id,))
+        row = cursor.fetchone()
+        return row if row else None
+    except Exception as e:
+        print(f"couldn't get project by ft id: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()

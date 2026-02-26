@@ -1,6 +1,7 @@
 import json, requests, tempfile, time, os
 import db, ai
 from globals import STAFF_CHANNEL, USER_CHANNEL, BOT_TOKEN, DASH_URL, PORT, MACROS, client
+from helpers import get_flavortown_project
 from cache import cache
 
 def send_files(event, dest_channel, dest_ts):
@@ -367,6 +368,53 @@ def handle_client_reply(event):
             )
             dest_ts = resp["ts"]
             db.save_message(ticket["id"], user_id, user_name, user_avatar, text or "", False, file_info if file_info else None, dest_ts, event.get("ts"))
+            project_id = get_flavortown_project(text)
+            if project_id:
+                project = db.get_project_by_ft_id(str(project_id))
+                if project:
+                    client.chat_postMessage(
+                        channel=STAFF_CHANNEL,
+                        thread_ts=ticket["staffThreadTs"],
+                        text=f"Project identified!",
+                        blocks=[
+                                {
+                                    "type": "header",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "Project Found!",
+                                        "emoji": True
+                                    }
+                                },
+                                {
+                                    "type": "divider"
+                                },
+                                {
+                                    "type": "section",
+                                    "text": {
+                                        "type": "mrkdwn",
+                                        "text": f"*User:* <@{project['ftSlackId']}>\n\n*Project:* <https://review.hackclub.com/admin/ship_certifications/{project['id']}/edit |{project['projectName']}>\n\n*Status:* {project['status']}"
+                                    }
+                                },
+                                {
+                                    "type": "divider"
+                                },
+                                {
+                                    "type": "context",
+                                    "elements": [
+                                        {
+                                            "type": "mrkdwn",
+                                            "text": f"*Project Type:* {project['projectType']}"
+                                        }
+                                    ]
+                                }
+                            ]
+                    )
+                else:
+                    client.chat_postMessage(
+                        channel=STAFF_CHANNEL,
+                        thread_ts=ticket["staffThreadTs"],
+                        text=f"Failed to fetch project.. Perhaps it hasn't been shipped?",
+                    )
 
 
         if files:

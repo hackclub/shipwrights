@@ -1,3 +1,4 @@
+import re
 import views
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -48,3 +49,8 @@ def is_shipwright(user_id):
         return True
     return False
 
+def get_flavortown_project(link):
+    match = re.search(r"https://flavortown\.hackclub\.com/projects/(\d+)", link)
+    if match:
+        return match.group(1)
+    return None

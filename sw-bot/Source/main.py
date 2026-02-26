@@ -32,7 +32,8 @@ def msg(event):
     channel = event["channel"]
     if subtype == "message_changed":
         if channel != USER_CHANNEL or event.get("previous_message").get("ts") in cache.ignorable:
-            cache.ignorable.remove(event.get("previous_message").get("ts"))
+            if event.get("previous_message").get("ts") in cache.ignorable:
+                cache.ignorable.remove(event.get("previous_message").get("ts"))
             return
         relay.edit_message(event)
         return
