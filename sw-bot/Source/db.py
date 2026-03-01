@@ -261,20 +261,35 @@ def get_shipwrights():
         cursor.close()
         db.close()
 
+def delete_message(message_ts):
+    db = get_db()
+    if not db:
+        return
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM ticket_msgs WHERE messageTs = %s", (message_ts,))
+        db.commit()
+    except Exception as e:
+        print(f"couldn't delete message: {e}")
+    finally:
+        cursor.close()
+        db.close()
+
+
 def edit_message(message_ts, new_text):
     db = get_db()
     if not db:
-        print("DB seems to be down :/")
         return
     cursor = db.cursor()
     try:
         cursor.execute("UPDATE ticket_msgs SET msg = %s WHERE messageTS = %s", (new_text, message_ts))
         db.commit()
     except Exception as e:
-        print(f"Error occurred, {e}")
+        print(f"edit_message broke: {e}")
         db.rollback()
     finally:
         cursor.close()
+        db.close()
 
 def insert_project_type(ft_project_id, project_type):
     db = get_db()
