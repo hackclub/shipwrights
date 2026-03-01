@@ -21,11 +21,10 @@ function HistoryCard({ h }: { h: any }) {
       href={`/admin/ship_certifications/${h.id}/edit`}
       target="_blank"
       rel="noopener noreferrer"
-      className={`block border-2 rounded-2xl p-3 transition-colors ${
-        h.isCurrent
-          ? 'bg-amber-950/30 border-amber-600/60 hover:border-amber-500'
-          : 'bg-zinc-950/50 border-amber-900/30 hover:border-amber-700/50'
-      }`}
+      className={`block border-2 rounded-2xl p-3 transition-colors ${h.isCurrent
+        ? 'bg-amber-950/30 border-amber-600/60 hover:border-amber-500'
+        : 'bg-zinc-950/50 border-amber-900/30 hover:border-amber-700/50'
+        }`}
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2 flex-wrap">
@@ -119,6 +118,17 @@ export function Form({ shipId }: Props) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [addReviewerName, setAddReviewerName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cert-add-reviewer-name') === 'true'
+    }
+    return false
+  })
+
+  const toggleReviewerName = (checked: boolean) => {
+    setAddReviewerName(checked)
+    localStorage.setItem('cert-add-reviewer-name', String(checked))
+  }
 
   useEffect(() => {
     if (!cert?.claimedAt) {
@@ -280,6 +290,17 @@ export function Form({ shipId }: Props) {
                 className="w-full bg-zinc-950/50 border-2 border-amber-900/30 text-white font-mono text-sm p-3 rounded-2xl focus:outline-none focus:border-amber-600/50 min-h-[100px] disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="enter your reasoning here..."
               />
+              <label className="flex items-center gap-2 mt-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={addReviewerName}
+                  onChange={(e) => toggleReviewerName(e.target.checked)}
+                  className="w-4 h-4 rounded border-2 border-amber-700/60 bg-zinc-950/50 text-amber-500 focus:ring-amber-600 focus:ring-offset-0 cursor-pointer accent-amber-500"
+                />
+                <span className="text-gray-400 font-mono text-xs group-hover:text-gray-300 transition-colors">
+                  <span className="text-amber-400">@{user?.username || 'reviewer'}</span> reviewed this ship!
+                </span>
+              </label>
             </div>
 
             <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20">
@@ -833,14 +854,20 @@ export function Form({ shipId }: Props) {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  update(confirmAction === 'approve' ? 'approved' : 'rejected')
+                  let finalReason = reason
+                  if (addReviewerName && user?.username) {
+                    const tag = `@${user.username} reviewed this ship!`
+                    if (!reason.includes(tag)) {
+                      finalReason = reason + `\n\n${tag}`
+                    }
+                  }
+                  update(confirmAction === 'approve' ? 'approved' : 'rejected', finalReason)
                   setConfirmAction(null)
                 }}
-                className={`flex-1 font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                  confirmAction === 'approve'
-                    ? 'bg-green-600 text-white border-2 border-green-500 hover:bg-green-500'
-                    : 'bg-red-600 text-white border-2 border-red-500 hover:bg-red-500'
-                }`}
+                className={`flex-1 font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] ${confirmAction === 'approve'
+                  ? 'bg-green-600 text-white border-2 border-green-500 hover:bg-green-500'
+                  : 'bg-red-600 text-white border-2 border-red-500 hover:bg-red-500'
+                  }`}
               >
                 YES
               </button>
