@@ -41,7 +41,7 @@ export const POST = withParams(PERMS.support_edit)(async ({ req, params }) => {
 
     const oldTicket = await prisma.ticket.findUnique({
       where: { id },
-      select: { assignees: true },
+      select: { assignees: true, staffThreadTs: true },
     })
 
     const oldIds = oldTicket?.assignees ? JSON.parse(oldTicket.assignees) : []
@@ -84,6 +84,29 @@ export const POST = withParams(PERMS.support_edit)(async ({ req, params }) => {
           console.error('push broke:', e)
         }
       }
+    }
+
+    if ((added.length > 0 || removed.length > 0) && oldTicket?.staffThreadTs) {
+      const [addedUsers, removedUsers] = await Promise.all([
+        added.length > 0
+          ? prisma.user.findMany({ where: { id: { in: added } }, select: { slackId: true } })
+          : Promise.resolve([]),
+        removed.length > 0
+          ? prisma.user.findMany({ where: { id: { in: removed } }, select: { slackId: true } })
+          : Promise.resolve([]),
+      ])
+
+      const botUrl = process.env.NEXT_PUBLIC_BOT_URL || 'http://localhost:45100'
+      fetch(`${botUrl}/ticket/assigned`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: id,
+          staffThreadTs: oldTicket.staffThreadTs,
+          assignees: addedUsers.map((u) => u.slackId),
+          removed: removedUsers.map((u) => u.slackId),
+        }),
+      }).catch((e) => console.error('bot notify broke:', e))
     }
 
     return NextResponse.json({ ok: true })

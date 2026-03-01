@@ -4,6 +4,7 @@ import { withSentryConfig } from '@sentry/nextjs'
 const nextConfig: NextConfig = {
   output: 'standalone',
   images: {
+    localPatterns: [{ pathname: '/**' }, { pathname: '/api/proxy-file', search: '**' }],
     remotePatterns: [
       {
         protocol: 'https',
@@ -28,6 +29,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.r2.dev',
       },
     ],
   },

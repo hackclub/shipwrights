@@ -26,6 +26,7 @@ export function useTicketActions({
   const [files, setFiles] = useState<File[]>([])
   const [note, setNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
+  const [closing, setClosing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -187,9 +188,17 @@ export function useTicketActions({
   }
 
   const closeTicket = async () => {
-    const r = await fetch(`/api/admin/tickets/${ticketId}/close`, { method: 'POST' })
-    if (r.ok) {
-      router.push('/admin/tickets')
+    if (closing) return
+    setClosing(true)
+    try {
+      const r = await fetch(`/api/admin/tickets/${ticketId}/close`, { method: 'POST' })
+      if (r.ok) {
+        router.push('/admin/tickets')
+      } else {
+        setClosing(false)
+      }
+    } catch {
+      setClosing(false)
     }
   }
 
@@ -240,6 +249,7 @@ export function useTicketActions({
     addAssignee,
     removeAssignee,
     closeTicket,
+    closing,
     addNote,
   }
 }

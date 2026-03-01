@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db'
 import { PERMS } from '@/lib/perms'
 import { push } from '@/lib/push-server'
 import { msgs } from '@/lib/notifs'
-import { bust } from '@/lib/cache'
 import { withParams } from '@/lib/api'
 
 export const POST = withParams(PERMS.support_edit)(async ({ user, req, params }) => {
@@ -65,7 +64,7 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, req, params })
         ticketId: ticket.id,
         staffName: user.username,
         staffAvatar: user.avatar,
-        message: cleanMessage || '📎 attachment',
+        message: cleanMessage,
         originalMessage: message?.trim() || '📎 attachment',
         sendToUser: sendToUser,
         userThreadTs: ticket.userThreadTs,
@@ -73,9 +72,6 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, req, params })
         files: files || [],
       }),
     })
-
-    if (!botResp.ok) {
-    }
 
     const assigneeIds = ticket.assignees ? JSON.parse(ticket.assignees as string) : []
     const toNotify = assigneeIds.filter((aid: number) => aid !== user.id)
@@ -98,8 +94,6 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, req, params })
         console.error('push notif broke:', e)
       }
     }
-
-    await bust('cache:tickets*')
 
     return NextResponse.json({ ok: true })
   } catch {

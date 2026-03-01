@@ -30,9 +30,10 @@ interface Profile {
 interface Props {
   slackId: string
   username: string
+  className?: string
 }
 
-export function SubmitterCard({ slackId, username }: Props) {
+export function SubmitterCard({ slackId, username, className }: Props) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -83,7 +84,9 @@ export function SubmitterCard({ slackId, username }: Props) {
 
   return (
     <>
-      <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 shadow-xl shadow-amber-950/20 w-[800px]">
+      <div
+        className={`bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 shadow-xl shadow-amber-950/20 w-[800px] ${className ?? ''}`}
+      >
         <div className="flex items-center gap-3 mb-3">
           <div className="relative w-10 h-10 shrink-0">
             {profile?.avatar ? (

@@ -75,6 +75,7 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, params, ip, ua
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-Key': botKey },
       body: JSON.stringify({
+        ticketId: id,
         userThreadTs: ticket.userThreadTs,
         staffThreadTs: ticket.staffThreadTs,
         staffName: user.username,

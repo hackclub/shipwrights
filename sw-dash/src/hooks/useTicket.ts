@@ -122,10 +122,14 @@ export function useTicket(ticketId: string) {
       socket.emit('join_ticket', { ticketId })
     })
 
+    const numId = parseInt(ticketId.replace('sw-', ''))
+
     socket.on('new_message', (data) => {
-      if (data.ticketId === parseInt(ticketId.replace('sw-', ''))) {
-        load()
-      }
+      if (data.ticketId === numId) load()
+    })
+
+    socket.on('ticket_updated', (data) => {
+      if (data.ticketId === numId) load()
     })
 
     socket.on('disconnect', () => {
