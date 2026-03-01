@@ -270,7 +270,7 @@ export async function create(shipCertId: number, ftProjectId: string, repoUrl: s
     where: { shipCertId },
   })
 
-  if (existing) {
+  if (existing && existing.status !== 'returned') {
     throw new Error(`ysws already exists for cert ${shipCertId}`)
   }
 
