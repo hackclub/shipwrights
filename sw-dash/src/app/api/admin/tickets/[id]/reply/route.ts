@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db'
 import { PERMS } from '@/lib/perms'
 import { push } from '@/lib/push/server'
 import { msgs } from '@/lib/push/messages'
-import { bust } from '@/lib/cache'
 import { withParams } from '@/lib/api'
 
 export const POST = withParams(PERMS.support_edit)(async ({ user, req, params }) => {
@@ -58,7 +57,7 @@ export const POST = withParams(PERMS.support_edit)(async ({ user, req, params })
 
     const botUrl = process.env.NEXT_PUBLIC_BOT_URL || 'http://localhost:45100'
     const botKey = process.env.SW_BOT_KEY || ''
-    const botResp = await fetch(`${botUrl}/bridge/send-reply`, {
+    await fetch(`${botUrl}/bridge/send-reply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-Key': botKey },
       body: JSON.stringify({
