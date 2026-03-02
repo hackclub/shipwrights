@@ -162,7 +162,6 @@ export default async function Admin() {
                 >
                   Support Tickets
                 </Link>
-                <Wip />
               </div>
             )}
           </div>

@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ago } from '@/lib/fmt'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts'
 
 interface Ticket {
   id: number
@@ -22,9 +31,16 @@ interface Stats {
   closed: number
 }
 
+interface GraphPoint {
+  date: string
+  created: number
+  closed: number
+}
+
 export default function Tickets() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [stats, setStats] = useState<Stats>({ total: 0, open: 0, closed: 0 })
+  const [graphData, setGraphData] = useState<GraphPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('open')
   const [botOk, setBotOk] = useState(true)
@@ -56,6 +72,24 @@ export default function Tickets() {
   }, [filter])
 
   useEffect(() => {
+    fetch('/api/admin/tickets/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return
+        const createdMap = new Map<string, number>(data.created.map((d: any) => [d.date, d.count]))
+        const closedMap = new Map<string, number>(data.closed.map((d: any) => [d.date, d.count]))
+        const allDates = new Set([...createdMap.keys(), ...closedMap.keys()])
+        const merged = [...allDates].sort().map((date) => ({
+          date,
+          created: createdMap.get(date) || 0,
+          closed: closedMap.get(date) || 0,
+        }))
+        setGraphData(merged)
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     const botUrl = process.env.NEXT_PUBLIC_BOT_URL || 'http://localhost:45100'
     const check = async () => {
       try {
@@ -70,14 +104,6 @@ export default function Tickets() {
     return () => clearInterval(t)
   }, [])
 
-  const openThread = (ticket: Ticket, type: 'user' | 'staff') => {
-    const threadTs = type === 'user' ? ticket.userThreadTs : ticket.staffThreadTs
-    if (!threadTs) return
-
-    const slackUrl = `slack://channel?team=T0266FRGM&id=C08578QKW4C&message=${threadTs}`
-    window.open(slackUrl, '_blank')
-  }
-
   const skel = () => (
     <main className="bg-grid min-h-screen w-full p-4 md:p-8">
       <div className="w-full">
@@ -88,21 +114,24 @@ export default function Tickets() {
             <div className="h-6 w-16 bg-zinc-800/30 rounded" />
           </div>
         </div>
-        <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20 mb-6 md:mb-8">
-          <div className="h-5 w-16 bg-zinc-800/50 rounded mb-4" />
-          <div className="grid grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="text-center p-3 bg-zinc-900/50 rounded-2xl border-2 border-amber-800/30 min-h-[80px]"
-              >
-                <div className="h-8 w-12 bg-zinc-800/40 rounded mx-auto mb-2" />
-                <div className="h-3 w-16 bg-zinc-800/30 rounded mx-auto" />
-              </div>
-            ))}
+        <div className="mb-6 md:mb-8">
+          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-2 border-amber-900/40 rounded-2xl p-4 md:p-5">
+            <div className="h-4 w-24 bg-zinc-800/40 rounded mb-2" />
+            <div className="h-9 w-16 bg-zinc-800/50 rounded mb-4" />
+            <div className="border-t border-zinc-800 pt-4 flex gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i}>
+                  <div className="h-3 w-12 bg-zinc-800/30 rounded mb-1" />
+                  <div className="h-6 w-10 bg-zinc-800/40 rounded" />
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-zinc-800 mt-4 pt-4">
+              <div className="h-[200px] bg-zinc-800/20 rounded" />
+            </div>
           </div>
         </div>
-        <div className="hidden md:block bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl overflow-hidden shadow-2xl shadow-amber-950/30">
+        <div className="hidden md:block bg-gradient-to-br from-zinc-900/90 to-black/90 border-2 border-amber-900/40 rounded-2xl overflow-hidden shadow-2xl">
           <table className="w-full">
             <thead>
               <tr className="border-b border-amber-900/30">
@@ -166,52 +195,139 @@ export default function Tickets() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-4 md:p-6 shadow-xl shadow-amber-950/20 mb-6 md:mb-8">
-          <h2 className="text-amber-400 font-mono text-base md:text-lg mb-3 md:mb-4">Stats</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-zinc-900/50 rounded-2xl border-2 border-amber-800/30">
-              <div className="text-white font-mono text-2xl md:text-3xl font-bold">
-                {stats.total}
+        <div className="mb-6 md:mb-8">
+          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-2 border-amber-900/40 rounded-2xl p-4 md:p-5 shadow-xl">
+            <div className="mb-4">
+              <div className="text-gray-400 font-mono text-xs mb-1">Total tickets</div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl md:text-4xl font-bold font-mono text-white">
+                  {stats.total}
+                </span>
+                <span className="text-gray-400 font-mono text-sm">
+                  {stats.open} open, {stats.closed} closed
+                </span>
               </div>
-              <div className="text-gray-400 font-mono text-xs md:text-sm mt-1">Total</div>
             </div>
-            <div className="text-center p-3 bg-green-900/20 rounded-2xl border-2 border-green-700/50">
-              <div className="text-green-400 font-mono text-2xl md:text-3xl font-bold">
-                {stats.open}
+
+            <div className="flex flex-wrap gap-4 md:gap-6 pt-4 border-t border-zinc-800">
+              <div>
+                <div className="text-gray-500 font-mono text-xs mb-1">Open</div>
+                <span className="text-xl font-bold font-mono text-green-400">{stats.open}</span>
               </div>
-              <div className="text-green-300/70 font-mono text-xs md:text-sm mt-1">Open</div>
+              <div>
+                <div className="text-gray-500 font-mono text-xs mb-1">Closed</div>
+                <span className="text-xl font-bold font-mono text-amber-400">{stats.closed}</span>
+              </div>
+              <div>
+                <div className="text-gray-500 font-mono text-xs mb-1">Close rate</div>
+                <span className="text-xl font-bold font-mono text-white">
+                  {stats.total > 0 ? Math.round((stats.closed / stats.total) * 100) : 0}%
+                </span>
+              </div>
             </div>
-            <div className="text-center p-3 bg-amber-900/20 rounded-2xl border-2 border-amber-700/50">
-              <div className="text-amber-400 font-mono text-2xl md:text-3xl font-bold">
-                {stats.closed}
+
+            <div className="mt-4 pt-4 border-t border-zinc-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-400 font-mono text-xs">last 30 days</span>
+                <div className="flex gap-3 font-mono text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-0.5 bg-green-400 inline-block" /> created
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-0.5 bg-amber-400 inline-block" /> closed
+                  </span>
+                </div>
               </div>
-              <div className="text-amber-300/70 font-mono text-xs md:text-sm mt-1">Closed</div>
+              {graphData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={graphData} margin={{ top: 5, right: 10, bottom: 40, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#78716c10" />
+                    <XAxis
+                      dataKey="date"
+                      stroke="#78716c"
+                      style={{ fontSize: '10px' }}
+                      tickFormatter={(d) => {
+                        const dt = new Date(d)
+                        return `${dt.toLocaleString('en-US', { month: 'short' })} ${dt.getDate()}`
+                      }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={40}
+                    />
+                    <YAxis
+                      stroke="#78716c"
+                      style={{ fontSize: '10px' }}
+                      allowDecimals={false}
+                      width={25}
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null
+                        const d = new Date(payload[0].payload.date)
+                        return (
+                          <div className="bg-zinc-900 border border-zinc-700 rounded px-3 py-2 shadow-xl">
+                            <p className="text-gray-400 text-xs font-mono mb-1">
+                              {d.toLocaleString('en-US', { month: 'short' })} {d.getDate()}
+                            </p>
+                            <p className="text-green-400 text-xs font-mono">
+                              created: {payload[0].payload.created}
+                            </p>
+                            <p className="text-amber-400 text-xs font-mono">
+                              closed: {payload[0].payload.closed}
+                            </p>
+                          </div>
+                        )
+                      }}
+                      cursor={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="created"
+                      stroke="#4ade80"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="closed"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-gray-500 font-mono text-sm">
+                  no data yet
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="mb-4 md:mb-6">
-          <h3 className="text-amber-400 font-mono text-xs md:text-sm mb-2">Filter</h3>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'open', 'closed'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`font-mono text-xs px-3 py-2 rounded-2xl border-2 transition-all ${
-                  filter === f
-                    ? 'bg-amber-900/30 text-amber-400 border-amber-700/60 shadow-lg shadow-amber-950/20'
-                    : 'bg-zinc-900/30 text-amber-300/60 border-amber-800/30 hover:bg-zinc-900/50'
-                }`}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)} (
-                {f === 'all' ? stats.total : f === 'open' ? stats.open : stats.closed})
-              </button>
-            ))}
-          </div>
+        <div className="mb-4 md:mb-6 flex flex-wrap gap-1">
+          {['all', 'open', 'closed'].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`font-mono text-xs px-3 py-1.5 rounded-xl border transition-all ${
+                filter === f
+                  ? f === 'open'
+                    ? 'bg-green-900/40 text-green-300 border-green-600'
+                    : f === 'closed'
+                      ? 'bg-amber-900/40 text-amber-300 border-amber-600'
+                      : 'bg-zinc-800 text-white border-zinc-600'
+                  : 'bg-zinc-900/50 text-gray-400 border-gray-700 hover:bg-zinc-800'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)} (
+              {f === 'all' ? stats.total : f === 'open' ? stats.open : stats.closed})
+            </button>
+          ))}
         </div>
 
         {tickets.length === 0 ? (
-          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 p-4 rounded-3xl shadow-2xl shadow-amber-950/30">
+          <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-2 border-amber-900/40 p-4 rounded-2xl shadow-2xl">
             <p className="text-amber-300/60 font-mono text-sm">nothing here bruh</p>
           </div>
         ) : (
@@ -220,7 +336,7 @@ export default function Tickets() {
               {tickets.map((t) => (
                 <div
                   key={t.id}
-                  className="border-4 border-amber-900/40 bg-gradient-to-br from-zinc-900/90 to-black/90 p-3 rounded-3xl shadow-xl shadow-amber-950/20"
+                  className="border-2 border-amber-900/30 bg-gradient-to-br from-zinc-900/80 to-black/80 p-3 rounded-2xl shadow-lg"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -282,7 +398,7 @@ export default function Tickets() {
               ))}
             </div>
 
-            <div className="hidden md:block border-4 border-amber-900/40 bg-gradient-to-br from-zinc-900/90 to-black/90 overflow-hidden rounded-3xl shadow-2xl shadow-amber-950/30">
+            <div className="hidden md:block border-2 border-amber-900/40 bg-gradient-to-br from-zinc-900/90 to-black/90 overflow-hidden rounded-2xl shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
