@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, join_room
 from flask_cors import CORS
 from globals import API_KEY, PORT, STAFF_CHANNEL, USER_CHANNEL, client, MACROS
 from cache import cache
+from db import save_message
 
 app = Flask(__name__)
 
@@ -105,10 +106,11 @@ def bridge_close_ticket():
         print(f'cache close failed: {e}')
 
     try:
-        client.chat_postMessage(
+        resp = client.chat_postMessage(
             channel=STAFF_CHANNEL, thread_ts=staff_thread_ts,
             text=f'ticket sw-{ticket_id} was closed by {staff_name} from the dashboard'
         )
+        save_message(ticket_id, 'BOT', 'Shipwrighter', None, f'ticket sw-{ticket_id} closed by {staff_name}', True, None, resp["ts"])
         if user_thread_ts:
             client.chat_postMessage(
                 channel=USER_CHANNEL, thread_ts=user_thread_ts,
@@ -147,18 +149,20 @@ def ticket_assigned():
     try:
         if assigned_to:
             names = ', '.join(f'<@{uid}>' for uid in assigned_to)
-            client.chat_postMessage(
+            resp = client.chat_postMessage(
                 channel=STAFF_CHANNEL,
                 thread_ts=staff_thread_ts,
                 text=f'ticket sw-{ticket_id} assigned to {names}'
             )
+            save_message(ticket_id, 'BOT', 'Shipwrighter', None, f'ticket sw-{ticket_id} assigned to {names}', True, None, resp["ts"])
         if removed:
             names = ', '.join(f'<@{uid}>' for uid in removed)
-            client.chat_postMessage(
+            resp = client.chat_postMessage(
                 channel=STAFF_CHANNEL,
                 thread_ts=staff_thread_ts,
                 text=f'{names} unassigned from ticket sw-{ticket_id}'
             )
+            save_message(ticket_id, 'BOT', 'Shipwrighter', None, f'{names} unassigned from ticket sw-{ticket_id}', True, None, resp["ts"])
     except Exception as e:
         print(f'assign notify failed: {e}')
 

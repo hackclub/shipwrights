@@ -267,11 +267,13 @@ def handle_staff_reply(event):
                 ]
             )
             cache.close_ticket(ticket["id"])
-            client.chat_postMessage(
+            resp = client.chat_postMessage(
                 channel=STAFF_CHANNEL,
                 thread_ts=ticket["staffThreadTs"],
                 text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
             )
+            db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'ticket resolved by <@{user_id}>', True, None, resp["ts"])
+            ping_ws(ticket["id"])
             client.chat_postMessage(
                 channel=USER_CHANNEL,
                 thread_ts=ticket["userThreadTs"],
@@ -311,12 +313,13 @@ def handle_staff_reply(event):
             thread_ts=ticket["userThreadTs"],
             text=f"Hey it seems that this ticket was reopened by <@{user_id}>!",
         )
-        client.chat_postMessage(
+        resp = client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
             text=f"<@{user_id}> has reopened this ticket.",
-
         )
+        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'<@{user_id}> has reopened this ticket', True, None, resp["ts"])
+        ping_ws(ticket["id"])
         client.reactions_remove(
             channel=STAFF_CHANNEL,
             timestamp=ticket["staffThreadTs"],
@@ -351,11 +354,13 @@ def handle_staff_reply(event):
         except Exception as e:
             print(f"Failed to add client thread reaction for a ticket: {e}")
 
-        client.chat_postMessage(
+        resp = client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=thread,
             text="ticket closed"
         )
+        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'ticket closed by <@{user_id}>', True, None, resp["ts"])
+        ping_ws(ticket["id"])
 
         client.chat_postMessage(
             channel=USER_CHANNEL,
@@ -621,11 +626,13 @@ def edit_message(event):
     message = event.get("message").get("text")
     ticket = cache.find_ticket_by_ts(message_ts)
     if message == 'This message was deleted.':
-        client.chat_postMessage(
+        resp = client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
             text="User has deleted message header, If no messages have been sent please don't send a reply or resolve as this could cause messages to be sent directly in the channel and not threaded."
         )
+        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, "User has deleted message header, don't reply or resolve - messages won't be threaded.", True, None, resp["ts"])
+        ping_ws(ticket["id"])
         return
     if event.get("message").get("thread_ts") == event.get("message").get("ts"):
         user_thread_link_resp = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=message_ts)
