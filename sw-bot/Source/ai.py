@@ -101,8 +101,8 @@ def paraphrase_message(ticket_id, message):
     save_message(ticket_id, "SWBOT", "Shipwrighter AI", None, f"AI Suggestion:\n{paraphrased}", True, None, resp.get("ts"))
     try:
         requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket_id}, headers={'X-API-Key': API_KEY}, timeout=0.5)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"failed to send notification: {e}")
 
 def get_ticket_detection(ticket_id):
     return json.loads(requests.get(

@@ -87,7 +87,7 @@ def send_paraphrased(client, body, ack):
         username=f"{user_info['username']} | AI Paraphrased",
         icon_url=user_info["pfp"],
     )
-    db.save_message(ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased, True, None, USER_CHANNEL)
+    db.save_message(ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased, True, None, staff_resp["ts"])
     relay.ping_ws(ticket_id)
 
 @slack_app.action("delete_message")

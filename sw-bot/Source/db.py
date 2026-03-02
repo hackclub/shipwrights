@@ -260,22 +260,6 @@ def get_shipwrights():
     finally:
         cursor.close()
         db.close()
-
-def delete_message(message_ts):
-    db = get_db()
-    if not db:
-        return
-    cursor = db.cursor()
-    try:
-        cursor.execute("DELETE FROM ticket_msgs WHERE messageTs = %s", (message_ts,))
-        db.commit()
-    except Exception as e:
-        print(f"couldn't delete message: {e}")
-    finally:
-        cursor.close()
-        db.close()
-
-
 def edit_message(message_ts, new_text):
     db = get_db()
     if not db:

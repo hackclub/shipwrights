@@ -655,18 +655,6 @@ def edit_message(event):
         text=event.get("message").get("text"),
     )
 
-def handle_message_deleted(event):
-    deleted_ts = event.get("deleted_ts")
-    if not deleted_ts:
-        return
-    thread = event.get("thread_ts") or event.get("previous_message", {}).get("thread_ts")
-    db.delete_message(deleted_ts)
-    if thread:
-        ticket = cache.find_ticket_by_ts(thread)
-        if ticket:
-            ping_ws(ticket["id"])
-
-
 def ping_ws(ticket_id):
     try:
         requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket_id}, headers={'X-API-Key': API_KEY}, timeout=0.5)
