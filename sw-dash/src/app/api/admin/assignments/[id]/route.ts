@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
-import { reportError } from '@/lib/error-tracking'
+import { reportError } from '@/lib/sentry-server'
 import { withParams } from '@/lib/api'
 
 export const GET = withParams()(async ({ params }) => {

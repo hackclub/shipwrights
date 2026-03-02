@@ -1,6 +1,6 @@
 import webpush from 'web-push'
-import { prisma } from './db'
-import { log } from './log'
+import { prisma } from '@/lib/db'
+import { log } from '@/lib/log'
 
 let vapidReady = false
 function ensureVapid() {

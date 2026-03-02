@@ -5,16 +5,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { can, PERMS } from '@/lib/perms'
 import { useShipCert } from '@/hooks/useShipCert'
+import { verdictColor } from '@/lib/styles'
 import { AiSummary } from './ai-summary'
 import { SubmitterCard } from '@/components/submitter-card'
 
 function HistoryCard({ h }: { h: any }) {
-  const verdictCls =
-    h.verdict === 'approved'
-      ? 'bg-green-900/30 text-green-400'
-      : h.verdict === 'rejected'
-        ? 'bg-red-900/30 text-red-400'
-        : 'bg-yellow-900/30 text-yellow-400'
+  const verdictCls = verdictColor(h.verdict)
 
   return (
     <Link

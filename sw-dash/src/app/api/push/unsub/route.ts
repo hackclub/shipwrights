@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { needAuth } from '@/lib/auth'
-import { del } from '@/lib/push-server'
+import { del } from '@/lib/push/server'
 
 export async function POST(req: NextRequest) {
   try {

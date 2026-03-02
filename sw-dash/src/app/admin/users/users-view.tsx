@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AddUser } from '@/components/admin/add-user'
+import { roleStyle } from '@/lib/styles'
 
 interface User {
   id: number
@@ -21,25 +22,6 @@ interface Props {
   canAdd: boolean
   myName: string
   mySlackId: string
-}
-
-const roleColor = (r: string) => {
-  switch (r) {
-    case 'megawright':
-      return 'text-purple-400 bg-purple-900/30 border-purple-700/50'
-    case 'hq':
-      return 'text-pink-400 bg-pink-900/30 border-pink-700/50'
-    case 'captain':
-      return 'text-blue-400 bg-blue-900/30 border-blue-700/50'
-    case 'shipwright':
-      return 'text-green-400 bg-green-900/30 border-green-700/50'
-    case 'fraudster':
-      return 'text-orange-400 bg-orange-900/30 border-orange-700/50'
-    case 'syswright':
-      return 'text-red-400 bg-red-900/30 border-red-700/50'
-    default:
-      return 'text-amber-300/60 bg-zinc-800 border-amber-900/30'
-  }
 }
 
 export function UsersView({ users, canEdit, canAdd, myName, mySlackId }: Props) {
@@ -136,7 +118,7 @@ export function UsersView({ users, canEdit, canAdd, myName, mySlackId }: Props) 
                 <td className="text-amber-300/50 font-mono text-xs px-4 py-3">{u.slackId}</td>
                 <td className="px-4 py-3">
                   <span
-                    className={`font-mono text-xs px-2 py-1 rounded-lg border ${roleColor(u.role)}`}
+                    className={`font-mono text-xs px-2 py-1 rounded-lg border ${roleStyle(u.role)}`}
                   >
                     {u.role}
                   </span>
@@ -209,7 +191,7 @@ export function UsersView({ users, canEdit, canAdd, myName, mySlackId }: Props) 
               <div className="bg-zinc-900/50 border border-amber-900/30 rounded-xl p-2">
                 <div className="text-amber-300/50 font-mono text-xs mb-1">role</div>
                 <span
-                  className={`font-mono text-xs px-2 py-0.5 rounded-lg border inline-block ${roleColor(u.role)}`}
+                  className={`font-mono text-xs px-2 py-0.5 rounded-lg border inline-block ${roleStyle(u.role)}`}
                 >
                   {u.role}
                 </span>

@@ -1,7 +1,8 @@
 import requests, json
 from datetime import datetime, timedelta
-from globals import SWAI_KEY, MACROS, STAFF_CHANNEL,client
+from globals import SWAI_KEY, MACROS, STAFF_CHANNEL, API_KEY, BOT_URL, client
 from cache import cache
+from db import save_message
 
 
 def get_ticket_summary(ticket_id):
@@ -66,7 +67,7 @@ def get_message_completion(ticket_id, message):
 def paraphrase_message(ticket_id, message):
     paraphrased = get_message_completion(ticket_id=ticket_id, message=message).get('paraphrased')
     ticket = cache.get_ticket_by_id(ticket_id)
-    client.chat_postMessage(
+    resp = client.chat_postMessage(
         channel=STAFF_CHANNEL,
         thread_ts=ticket['staffThreadTs'],
         text="",
@@ -97,6 +98,11 @@ def paraphrase_message(ticket_id, message):
             }
         ]
     )
+    save_message(ticket_id, "SWBOT", "Shipwrighter AI", None, f"AI Suggestion:\n{paraphrased}", True, None, resp.get("ts"))
+    try:
+        requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket_id}, headers={'X-API-Key': API_KEY}, timeout=0.5)
+    except Exception as e:
+        print(f"failed to send notification: {e}")
 
 def get_ticket_detection(ticket_id):
     return json.loads(requests.get(

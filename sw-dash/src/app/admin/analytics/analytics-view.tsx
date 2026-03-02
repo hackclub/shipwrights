@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { StatsCard } from '@/components/admin/stats-card'
-import { Chart } from '@/components/admin/chart'
+import { Chart } from '@/components/charts/chart'
 
 interface AnalyticsData {
   certs: {

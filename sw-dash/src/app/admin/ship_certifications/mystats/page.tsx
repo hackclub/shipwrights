@@ -4,6 +4,7 @@ import { getUser } from '@/lib/server-auth'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { RATES, getBounty } from '@/lib/payouts'
+import { ago } from '@/lib/fmt'
 import PayoutModal from './payout-modal'
 
 export default async function Stats() {
@@ -111,15 +112,6 @@ export default async function Stats() {
   ]
     .sort((a, b) => (b.when?.getTime() || 0) - (a.when?.getTime() || 0))
     .slice(0, 15)
-
-  const ago = (d: Date | null) => {
-    if (!d) return '-'
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000)
-    if (diff < 60) return 'now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-    return `${Math.floor(diff / 86400)}d`
-  }
 
   const rate = total > 0 ? Math.round((approved / total) * 100) : 0
   const filteredLb = global.filter((s) => s.reviewerId !== sysUser?.id)
@@ -293,7 +285,7 @@ export default async function Stats() {
                       {l.multi ? `${l.multi}x` : '-'}
                     </td>
                     <td className="p-3 text-right text-gray-500 font-mono text-xs">
-                      {ago(l.when)}
+                      {ago(l.when, true)}
                     </td>
                     <td
                       className={`p-3 text-right font-mono text-sm font-bold ${l.amt && l.amt > 0 ? 'text-green-400' : 'text-red-400'}`}

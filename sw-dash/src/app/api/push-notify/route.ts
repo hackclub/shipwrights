@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { push } from '@/lib/push-server'
-import { msgs } from '@/lib/notifs'
+import { push } from '@/lib/push/server'
+import { msgs } from '@/lib/push/messages'
 
 export async function POST(req: NextRequest) {
   const key = req.headers.get('x-api-key')

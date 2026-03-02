@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { cache, genKey } from '@/lib/cache'
 import { fetchDevlogs, FtDevlog, getAiDecl } from './ft'
-import { parseRepo, fetchCommits } from './gh'
+import { parseRepo, fetchCommits } from './github'
 import { grab, upload } from './r2'
 
 const ftBase = process.env.NEXT_PUBLIC_FLAVORTOWN_URL || ''
@@ -268,6 +268,7 @@ async function pullMedia(ftMedia: FtDevlog['media']): Promise<Media[]> {
 export async function create(shipCertId: number, ftProjectId: string, repoUrl: string | null) {
   const existing = await prisma.yswsReview.findFirst({
     where: { shipCertId },
+    orderBy: { createdAt: 'desc' },
   })
 
   if (existing && existing.status !== 'returned') {
@@ -354,6 +355,12 @@ export async function create(shipCertId: number, ftProjectId: string, repoUrl: s
       })
     }
   }
+
+  const freshCert = await prisma.shipCert.findUnique({
+    where: { id: shipCertId },
+    select: { status: true },
+  })
+  if (!freshCert || freshCert.status !== 'approved') return null
 
   const ysws = await prisma.yswsReview.create({
     data: {

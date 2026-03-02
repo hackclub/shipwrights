@@ -5,8 +5,8 @@ import { api } from '@/lib/api'
 import { PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { parseId } from '@/lib/utils'
-import { push } from '@/lib/push-server'
-import { msgs } from '@/lib/notifs'
+import { push } from '@/lib/push/server'
+import { msgs } from '@/lib/push/messages'
 import { log } from '@/lib/log'
 
 const s3 = new S3Client({

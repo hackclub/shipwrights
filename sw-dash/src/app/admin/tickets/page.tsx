@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { ago } from '@/lib/fmt'
 
 interface Ticket {
   id: number
@@ -11,6 +12,8 @@ interface Ticket {
   status: string
   createdAt: string
   assignees?: Array<{ id: number; name: string; avatar?: string | null }>
+  userThreadTs?: string | null
+  staffThreadTs?: string | null
 }
 
 interface Stats {
@@ -67,13 +70,12 @@ export default function Tickets() {
     return () => clearInterval(t)
   }, [])
 
-  const ago = (date: string) => {
-    const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-    if (diff < 60) return 'just now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
-    return `${Math.floor(diff / 604800)}w ago`
+  const openThread = (ticket: Ticket, type: 'user' | 'staff') => {
+    const threadTs = type === 'user' ? ticket.userThreadTs : ticket.staffThreadTs
+    if (!threadTs) return
+
+    const slackUrl = `slack://channel?team=T0266FRGM&id=C08578QKW4C&message=${threadTs}`
+    window.open(slackUrl, '_blank')
   }
 
   const skel = () => (

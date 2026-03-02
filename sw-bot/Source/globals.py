@@ -13,6 +13,7 @@ STAFF_CHANNEL = os.getenv("STAFF_CHANNEL_ID")
 BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SWAI_KEY = os.getenv("SW_AI")
 PORT = int(os.getenv('PORT', '45100'))
+BOT_URL = os.getenv('BOT_URL', f'http://127.0.0.1:{PORT}')
 
 MACROS = {
     "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",

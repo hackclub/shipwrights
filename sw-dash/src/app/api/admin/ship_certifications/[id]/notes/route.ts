@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { log } from '@/lib/log'
 import { PERMS } from '@/lib/perms'
-import { push } from '@/lib/push-server'
-import { msgs } from '@/lib/notifs'
+import { push } from '@/lib/push/server'
+import { msgs } from '@/lib/push/messages'
 import { withParams } from '@/lib/api'
 
 interface InternalNote {

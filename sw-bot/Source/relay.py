@@ -1,6 +1,6 @@
 import json, requests, tempfile, time, os
 import db, ai
-from globals import STAFF_CHANNEL, USER_CHANNEL, BOT_TOKEN, DASH_URL, PORT, MACROS, client
+from globals import STAFF_CHANNEL, USER_CHANNEL, BOT_TOKEN, DASH_URL, API_KEY, BOT_URL, MACROS, client
 from helpers import get_flavortown_project
 from cache import cache
 
@@ -232,8 +232,7 @@ def handle_staff_reply(event):
                 icon_url=staff_avatar
             )
             dest_ts = resp["ts"]
-            db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts
-                            )
+            db.save_message(ticket["id"], user_id, staff_name, staff_avatar, MACROS[clean_text], True, None, dest_ts)
             ping_ws(ticket["id"])
             client.chat_postEphemeral(
                 channel=STAFF_CHANNEL,
@@ -302,6 +301,7 @@ def handle_staff_reply(event):
 
     elif text.strip().lower().startswith('!ai'):
         clean_text = text[1:].lstrip('!ai')
+        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, None, event.get("ts"))
         ai.paraphrase_message(ticket["id"], clean_text)
 
     elif text.strip().lower().startswith('!reopen'):
@@ -467,7 +467,7 @@ def handle_client_reply(event):
             send_files(event, STAFF_CHANNEL, ticket["staffThreadTs"])
 
         try:
-            requests.post(f'http://localhost:{PORT}/ws/notify', json={'ticketId': ticket["id"]}, timeout=0.5)
+            requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket["id"]}, headers={'X-API-Key': API_KEY}, timeout=0.5)
         except Exception as e:
             print(f"failed to send notification: {e}")
     elif ticket.get("status", None) == "closed" and USER_CHANNEL == event.get("channel"):
@@ -611,6 +611,10 @@ def create_ticket(event):
         )
         if user_opt_in:
             ai.detect_ticket(ticket_id)
+        try:
+            requests.post(f'{DASH_URL}/api/admin/tickets/bust', headers={'X-API-Key': API_KEY}, timeout=1)
+        except Exception:
+            pass
 
 def edit_message(event):
     message_ts = event.get("previous_message").get("ts")
@@ -653,6 +657,6 @@ def edit_message(event):
 
 def ping_ws(ticket_id):
     try:
-        requests.post(f'http://localhost:{PORT}/ws/notify', json={'ticketId': ticket_id}, timeout=0.5)
+        requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket_id}, headers={'X-API-Key': API_KEY}, timeout=0.5)
     except Exception as e:
         print(f"Failed to ping ws ticket: {e}")

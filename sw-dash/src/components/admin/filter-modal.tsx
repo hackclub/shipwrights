@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
+import { useClickOutside } from '@/hooks/useClickOutside'
 
 interface Props {
   status: string
@@ -40,14 +41,10 @@ export function FilterModal({
   const [localInclude, setLocalInclude] = useState<string[]>(includeReviewers)
   const [localExclude, setLocalExclude] = useState<string[]>(excludeReviewers)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  useClickOutside(
+    ref,
+    useCallback(() => setOpen(false), [])
+  )
 
   const apply = () => {
     onChange({

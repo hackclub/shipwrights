@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { can, PERMS } from '@/lib/perms'
-import { useUser } from '@/lib/user-context'
+import { useUser } from '@/components/providers/user-context'
 import { ShipCert, UserData } from '@/types'
 import { io } from 'socket.io-client'
 

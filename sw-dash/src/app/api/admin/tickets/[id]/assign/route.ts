@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { PERMS } from '@/lib/perms'
-import { push } from '@/lib/push-server'
-import { msgs } from '@/lib/notifs'
+import { push } from '@/lib/push/server'
+import { msgs } from '@/lib/push/messages'
 import { withParams } from '@/lib/api'
 
 export const POST = withParams(PERMS.support_edit)(async ({ req, params }) => {

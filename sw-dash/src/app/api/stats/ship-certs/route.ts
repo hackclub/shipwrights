@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCerts } from '@/lib/certs'
 import { prisma } from '@/lib/db'
-import { reportError } from '@/lib/error-tracking'
+import { reportError } from '@/lib/sentry-server'
 
 export async function GET(req: NextRequest) {
   const key = req.headers.get('x-api-key')

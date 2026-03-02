@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { api } from '@/lib/api'
 import { prisma } from '@/lib/db'
-import { reportError } from '@/lib/error-tracking'
-import { push } from '@/lib/push-server'
-import { msgs } from '@/lib/notifs'
+import { reportError } from '@/lib/sentry-server'
+import { push } from '@/lib/push/server'
+import { msgs } from '@/lib/push/messages'
 import { cache, bust } from '@/lib/cache'
 
 export const POST = api()(async ({ user, req }) => {

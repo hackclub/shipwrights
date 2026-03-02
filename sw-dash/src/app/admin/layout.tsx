@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { UserProvider, useUser } from '@/lib/user-context'
+import { UserProvider, useUser } from '@/components/providers/user-context'
 
 function AuthCheck({ children }: { children: React.ReactNode }) {
   const router = useRouter()

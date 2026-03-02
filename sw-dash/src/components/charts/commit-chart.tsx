@@ -1,6 +1,7 @@
 'use client'
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { parseRepo } from '@/lib/github'
 
 interface Commit {
   sha: string
@@ -14,11 +15,6 @@ interface Commit {
 interface Props {
   commits: Commit[]
   repoUrl?: string
-}
-
-const parseRepo = (url: string) => {
-  const m = url.match(/github\.com\/([^/]+)\/([^/]+)/)
-  return m ? { owner: m[1], repo: m[2].replace(/\.git$/, '') } : null
 }
 
 function CommitLink({

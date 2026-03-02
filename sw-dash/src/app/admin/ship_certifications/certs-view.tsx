@@ -5,6 +5,9 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Cert, Stats, TypeCount, Reviewer } from '@/types'
 import { AvgWaitChart } from './avg-wait-chart'
+import { ago, fmtDate } from '@/lib/fmt'
+import { verdictColor } from '@/lib/styles'
+import { useClickOutside } from '@/hooks/useClickOutside'
 
 interface Props {
   initial: {
@@ -15,19 +18,6 @@ interface Props {
   }
 }
 
-const vColor = (v: string) => {
-  switch (v.toLowerCase()) {
-    case 'approved':
-      return 'bg-green-900/30 text-green-400 border-green-700'
-    case 'rejected':
-      return 'bg-red-900/30 text-red-400 border-red-700'
-    case 'pending':
-      return 'bg-yellow-900/30 text-yellow-400 border-yellow-700'
-    default:
-      return 'bg-gray-900/30 text-gray-400 border-gray-700'
-  }
-}
-
 const fmtTime = (secs: number) => {
   if (secs <= 0) return 'unlocked'
   const m = Math.floor(secs / 60)
@@ -35,32 +25,7 @@ const fmtTime = (secs: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-const ago = (date: string) => {
-  if (!date || date === '-') return '-'
-  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
-  return `${Math.floor(diff / 604800)}w ago`
-}
-
-const fmtDate = (date: string) => {
-  if (!date || date === '-') return '-'
-  return new Date(date).toLocaleDateString()
-}
-
 const QUEUE_TARGET = 35
-
-function useClickOutside(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) cb()
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-}
 
 function Dropdown({
   label,
@@ -536,7 +501,7 @@ export function CertsView({ initial }: Props) {
                   </span>
                 ) : (
                   <span
-                    className={`px-2 py-1 rounded font-mono text-xs border ${vColor(c.verdict)}`}
+                    className={`px-2 py-1 rounded font-mono text-xs border ${verdictColor(c.verdict)}`}
                   >
                     {c.verdict}
                   </span>
@@ -635,7 +600,7 @@ export function CertsView({ initial }: Props) {
                       </div>
                     ) : (
                       <span
-                        className={`inline-block px-2 py-1 rounded font-mono text-xs border ${vColor(c.verdict)}`}
+                        className={`inline-block px-2 py-1 rounded font-mono text-xs border ${verdictColor(c.verdict)}`}
                       >
                         {c.verdict}
                       </span>

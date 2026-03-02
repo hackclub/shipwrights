@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { reg, ask, sub, unsub, check } from '@/lib/push'
+import { reg, ask, sub, unsub, check } from '@/lib/push/client'
 
 type Status = 'checking' | 'denied' | 'unsupported' | 'ready'
 

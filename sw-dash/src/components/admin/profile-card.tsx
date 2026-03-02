@@ -4,35 +4,13 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import Pwa from '@/components/ui/pwa'
+import { roleStyle } from '@/lib/styles'
 
 interface User {
   id: number
   username: string
   avatar: string | null
   role: string
-}
-
-const roleStyle = (r: string) => {
-  switch (r) {
-    case 'megawright':
-      return 'bg-purple-900/30 text-purple-400 border-purple-700/50'
-    case 'captain':
-      return 'bg-red-900/30 text-red-400 border-red-700/50'
-    case 'shipwright':
-      return 'bg-blue-900/30 text-blue-400 border-blue-700/50'
-    case 'ysws_reviewer':
-      return 'bg-cyan-900/30 text-cyan-400 border-cyan-700/50'
-    case 'sw_ysws':
-      return 'bg-teal-900/30 text-teal-400 border-teal-700/50'
-    case 'fraudster':
-      return 'bg-orange-900/30 text-orange-400 border-orange-700/50'
-    case 'observer':
-      return 'bg-gray-900/30 text-gray-400 border-gray-700/50'
-    case 'syswright':
-      return 'bg-green-900/30 text-green-400 border-green-700/50'
-    default:
-      return 'bg-yellow-900/30 text-yellow-400 border-yellow-700/50'
-  }
 }
 
 export function ProfileCard({ user }: { user: User }) {

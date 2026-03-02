@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { CommitChart } from '@/components/commit-chart'
-import { TimeChart } from '@/components/time-chart'
+import { CommitChart } from '@/components/charts/commit-chart'
+import { TimeChart } from '@/components/charts/time-chart'
 import { SubmitterCard } from '@/components/submitter-card'
+import { fmtDuration } from '@/lib/fmt'
 
 interface Commit {
   sha: string
@@ -117,12 +118,6 @@ export function Review({ data, canEdit, canUndo }: Props) {
   const avgSecs = data.devlogs.length > 0 ? totalSecs / data.devlogs.length : 0
   const maxSecs = data.devlogs.length > 0 ? Math.max(...data.devlogs.map((d) => d.origSecs)) : 0
   const oneHrCount = data.devlogs.filter((d) => d.origSecs >= 3600).length
-
-  const fmtTime = (secs: number) => {
-    const hrs = Math.floor(secs / 3600)
-    const mins = Math.floor((secs % 3600) / 60)
-    return `${hrs}h ${mins}m`
-  }
 
   const fmtMins = (secs: number) => Math.floor(secs / 60)
 
@@ -284,15 +279,17 @@ export function Review({ data, canEdit, canUndo }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-zinc-950/50 border-2 border-amber-900/30 rounded-2xl p-3 text-center">
                 <div className="text-gray-400 font-mono text-xs mb-1">Total Time</div>
-                <div className="text-white font-mono text-lg font-bold">{fmtTime(totalSecs)}</div>
+                <div className="text-white font-mono text-lg font-bold">
+                  {fmtDuration(totalSecs)}
+                </div>
               </div>
               <div className="bg-zinc-950/50 border-2 border-amber-900/30 rounded-2xl p-3 text-center">
                 <div className="text-gray-400 font-mono text-xs mb-1">Avg per Devlog</div>
-                <div className="text-white font-mono text-lg font-bold">{fmtTime(avgSecs)}</div>
+                <div className="text-white font-mono text-lg font-bold">{fmtDuration(avgSecs)}</div>
               </div>
               <div className="bg-zinc-950/50 border-2 border-amber-900/30 rounded-2xl p-3 text-center">
                 <div className="text-gray-400 font-mono text-xs mb-1">Longest</div>
-                <div className="text-white font-mono text-lg font-bold">{fmtTime(maxSecs)}</div>
+                <div className="text-white font-mono text-lg font-bold">{fmtDuration(maxSecs)}</div>
               </div>
               <div className="bg-zinc-950/50 border-2 border-amber-900/30 rounded-2xl p-3 text-center">
                 <div className="text-gray-400 font-mono text-xs mb-1">Devlogs ≥1hr</div>
@@ -541,7 +538,7 @@ export function Review({ data, canEdit, canUndo }: Props) {
                       <div className="text-amber-400 font-mono text-sm">
                         Original Time:{' '}
                         <span className="text-white">{d.origSecs.toLocaleString()} seconds</span>{' '}
-                        <em className="text-gray-400">({fmtTime(d.origSecs)})</em>
+                        <em className="text-gray-400">({fmtDuration(d.origSecs)})</em>
                       </div>
 
                       {d.commits.length > 0 && (

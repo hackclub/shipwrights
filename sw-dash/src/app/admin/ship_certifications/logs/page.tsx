@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { can, PERMS } from '@/lib/perms'
-import { useUser } from '@/lib/user-context'
+import { useUser } from '@/components/providers/user-context'
+import { ago, fmtDate } from '@/lib/fmt'
+import { verdictColor } from '@/lib/styles'
 
 interface LogEntry {
   shipId: number
@@ -59,35 +61,6 @@ export default function Logs() {
 
     load()
   }, [user, authLoading])
-
-  const color = (verdict: string) => {
-    switch (verdict.toLowerCase()) {
-      case 'approved':
-        return 'bg-green-900/30 text-green-400 border-green-700'
-      case 'rejected':
-        return 'bg-red-900/30 text-red-400 border-red-700'
-      default:
-        return 'bg-gray-900/30 text-gray-400 border-gray-700'
-    }
-  }
-
-  const ago = (date: string) => {
-    if (date === '-') return '-'
-    const now = new Date()
-    const d = new Date(date)
-    const diff = Math.floor((now.getTime() - d.getTime()) / 1000)
-
-    if (diff < 60) return 'just now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
-    return `${Math.floor(diff / 604800)}w ago`
-  }
-
-  const fmtDate = (date: string) => {
-    if (date === '-') return '-'
-    return new Date(date).toLocaleDateString()
-  }
 
   const skel = () => (
     <main className="bg-grid min-h-screen w-full p-4 md:p-8" role="main">
@@ -200,7 +173,7 @@ export default function Logs() {
                       <div className="text-gray-500 font-mono text-xs">Type: {l.type}</div>
                     </div>
                     <span
-                      className={`px-2 py-1 rounded font-mono text-xs border ml-2 ${color(l.verdict)}`}
+                      className={`px-2 py-1 rounded font-mono text-xs border ml-2 ${verdictColor(l.verdict)}`}
                     >
                       {l.verdict}
                     </span>
@@ -268,7 +241,7 @@ export default function Logs() {
                         </td>
                         <td className="p-4">
                           <span
-                            className={`inline-block px-2 py-1 rounded font-mono text-xs border ${color(l.verdict)}`}
+                            className={`inline-block px-2 py-1 rounded font-mono text-xs border ${verdictColor(l.verdict)}`}
                           >
                             {l.verdict}
                           </span>

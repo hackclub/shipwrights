@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { fmtDuration } from '@/lib/fmt'
+import { useClickOutside } from '@/hooks/useClickOutside'
 
 interface Review {
   id: number
@@ -63,22 +65,6 @@ const sColor = (s: string) => {
     default:
       return 'bg-gray-900/30 text-gray-400 border-gray-700'
   }
-}
-
-const fmtTime = (secs: number) => {
-  const hrs = Math.floor(secs / 3600)
-  const mins = Math.floor((secs % 3600) / 60)
-  return `${hrs}h ${mins}m`
-}
-
-function useClickOutside(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) cb()
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
 }
 
 function Dropdown({
@@ -504,7 +490,7 @@ export function YswsView({ initial }: Props) {
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               <div>
                 <span className="text-gray-500">time:</span>{' '}
-                <span className="text-white">{fmtTime(r.totalTime)}</span>
+                <span className="text-white">{fmtDuration(r.totalTime)}</span>
               </div>
               <div>
                 <span className="text-gray-500">cert by:</span>{' '}
@@ -560,7 +546,7 @@ export function YswsView({ initial }: Props) {
                     </span>
                   </td>
                   <td className="p-4 text-white font-mono text-sm">{r.devlogCount}</td>
-                  <td className="p-4 text-white font-mono text-sm">{fmtTime(r.totalTime)}</td>
+                  <td className="p-4 text-white font-mono text-sm">{fmtDuration(r.totalTime)}</td>
                   <td className="p-4 text-white font-mono text-sm">{r.certifier}</td>
                   <td className="p-4 text-white font-mono text-sm">{r.reviewer || '-'}</td>
                 </tr>

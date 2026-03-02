@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { needAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { push } from '@/lib/push-server'
+import { push } from '@/lib/push/server'
 
 export async function POST(req: NextRequest) {
   try {

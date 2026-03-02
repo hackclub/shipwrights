@@ -4,6 +4,7 @@ import { getUser } from '@/lib/server-auth'
 import { can, PERMS } from '@/lib/perms'
 import { prisma } from '@/lib/db'
 import { RATES } from '@/lib/payouts'
+import { ago } from '@/lib/fmt'
 
 export default async function Logs() {
   const user = await getUser()
@@ -27,15 +28,6 @@ export default async function Logs() {
     },
     take: 200,
   })
-
-  const ago = (d: Date | null) => {
-    if (!d) return '-'
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000)
-    if (diff < 60) return 'now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-    return `${Math.floor(diff / 86400)}d`
-  }
 
   const getRate = (type: string | null) => (type ? (RATES[type] ?? 1) : 1)
 
@@ -79,7 +71,7 @@ export default async function Logs() {
                     {c.payoutMulti || 1}x
                   </td>
                   <td className="p-4 text-right text-gray-500 font-mono text-xs">
-                    {ago(c.reviewCompletedAt)}
+                    {ago(c.reviewCompletedAt, true)}
                   </td>
                   <td className="p-4 text-right text-green-400 font-mono text-sm font-bold">
                     +{c.cookiesEarned?.toFixed(2)}
