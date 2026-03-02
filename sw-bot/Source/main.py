@@ -30,9 +30,6 @@ def msg(event):
     if subtype and subtype not in ["file_share", "message_changed", "thread_broadcast", "message_deleted"]:
         return
     channel = event["channel"]
-    if subtype == "message_deleted":
-        relay.handle_message_deleted(event)
-        return
     if subtype == "message_changed":
         if channel != USER_CHANNEL or event.get("previous_message").get("ts") in cache.ignorable:
             if event.get("previous_message").get("ts") in cache.ignorable:
@@ -90,7 +87,7 @@ def send_paraphrased(client, body, ack):
         username=f"{user_info['username']} | AI Paraphrased",
         icon_url=user_info["pfp"],
     )
-    db.save_message(ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased, True, None, staff_resp["ts"])
+    db.save_message(ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased, True, None, USER_CHANNEL)
     relay.ping_ws(ticket_id)
 
 @slack_app.action("delete_message")
