@@ -298,6 +298,17 @@ model Ticket {
   @@map("tickets")
 }
 
+model TicketFeedback {
+  id             Int    @id @default(autoincrement())
+  ticketId       Int
+  reviewerRating Int
+  rating         Int
+  comment        String @db.VarChar(250)
+
+  @@index([ticketId])
+  @@map("ticket_feedback")
+}
+
 model TicketUser {
   id        Int     @id @default(autoincrement())
   userId    String  @db.VarChar(50)
