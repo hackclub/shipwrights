@@ -11,9 +11,7 @@ interface Decision {
 
 // Helper function to convert Date to Eastern Time date string (YYYY-MM-DD)
 function toEasternDate(date: Date): string {
-  const easternDate = new Date(
-    date.toLocaleString('en-US', { timeZone: 'America/New_York' })
-  )
+  const easternDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }))
   const year = easternDate.getFullYear()
   const month = String(easternDate.getMonth() + 1).padStart(2, '0')
   const day = String(easternDate.getDate()).padStart(2, '0')

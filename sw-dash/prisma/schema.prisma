@@ -299,11 +299,11 @@ model Ticket {
 }
 
 model TicketFeedback {
-  id             Int    @id @default(autoincrement())
-  ticketId       Int
-  reviewerRating Int
-  rating         Int
-  comment        String @db.VarChar(250)
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  rating    Int
+  comment   String   @db.VarChar(250)
+  createdAt DateTime @default(now())
 
   @@index([ticketId])
   @@map("ticket_feedback")
