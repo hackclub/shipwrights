@@ -117,7 +117,7 @@ model LoginLog {
 model Assignment {
   id            Int           @id @default(autoincrement())
   userId        Int
-  repoUrl       String
+  repoUrl       String        @db.Text
   description   String?
   status        String        @default("pending")
   comments      String?       @db.Text
@@ -125,7 +125,7 @@ model Assignment {
   updatedAt     DateTime      @updatedAt
   assigneeId    Int?
   projectName   String?
-  demoUrl       String?
+  demoUrl       String?       @db.Text
   shipCertId    Int?          @unique
   subscriptions AssignSubsc[]
   assignee      User?         @relation("AssignedTo", fields: [assigneeId], references: [id])
@@ -163,9 +163,9 @@ model ShipCert {
   projectName String?
   projectType String?
   description String? @db.Text
-  demoUrl     String?
-  repoUrl     String?
-  readmeUrl   String?
+  demoUrl     String? @db.Text
+  repoUrl     String? @db.Text
+  readmeUrl   String? @db.Text
   devTime     String?
 
   status            String    @default("pending")
