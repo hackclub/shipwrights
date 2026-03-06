@@ -439,3 +439,11 @@ model SpotCheck {
   @@index([status])
   @@map("spot_checks")
 }
+
+model HcSubmitterStats {
+  email        String   @id @db.VarChar(255)
+  projectCount Int
+  updatedAt    DateTime @updatedAt
+
+  @@map("hc_submitter_stats")
+}

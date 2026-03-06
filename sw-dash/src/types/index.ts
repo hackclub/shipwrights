@@ -96,6 +96,7 @@ export interface ShipCert {
   customBounty?: number | null
   aiSummary?: string
   submitterShipNumber?: number
+  yswsProjectCount?: number
   claimedBy?: string | null
   claimedAt?: string | null
   canEditClaim?: boolean

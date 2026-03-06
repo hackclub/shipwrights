@@ -234,7 +234,9 @@ export function Form({ shipId }: Props) {
           </div>
         )}
 
-        {(cert.submitterShipNumber != null && cert.submitterShipNumber > 0) || cert.ftType ? (
+        {(cert.submitterShipNumber != null && cert.submitterShipNumber > 0) ||
+        cert.ftType ||
+        (cert.yswsProjectCount != null && cert.yswsProjectCount > 0) ? (
           <div
             className={`rounded-2xl border-2 px-5 py-3 mb-4 md:mb-6 font-mono ${
               cert.submitterShipNumber === 1
@@ -254,9 +256,17 @@ export function Form({ shipId }: Props) {
                 This is {cert.submitter.username}&apos;s very first ship — be extra helpful with feedback!
               </span>
             )}
+            {cert.yswsProjectCount != null && cert.yswsProjectCount > 0 && (
+              <span
+                className={`block text-sm ${cert.submitterShipNumber ? 'mt-1.5 pt-1.5 border-t border-current/20' : ''} text-amber-400`}
+              >
+                {cert.yswsProjectCount} {cert.yswsProjectCount === 1 ? 'project' : 'projects'} across
+                Hack Club YSWS programs
+              </span>
+            )}
             {ftTypeLabel(cert.ftType) && cert.ftType !== 'initial' && (
               <span
-                className={`block text-sm ${cert.submitterShipNumber ? 'mt-1.5 pt-1.5 border-t border-current/20' : ''} text-cyan-400`}
+                className={`block text-sm ${cert.submitterShipNumber || cert.yswsProjectCount ? 'mt-1.5 pt-1.5 border-t border-current/20' : ''} text-cyan-400`}
               >
                 {ftTypeLabel(cert.ftType)}
               </span>

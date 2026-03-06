@@ -8,6 +8,7 @@ import { bust } from '@/lib/cache'
 import { calc } from '@/lib/payouts'
 import { withParams } from '@/lib/api'
 import { create as createYsws } from '@/lib/ysws'
+import { getSlackUser } from '@/lib/slack'
 
 interface InternalNote {
   id: string
@@ -84,7 +85,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       }
     }
 
-    const [history, submitterShipNumber] = await Promise.all([
+    const [history, submitterShipNumber, yswsProjectCount] = await Promise.all([
       cert.ftProjectId
         ? prisma.shipCert.findMany({
             where: { ftProjectId: cert.ftProjectId },
@@ -101,6 +102,21 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
             },
           })
         : 0,
+      (async () => {
+        if (!cert.ftSlackId) return 0
+        try {
+          const slackUser = await getSlackUser(cert.ftSlackId)
+          const email = slackUser?.profile?.email
+          if (!email) return 0
+          const stats = await prisma.hcSubmitterStats.findUnique({
+            where: { email: email.trim().toLowerCase() },
+            select: { projectCount: true },
+          })
+          return stats?.projectCount ?? 0
+        } catch {
+          return 0
+        }
+      })(),
     ])
 
     return NextResponse.json({
@@ -155,6 +171,7 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
       canEditClaim,
       aiSummary: cert.aiSummary,
       submitterShipNumber,
+      yswsProjectCount,
       history: history.map((h) => ({
         id: h.id,
         verdict: h.status,
