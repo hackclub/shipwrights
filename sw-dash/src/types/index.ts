@@ -56,6 +56,7 @@ export interface ShipCert {
   ftId: string
   project: string
   type: string
+  ftType?: string | null
   desc: string
   devTime: string
   submitter: {
@@ -95,6 +96,7 @@ export interface ShipCert {
   customBounty?: number | null
   aiSummary?: string
   submitterShipNumber?: number
+  yswsProjectCount?: number
   claimedBy?: string | null
   claimedAt?: string | null
   canEditClaim?: boolean

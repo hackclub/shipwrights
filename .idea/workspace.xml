@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="c8816869-50ce-49c0-827d-d22a46ad8270" name="Changes" comment="refactor: update feedback tag categories and labels for clarity&#10;&#10;- Renamed `APPROVAL_TAGS` to `SHIPPED_TAGS` and `REJECTION_TAGS` to `REVISION_TAGS`.&#10;- Replaced old `category` values with clearer terms (`positive` → `highlight`, `negative` → `needs-work`, `neutral` → `note`).&#10;- Adjusted labels to improve specificity (e.g., &quot;Demo broken&quot; → &quot;Demo didn't load&quot;, &quot;Suspected AI-generated&quot; → &quot;Missing AI disclosure&quot;).">
+      <change beforePath="$PROJECT_DIR$/sw-dash/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/admin/ship_certifications/[id]/edit/form.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/admin/ship_certifications/[id]/edit/form.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/admin/ship_certifications/certs-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/admin/ship_certifications/certs-view.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/admin/ysws_reviews/[id]/review.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/admin/ysws_reviews/[id]/review.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/admin/ysws_reviews/ysws-view.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/admin/ysws_reviews/ysws-view.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/api/admin/ship_certifications/[id]/report/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/api/admin/ship_certifications/[id]/report/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/api/admin/ship_certifications/[id]/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/api/admin/ship_certifications/[id]/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/app/api/webhooks/ship-submitted/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/app/api/webhooks/ship-submitted/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/hooks/useShipCert.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/hooks/useShipCert.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/lib/certs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/lib/certs.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/lib/feedback-snippets.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/lib/feedback-snippets.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/lib/ysws.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/lib/ysws.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sw-dash/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/sw-dash/src/types/index.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;dhamariT&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/hackclub/shipwrights.git&quot;,
+    &quot;accountId&quot;: &quot;35be27f4-a0f9-4ed6-bbfe-43dd2736f35e&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="39AKUVd65vuk9Ir8eF7I1EWhwOl" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feedback-templates&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/dhamari/WebstormProjects/shipwrights/sw-dash/node_modules/typescript/lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="ReactDesignerToolWindowState">
+    <option name="myId2Visible">
+      <map>
+        <entry key="com.intellij.reactbuddy.reactComponents" value="false" />
+        <entry key="com.intellij.reactbuddy.reactInspector" value="false" />
+        <entry key="com.intellij.reactbuddy.storybook" value="false" />
+      </map>
+    </option>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-a71380e98a7c-JavaScript-WS-252.28539.21" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="c8816869-50ce-49c0-827d-d22a46ad8270" name="Changes" comment="" />
+      <created>1770133450227</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1770133450227</updated>
+      <workItem from="1770133451427" duration="16167000" />
+      <workItem from="1770224622081" duration="4708000" />
+      <workItem from="1770305066103" duration="5631000" />
+      <workItem from="1771952494569" duration="969000" />
+    </task>
+    <task id="LOCAL-00001" summary="Add detailed ship certification analytics and metrics ticker&#10;&#10;- Extended stats tracking to include net flow, deltas, and approval rate trends.&#10;- Added a responsive stats ticker component (`TickerItem`) for displaying live metrics with visual trends.&#10;- Filtered pending ships to exclude returned projects from queue time calculations.&#10;- Improved leaderboard layout with truncation fixes and styling updates.">
+      <option name="closed" value="true" />
+      <created>1770141720480</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1770141720480</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Make this make more sense">
+      <option name="closed" value="true" />
+      <created>1770224924503</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1770224924503</updated>
+    </task>
+    <task id="LOCAL-00003" summary="refactor: update feedback tag categories and labels for clarity&#10;&#10;- Renamed `APPROVAL_TAGS` to `SHIPPED_TAGS` and `REJECTION_TAGS` to `REVISION_TAGS`.&#10;- Replaced old `category` values with clearer terms (`positive` → `highlight`, `negative` → `needs-work`, `neutral` → `note`).&#10;- Adjusted labels to improve specificity (e.g., &quot;Demo broken&quot; → &quot;Demo didn't load&quot;, &quot;Suspected AI-generated&quot; → &quot;Missing AI disclosure&quot;).">
+      <option name="closed" value="true" />
+      <created>1770310696353</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1770310696353</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Add detailed ship certification analytics and metrics ticker&#10;&#10;- Extended stats tracking to include net flow, deltas, and approval rate trends.&#10;- Added a responsive stats ticker component (`TickerItem`) for displaying live metrics with visual trends.&#10;- Filtered pending ships to exclude returned projects from queue time calculations.&#10;- Improved leaderboard layout with truncation fixes and styling updates." />
+    <MESSAGE value="Make this make more sense" />
+    <MESSAGE value="refactor: update feedback tag categories and labels for clarity&#10;&#10;- Renamed `APPROVAL_TAGS` to `SHIPPED_TAGS` and `REJECTION_TAGS` to `REVISION_TAGS`.&#10;- Replaced old `category` values with clearer terms (`positive` → `highlight`, `negative` → `needs-work`, `neutral` → `note`).&#10;- Adjusted labels to improve specificity (e.g., &quot;Demo broken&quot; → &quot;Demo didn't load&quot;, &quot;Suspected AI-generated&quot; → &quot;Missing AI disclosure&quot;)." />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor: update feedback tag categories and labels for clarity&#10;&#10;- Renamed `APPROVAL_TAGS` to `SHIPPED_TAGS` and `REJECTION_TAGS` to `REVISION_TAGS`.&#10;- Replaced old `category` values with clearer terms (`positive` → `highlight`, `negative` → `needs-work`, `neutral` → `note`).&#10;- Adjusted labels to improve specificity (e.g., &quot;Demo broken&quot; → &quot;Demo didn't load&quot;, &quot;Suspected AI-generated&quot; → &quot;Missing AI disclosure&quot;)." />
+  </component>
+</project>

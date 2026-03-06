@@ -25,6 +25,19 @@ const fmtTime = (secs: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+function ftTypeLabel(ftType: string | null): string {
+  switch (ftType) {
+    case 'initial':
+      return 'New project'
+    case 'recertification':
+      return 'Seen before (recertification)'
+    case 'resend':
+      return 'Resubmitted (was rejected)'
+    default:
+      return ftType || ''
+  }
+}
+
 const QUEUE_TARGET = 35
 
 function Dropdown({
@@ -425,9 +438,9 @@ export function CertsView({ initial }: Props) {
             value={ftType}
             options={[
               { val: 'all', label: 'All' },
-              { val: 'initial', label: 'Initial' },
-              { val: 'recertification', label: 'Recertification' },
-              { val: 'resend', label: 'Resend' },
+              { val: 'initial', label: 'New project' },
+              { val: 'recertification', label: 'Seen before' },
+              { val: 'resend', label: 'Resubmitted' },
             ]}
             onChange={setFtType}
           />
@@ -522,7 +535,7 @@ export function CertsView({ initial }: Props) {
               {c.ftType && (
                 <div>
                   <span className="text-gray-500">ft type:</span>{' '}
-                  <span className="text-cyan-400">{c.ftType}</span>
+                  <span className="text-cyan-400">{ftTypeLabel(c.ftType)}</span>
                 </div>
               )}
               <div>
@@ -577,7 +590,7 @@ export function CertsView({ initial }: Props) {
                     <div className="text-gray-500 font-mono text-xs">FT #{c.ftProjectId}</div>
                     <div className="text-gray-500 font-mono text-xs">Type: {c.type}</div>
                     {c.ftType && (
-                      <div className="text-cyan-400 font-mono text-xs">FT Type: {c.ftType}</div>
+                      <div className="text-cyan-400 font-mono text-xs">{ftTypeLabel(c.ftType)}</div>
                     )}
                     {c.customBounty && (
                       <div className="mt-1">
