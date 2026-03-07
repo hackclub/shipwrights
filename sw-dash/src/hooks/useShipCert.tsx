@@ -157,8 +157,10 @@ export function useShipCert(shipId: string) {
     }
   }, [cert?.submitter?.slackId, user?.role])
 
-  const update = async (newVerdict: string) => {
+  const update = async (newVerdict: string, feedbackOverride?: string) => {
     if (submitting) return
+
+    const finalReason = feedbackOverride ?? reason
 
     try {
       if (cert?.canEditClaim === false && !canOverride) {
@@ -167,7 +169,7 @@ export function useShipCert(shipId: string) {
         return
       }
       const videoUrl = url || cert?.proofVideo
-      if (!reason.trim()) {
+      if (!finalReason.trim()) {
         setErr('write feedback first dumbass')
         setTimeout(() => setErr(null), 3000)
         return
@@ -189,7 +191,7 @@ export function useShipCert(shipId: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           verdict: newVerdict,
-          reviewFeedback: reason,
+          reviewFeedback: finalReason,
           proofVideoUrl: videoUrl,
         }),
       })
