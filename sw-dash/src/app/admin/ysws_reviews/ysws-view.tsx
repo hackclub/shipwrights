@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { fmtDuration } from '@/lib/fmt'
 import { useClickOutside } from '@/hooks/useClickOutside'
@@ -195,13 +195,18 @@ function MultiDropdown({
 
 export function YswsView({ initial }: Props) {
   const params = useSearchParams()
-  const [status, setStatus] = useState('pending')
-  const [sortBy, setSortBy] = useState('newest')
-  const [search, setSearch] = useState('')
-  const [includeReviewers, setIncludeReviewers] = useState<string[]>([])
-  const [excludeReviewers, setExcludeReviewers] = useState<string[]>([])
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const router = useRouter()
+  const [status, setStatus] = useState(params.get('status') || 'pending')
+  const [sortBy, setSortBy] = useState(params.get('sortBy') || 'newest')
+  const [search, setSearch] = useState(params.get('search') || '')
+  const [includeReviewers, setIncludeReviewers] = useState<string[]>(
+    params.get('include') ? params.get('include')!.split(',') : []
+  )
+  const [excludeReviewers, setExcludeReviewers] = useState<string[]>(
+    params.get('exclude') ? params.get('exclude')!.split(',') : []
+  )
+  const [from, setFrom] = useState(params.get('from') || '')
+  const [to, setTo] = useState(params.get('to') || '')
   const [reviews, setReviews] = useState(initial.reviews)
   const [stats, setStats] = useState(initial.stats)
   const [leaderboard, setLeaderboard] = useState(initial.leaderboard)
@@ -243,14 +248,31 @@ export function YswsView({ initial }: Props) {
     }
   }, [status, sortBy, lbMode, search, includeReviewers, excludeReviewers, from, to])
 
-  const [mounted, setMounted] = useState(false)
+  const hasUrlFilters = !!(
+    params.get('status') || params.get('sortBy') || params.get('search') ||
+    params.get('include') || params.get('exclude') || params.get('from') || params.get('to')
+  )
+  const ready = useRef(hasUrlFilters)
+
   useEffect(() => {
-    if (!mounted) {
-      setMounted(true)
+    if (!ready.current) {
+      ready.current = true
       return
     }
     load()
-  }, [status, sortBy, lbMode, search, includeReviewers, excludeReviewers, from, to, mounted, load])
+  }, [status, sortBy, lbMode, search, includeReviewers, excludeReviewers, from, to, load])
+
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (status !== 'pending') p.set('status', status)
+    if (sortBy !== 'newest') p.set('sortBy', sortBy)
+    if (search) p.set('search', search)
+    if (includeReviewers.length) p.set('include', includeReviewers.join(','))
+    if (excludeReviewers.length) p.set('exclude', excludeReviewers.join(','))
+    if (from) p.set('from', from)
+    if (to) p.set('to', to)
+    router.replace(`?${p}`, { scroll: false })
+  }, [status, sortBy, search, includeReviewers, excludeReviewers, from, to])
 
   const loadDevlogStats = useCallback(async () => {
     try {

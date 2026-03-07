@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AddUser } from '@/components/admin/add-user'
@@ -25,8 +26,16 @@ interface Props {
 }
 
 export function UsersView({ users, canEdit, canAdd, myName, mySlackId }: Props) {
-  const [search, setSearch] = useState('')
+  const params = useSearchParams()
+  const router = useRouter()
+  const [search, setSearch] = useState(params.get('q') || '')
   const [showAdd, setShowAdd] = useState(false)
+
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (search) p.set('q', search)
+    router.replace(`?${p}`, { scroll: false })
+  }, [search])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()

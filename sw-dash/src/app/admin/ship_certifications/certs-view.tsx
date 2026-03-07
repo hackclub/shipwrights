@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Cert, Stats, TypeCount, Reviewer } from '@/types'
 import { AvgWaitChart } from './avg-wait-chart'
@@ -135,12 +135,13 @@ function MultiSelect({
 
 export function CertsView({ initial }: Props) {
   const params = useSearchParams()
-  const [ftType, setFtType] = useState('all')
-  const [status, setStatus] = useState('pending')
-  const [sortBy, setSortBy] = useState('oldest')
-  const [search, setSearch] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const router = useRouter()
+  const [ftType, setFtType] = useState(params.get('ftType') || 'all')
+  const [status, setStatus] = useState(params.get('status') || 'pending')
+  const [sortBy, setSortBy] = useState(params.get('sortBy') || 'oldest')
+  const [search, setSearch] = useState(params.get('search') || '')
+  const [from, setFrom] = useState(params.get('from') || '')
+  const [to, setTo] = useState(params.get('to') || '')
   const [certs, setCerts] = useState(initial.certs)
   const [stats, setStats] = useState(initial.stats)
   const [leaderboard, setLeaderboard] = useState(initial.leaderboard)
@@ -149,7 +150,9 @@ export function CertsView({ initial }: Props) {
   const [msg, setMsg] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now())
   const [lbMode, setLbMode] = useState('weekly')
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    params.get('type') ? params.get('type')!.split(',') : []
+  )
 
   useEffect(() => {
     if (params.get('success')) {
@@ -183,7 +186,11 @@ export function CertsView({ initial }: Props) {
     }
   }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to])
 
-  const ready = useRef(false)
+  const hasUrlFilters = !!(
+    params.get('status') || params.get('ftType') || params.get('type') ||
+    params.get('search') || params.get('from') || params.get('to') || params.get('sortBy')
+  )
+  const ready = useRef(hasUrlFilters)
 
   useEffect(() => {
     if (!ready.current) {
@@ -192,6 +199,18 @@ export function CertsView({ initial }: Props) {
     }
     load()
   }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to, load])
+
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (selectedTypes.length > 0) p.set('type', selectedTypes.join(','))
+    if (ftType !== 'all') p.set('ftType', ftType)
+    if (status !== 'pending') p.set('status', status)
+    if (sortBy !== 'oldest') p.set('sortBy', sortBy)
+    if (search) p.set('search', search)
+    if (from) p.set('from', from)
+    if (to) p.set('to', to)
+    router.replace(`?${p}`, { scroll: false })
+  }, [ftType, status, sortBy, search, from, to, selectedTypes])
 
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1000)
