@@ -410,7 +410,8 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
             updated.reviewFeedback || '',
             updated.proofVideoUrl || undefined,
             updated.id,
-            updated.projectType
+            updated.projectType,
+            updated.reviewer?.ftuid
           )
           if (synced) {
             await prisma.shipCert.update({
