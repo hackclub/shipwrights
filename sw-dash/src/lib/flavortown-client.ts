@@ -6,7 +6,8 @@ export async function syncFt(
   feedback: string,
   proofVideoUrl?: string,
   certId?: number,
-  projectType?: string | null
+  projectType?: string | null,
+  ftUserId?: string | null
 ): Promise<boolean> {
   const baseUrl = process.env.NEXT_PUBLIC_FLAVORTOWN_URL
   const apiKey = process.env.FLAVORTOWN_API_KEY
@@ -30,6 +31,7 @@ export async function syncFt(
     reason: feedback,
     video_url: proofVideoUrl || null,
     project_type: projectType || null,
+    ft_user_id: ftUserId || null,
   }
 
   try {
