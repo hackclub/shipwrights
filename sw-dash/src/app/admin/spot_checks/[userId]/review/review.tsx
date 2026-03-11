@@ -1,46 +1,181 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { SpotCheckSessionBar } from '@/components/spot-check-session-bar'
+
+function DoneView({
+  reviewed,
+  doneSummary,
+  setDoneSummary,
+  endedSessionRef,
+}: {
+  reviewed: number
+  doneSummary: {
+    certCount: number
+    reviewedCount?: number
+    leftCount?: number
+    certs: { certId: number; projectName: string | null; status: string }[]
+  } | null
+  setDoneSummary: (s: typeof doneSummary) => void
+  endedSessionRef: React.MutableRefObject<boolean>
+}) {
+  useEffect(() => {
+    if (reviewed === 0 || endedSessionRef.current) return
+    endedSessionRef.current = true
+    fetch('/api/admin/spot_check_session', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'end' }),
+    })
+      .then((r) => r.json())
+      .then((data) => data.summary && setDoneSummary(data.summary))
+      .catch(() => {})
+  }, [reviewed, setDoneSummary, endedSessionRef])
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-8">
+      <div className="text-4xl mb-4">🎉</div>
+      <h2 className="text-2xl font-mono font-bold text-amber-400 mb-2">done</h2>
+      <p className="text-amber-300/60 font-mono text-sm mb-4">checked all {reviewed} certs</p>
+      {reviewed > 0 && !doneSummary && (
+        <p className="text-amber-500/60 font-mono text-xs mb-4">loading summary…</p>
+      )}
+      {doneSummary && (
+        <div className="bg-zinc-900/80 border-2 border-amber-800/40 rounded-2xl p-6 max-w-md w-full mb-6 text-left">
+          <h3 className="font-mono font-bold text-amber-400 mb-2">Spot check summary</h3>
+          <p className="font-mono text-amber-200 text-sm">
+            You&apos;ve reviewed <strong>{doneSummary.reviewedCount ?? doneSummary.certCount}</strong> project{(doneSummary.reviewedCount ?? doneSummary.certCount) !== 1 ? 's' : ''}.
+          </p>
+          {(doneSummary.leftCount !== undefined && doneSummary.leftCount !== null) && (
+            <p className="font-mono text-amber-200 text-sm mt-1">
+              There {doneSummary.leftCount === 1 ? 'is' : 'are'} <strong>{doneSummary.leftCount}</strong> left in the batch.
+            </p>
+          )}
+        </div>
+      )}
+      <Link
+        href="/admin/spot_checks"
+        className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+      >
+        back
+      </Link>
+    </div>
+  )
+}
 
 export default function Review({ wrightId }: { wrightId: string }) {
-  const [showSetup, setShowSetup] = useState(true)
-  const [totalCount, setTotalCount] = useState('')
-  const [addOnReject, setAddOnReject] = useState('')
+  const searchParams = useSearchParams()
+  const sessionIdParam = searchParams.get('sessionId')
 
   const [certs, setCerts] = useState<any[]>([])
   const [idx, setIdx] = useState(0)
   const [reviewed, setReviewed] = useState(0)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [showReject, setShowReject] = useState<'full' | 'keep' | null>(null)
 
   const [why, setWhy] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const start = async () => {
-    const n = parseInt(totalCount)
-    if (!n || n < 1) {
-      alert('gotta enter a valid number')
+  const [doneSummary, setDoneSummary] = useState<{
+    certCount: number
+    reviewedCount?: number
+    leftCount?: number
+    certs: { certId: number; projectName: string | null; status: string }[]
+  } | null>(null)
+  const endedSessionRef = useRef(false)
+  const autoStartedRef = useRef(false)
+
+  useEffect(() => {
+    if (!sessionIdParam) return
+    const id = parseInt(sessionIdParam, 10)
+    if (!Number.isFinite(id)) {
+      setLoading(false)
       return
     }
-
-    setLoading(true)
-    try {
-      const res = await fetch('/api/admin/spot_checks/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', wrightId: Number(wrightId), count: n }),
+    fetch(`/api/admin/spot_check_session/${id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.certs && data.certs.length > 0) {
+          setCerts(data.certs)
+          if (data.session?.status === 'paused') {
+            fetch('/api/admin/spot_check_session', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'resume' }),
+            }).then(() => window.dispatchEvent(new Event('spot-check-session-update')))
+          }
+        }
       })
-      const data = await res.json()
-      setCerts(data.certs || [])
-      setShowSetup(false)
-    } catch (e) {
-      alert('load failed')
-    } finally {
-      setLoading(false)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [sessionIdParam])
+
+  useEffect(() => {
+    if (sessionIdParam || autoStartedRef.current) return
+    autoStartedRef.current = true
+    const wrightIdNum = Number(wrightId)
+    const DEFAULT_BATCH = 5
+    fetch('/api/admin/spot_checks/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start', wrightId: wrightIdNum, count: DEFAULT_BATCH }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const certsList = data.certs || []
+        if (certsList.length > 0) {
+          let sessionOk = false
+          fetch('/api/admin/spot_check_session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wrightId: Number.isFinite(wrightIdNum) ? wrightIdNum : null }),
+          })
+            .then((sessionRes) => {
+              if (sessionRes.ok) sessionOk = true
+              return Promise.all(
+                certsList.map((c: { id: number }) =>
+                  fetch('/api/admin/spot_check_session/certs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      certId: c.id,
+                      ...(Number.isFinite(wrightIdNum) ? { wrightId: wrightIdNum } : {}),
+                    }),
+                  }).then((addRes) => {
+                    if (addRes.ok) sessionOk = true
+                  })
+                )
+              )
+            })
+            .then(() => {
+              if (sessionOk) window.dispatchEvent(new Event('spot-check-session-update'))
+            })
+        }
+        setCerts(certsList)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [sessionIdParam, wrightId])
+
+  useEffect(() => {
+    const handler = (e: CustomEvent<{
+      certCount: number
+      reviewedCount?: number
+      leftCount?: number
+      certs: { certId: number; projectName: string | null; status: string }[]
+    }>) => {
+      if (e.detail) {
+        endedSessionRef.current = true
+        setDoneSummary(e.detail)
+        setCerts([])
+      }
     }
-  }
+    window.addEventListener('spot-check-session-ended', handler as EventListener)
+    return () => window.removeEventListener('spot-check-session-ended', handler as EventListener)
+  }, [])
 
   const approve = async () => {
     const cert = certs[idx]
@@ -86,19 +221,6 @@ export default function Review({ wrightId }: { wrightId: string }) {
         }),
       })
 
-      if (!keepLb) {
-        const add = parseInt(addOnReject)
-        if (add && add > 0) {
-          const res = await fetch('/api/admin/spot_checks/actions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'start', wrightId: Number(wrightId), count: add }),
-          })
-          const d = await res.json()
-          setCerts([...certs, ...(d.certs || [])])
-        }
-      }
-
       setShowReject(null)
       setWhy('')
       setNotes('')
@@ -120,60 +242,6 @@ export default function Review({ wrightId }: { wrightId: string }) {
     }
   }
 
-  if (showSetup)
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-          <h3 className="text-xl font-mono font-bold text-amber-400 mb-2">Spot Check</h3>
-
-          <div className="mb-4">
-            <label className="block font-mono text-xs uppercase text-amber-500/60 font-bold mb-2">
-              how many do you want to spot check?
-            </label>
-            <input
-              type="number"
-              className="w-full bg-zinc-950/50 border-2 border-amber-900/40 text-amber-200 font-mono rounded-xl p-3 focus:border-amber-500 outline-none transition-colors"
-              placeholder="5"
-              value={totalCount}
-              onChange={(e) => setTotalCount(e.target.value)}
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block font-mono text-xs uppercase text-amber-500/60 font-bold mb-2">
-              if rejecting, how many add more to total?
-            </label>
-            <input
-              type="number"
-              className="w-full bg-zinc-950/50 border-2 border-amber-900/40 text-amber-200 font-mono rounded-xl p-3 focus:border-amber-500 outline-none transition-colors"
-              placeholder="0"
-              value={addOnReject}
-              onChange={(e) => setAddOnReject(e.target.value)}
-            />
-            <p className="text-xs text-amber-500/40 font-mono mt-1">
-              adds new random certs if u reject
-            </p>
-          </div>
-
-          <div className="flex gap-4">
-            <Link
-              href={`/admin/spot_checks/${wrightId}`}
-              className="flex-1 bg-zinc-800/50 hover:bg-zinc-700/50 border-2 border-amber-900/40 text-amber-200 font-mono py-2 rounded-xl transition-colors text-center"
-            >
-              cancel
-            </Link>
-            <button
-              onClick={start}
-              disabled={loading}
-              className="flex-1 bg-blue-500/10 border-2 border-dashed border-blue-600 hover:border-blue-400 text-blue-400 hover:text-blue-300 font-mono py-2 rounded-xl transition-all hover:bg-blue-500/20 disabled:opacity-50"
-            >
-              {loading ? 'loading...' : 'start'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-
   if (loading)
     return (
       <div className="flex h-full items-center justify-center font-mono text-amber-400">
@@ -183,17 +251,12 @@ export default function Review({ wrightId }: { wrightId: string }) {
 
   if (certs.length === 0 || idx >= certs.length)
     return (
-      <div className="flex h-full flex-col items-center justify-center p-8">
-        <div className="text-4xl mb-4">🎉</div>
-        <h2 className="text-2xl font-mono font-bold text-amber-400 mb-2">done</h2>
-        <p className="text-amber-300/60 font-mono text-sm mb-6">checked all {reviewed} certs</p>
-        <Link
-          href="/admin/spot_checks"
-          className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-mono text-sm px-6 py-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
-        >
-          back
-        </Link>
-      </div>
+      <DoneView
+        reviewed={reviewed}
+        doneSummary={doneSummary}
+        setDoneSummary={setDoneSummary}
+        endedSessionRef={endedSessionRef}
+      />
     )
 
   const cert = certs[idx]
@@ -202,7 +265,8 @@ export default function Review({ wrightId }: { wrightId: string }) {
   )?.[1]
 
   return (
-    <div className="flex h-full relative">
+    <div className="flex h-full relative flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
       {showReject && (
         <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-8">
           <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-red-900/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl">
@@ -211,6 +275,9 @@ export default function Review({ wrightId }: { wrightId: string }) {
               {showReject === 'keep'
                 ? 'creates case, lb stays untouched'
                 : 'removes from LB and creates case'}
+            </p>
+            <p className="font-mono text-xs text-amber-500/60 mb-4">
+              After you flag: a case is created and appears under Spot Checks for staff to resolve. Reject (full) also reduces the reviewer&apos;s leaderboard position; Reject (keep lb) does not.
             </p>
 
             <div className="mb-4">
@@ -257,14 +324,15 @@ export default function Review({ wrightId }: { wrightId: string }) {
       )}
 
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <Link
             href={`/admin/spot_checks/${wrightId}`}
             className="text-amber-300/70 hover:text-amber-200 font-mono text-sm"
           >
             ← back
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <SpotCheckSessionBar forceShow compact />
             <div className="font-mono text-lg font-bold text-amber-400">
               {idx + 1}/{certs.length}
             </div>
@@ -370,5 +438,6 @@ export default function Review({ wrightId }: { wrightId: string }) {
         </div>
       </div>
     </div>
+  </div>
   )
 }

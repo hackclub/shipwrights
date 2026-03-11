@@ -47,6 +47,8 @@ model User {
   spotResolved SpotCheck[] @relation("Resolved")
   swApiKey     String?     @unique @db.VarChar(64)
 
+  spotCheckSessions SpotCheckSession[]
+
   submitterNotes FtSubmitterNote[]
 
   @@map("users")
@@ -193,6 +195,7 @@ model ShipCert {
   assignments Assignment[]
   yswsReviews YswsReview[]
   spotChecks  SpotCheck[]
+  spotCheckSessionCerts SpotCheckSessionCert[]
 
   spotChecked   Boolean   @default(false)
   spotCheckedAt DateTime?
@@ -438,4 +441,37 @@ model SpotCheck {
   @@index([reviewerId])
   @@index([status])
   @@map("spot_checks")
+}
+
+// Session for "spot check run": flag certs, pause/resume, track time, show summary when done
+model SpotCheckSession {
+  id                  Int       @id @default(autoincrement())
+  staffId              Int
+  startedAt           DateTime  @default(now())
+  pausedAt            DateTime? // when paused; null when active
+  endedAt             DateTime?
+  totalSecondsAccrued Int       @default(0) // accumulated active time
+  status              String    @default("active") // active | paused | ended
+
+  staff User                   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  certs SpotCheckSessionCert[]
+
+  @@index([staffId])
+  @@index([status])
+  @@map("spot_check_sessions")
+}
+
+model SpotCheckSessionCert {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  certId    Int
+  addedAt   DateTime @default(now())
+
+  session SpotCheckSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  cert    ShipCert         @relation(fields: [certId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, certId])
+  @@index([sessionId])
+  @@index([certId])
+  @@map("spot_check_session_certs")
 }
