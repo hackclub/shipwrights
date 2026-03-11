@@ -12,10 +12,6 @@ export default async function Admin() {
   const user = await getUser()
   if (!user) redirect('/')
 
-  if (user.role === 'captain') {
-    redirect('/admin/captain')
-  }
-
   const [pendingCerts, pendingYsws] = await Promise.all([
     prisma.shipCert.count({ where: { status: 'pending' } }),
     prisma.yswsReview.count({ where: { status: 'pending' } }),
