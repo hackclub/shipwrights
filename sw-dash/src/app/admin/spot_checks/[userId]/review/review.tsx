@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 
 export default function Review({ wrightId }: { wrightId: string }) {
@@ -17,6 +17,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
   const [why, setWhy] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const whyTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const start = async () => {
     const n = parseInt(totalCount)
@@ -42,7 +43,17 @@ export default function Review({ wrightId }: { wrightId: string }) {
     }
   }
 
-  const approve = async () => {
+  const next = () => {
+    setReviewed((r) => r + 1)
+    if (idx + 1 < certs.length) {
+      setIdx(idx + 1)
+    } else {
+      setCerts([])
+      setIdx(0)
+    }
+  }
+
+  const approve = useCallback(async () => {
     const cert = certs[idx]
     if (!cert) return
 
@@ -64,61 +75,91 @@ export default function Review({ wrightId }: { wrightId: string }) {
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [certs, idx, wrightId])
 
-  const reject = async (keepLb = false) => {
-    const cert = certs[idx]
-    if (!cert || !why) return
+  const reject = useCallback(
+    async (keepLb = false) => {
+      const cert = certs[idx]
+      if (!cert || !why) return
 
-    setSubmitting(true)
-    try {
-      await fetch('/api/admin/spot_checks/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'decide',
-          decision: 'rejected',
-          certId: cert.id,
-          wrightId: Number(wrightId),
-          why,
-          notes,
-          keepLb,
-        }),
-      })
+      setSubmitting(true)
+      try {
+        await fetch('/api/admin/spot_checks/actions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'decide',
+            decision: 'rejected',
+            certId: cert.id,
+            wrightId: Number(wrightId),
+            why,
+            notes,
+            keepLb,
+          }),
+        })
 
-      if (!keepLb) {
-        const add = parseInt(addOnReject)
-        if (add && add > 0) {
-          const res = await fetch('/api/admin/spot_checks/actions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'start', wrightId: Number(wrightId), count: add }),
-          })
-          const d = await res.json()
-          setCerts([...certs, ...(d.certs || [])])
+        if (!keepLb) {
+          const add = parseInt(addOnReject)
+          if (add && add > 0) {
+            const res = await fetch('/api/admin/spot_checks/actions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'start', wrightId: Number(wrightId), count: add }),
+            })
+            const d = await res.json()
+            setCerts([...certs, ...(d.certs || [])])
+          }
         }
+
+        setShowReject(null)
+        setWhy('')
+        setNotes('')
+        next()
+      } catch (e) {
+        alert('reject failed')
+      } finally {
+        setSubmitting(false)
       }
+    },
+    [certs, idx, wrightId, why, notes, addOnReject]
+  )
 
-      setShowReject(null)
-      setWhy('')
-      setNotes('')
-      next()
-    } catch (e) {
-      alert('reject failed')
-    } finally {
-      setSubmitting(false)
+  // Arrow keys: right = approve, left = open reject
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showReject) {
+        if (e.key === 'Enter' && why.trim() && !submitting) {
+          e.preventDefault()
+          reject(showReject === 'keep')
+        }
+        return
+      }
+      const target = e.target as Node
+      if (
+        target &&
+        (target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement)
+      )
+        return
+      if (certs.length === 0 || idx >= certs.length || submitting) return
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        approve()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        setShowReject('full')
+      }
     }
-  }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showReject, certs, idx, why, submitting, approve, reject])
 
-  const next = () => {
-    setReviewed((r) => r + 1)
-    if (idx + 1 < certs.length) {
-      setIdx(idx + 1)
-    } else {
-      setCerts([])
-      setIdx(0)
+  useEffect(() => {
+    if (showReject) {
+      whyTextareaRef.current?.focus()
     }
-  }
+  }, [showReject])
 
   if (showSetup)
     return (
@@ -218,6 +259,7 @@ export default function Review({ wrightId }: { wrightId: string }) {
                 why? (required)
               </label>
               <textarea
+                ref={whyTextareaRef}
                 className="w-full bg-zinc-950/50 border-2 border-amber-900/40 text-amber-200 font-mono rounded-xl p-3 h-24 focus:border-red-500 outline-none transition-colors"
                 placeholder="what's wrong?"
                 value={why}
@@ -276,12 +318,20 @@ export default function Review({ wrightId }: { wrightId: string }) {
           <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl overflow-hidden shadow-2xl">
             {ytId ? (
               <iframe
-                src={`https://www.youtube.com/embed/${ytId}`}
+                src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
                 className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             ) : cert.proofVideoUrl ? (
-              <video src={cert.proofVideoUrl} controls className="w-full h-full" />
+              <video
+                src={cert.proofVideoUrl}
+                controls
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full"
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-amber-500/50 font-mono">
                 no video
@@ -345,6 +395,9 @@ export default function Review({ wrightId }: { wrightId: string }) {
 
             <div className="pt-6 border-t border-amber-900/20">
               <h3 className="font-mono font-bold text-amber-400 text-center mb-4">your call</h3>
+              <p className="font-mono text-xs text-amber-500/50 text-center mb-3">
+                ← reject · approve →
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setShowReject('full')}
