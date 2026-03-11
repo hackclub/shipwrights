@@ -17,6 +17,7 @@ type DashboardData = {
     byReviewer: { reviewerId: number; username: string; total: number; oldCerts: number }[]
   }
   backlogCount: number
+  returnedCount: number
 }
 
 function formatSince(sinceIso: string) {
@@ -214,6 +215,25 @@ export default function CaptainPage() {
                   {data.backlogCount}
                 </div>
                 <p className="font-mono text-xs text-amber-500/60 mt-1">projects still in review</p>
+              </div>
+              <div className="bg-zinc-900/90 border-2 border-purple-900/40 rounded-2xl p-6 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-purple-400/90 text-xs uppercase tracking-wider">
+                    Returned by admin
+                  </span>
+                  <Link
+                    href="/admin/ship_certifications?returned=1&status=pending"
+                    className="font-mono text-purple-400 hover:text-purple-300 text-sm"
+                  >
+                    View →
+                  </Link>
+                </div>
+                <div className="text-2xl font-mono font-bold text-purple-400 mt-2">
+                  {data.returnedCount}
+                </div>
+                <p className="font-mono text-xs text-amber-500/60 mt-1">
+                  need captain triage (excluded from main queue)
+                </p>
               </div>
             </div>
           )}

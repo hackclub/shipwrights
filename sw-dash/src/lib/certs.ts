@@ -10,6 +10,8 @@ interface Filters {
   from?: string | null
   to?: string | null
   search?: string | null
+  /** When true, only certs with yswsReturnedAt set (returned by admin). Requires status pending. */
+  returnedOnly?: boolean
 }
 
 type StatsRow = {
@@ -86,12 +88,12 @@ async function fetchStats(lbMode: string) {
       ORDER BY date ASC
     `,
 
-    // Stats + queue in ONE SQL query
+    // Stats + queue in ONE SQL query (pending = queue only, excludes returned-by-admin)
     prisma.$queryRaw<StatsRow[]>`
       SELECT
         SUM(status = 'approved') AS approved,
         SUM(status = 'rejected') AS rejected,
-        SUM(status = 'pending') AS pending,
+        SUM(status = 'pending' AND yswsReturnedAt IS NULL) AS pending,
         SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${today}) AS decisionsToday,
         SUM(createdAt >= ${today}) AS newShipsToday,
         SUM(reviewCompletedAt IS NOT NULL AND reviewCompletedAt >= ${yesterday} AND reviewCompletedAt < ${today}) AS decisionsYesterday,
@@ -264,6 +266,13 @@ async function fetchList(filters: Filters) {
   if (type && type.length > 0) where.projectType = { in: type }
   if (filters.ftType && filters.ftType !== 'all') where.ftType = filters.ftType
   if (status && status !== 'all') where.status = status
+  if (status === 'pending') {
+    if (filters.returnedOnly) {
+      where.yswsReturnedAt = { not: null }
+    } else {
+      where.yswsReturnedAt = null
+    }
+  }
   if (filters.from || filters.to) {
     where.createdAt = {
       ...(filters.from ? { gte: new Date(filters.from) } : {}),
@@ -275,6 +284,14 @@ async function fetchList(filters: Filters) {
   }
 
   const orderBy = { createdAt: sortBy === 'oldest' ? 'asc' : 'desc' } as const
+
+  const groupByWhere: Record<string, unknown> = {}
+  if (status && status !== 'all') {
+    groupByWhere.status = status
+    if (status === 'pending') {
+      groupByWhere.yswsReturnedAt = filters.returnedOnly ? { not: null } : null
+    }
+  }
 
   const [certs, typeGroups] = await Promise.all([
     prisma.shipCert.findMany({
@@ -304,7 +321,7 @@ async function fetchList(filters: Filters) {
 
     prisma.shipCert.groupBy({
       by: ['projectType'],
-      where: status && status !== 'all' ? { status } : {},
+      where: groupByWhere,
       _count: true,
     }),
   ])
@@ -363,6 +380,7 @@ async function getList(filters: Filters) {
     from: filters.from || null,
     to: filters.to || null,
     search: filters.search || null,
+    returnedOnly: filters.returnedOnly || null,
   })
   return cache(key, 15, () => fetchList(filters))
 }

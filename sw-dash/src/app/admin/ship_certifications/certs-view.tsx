@@ -16,6 +16,10 @@ interface Props {
     leaderboard: Reviewer[]
     types: TypeCount[]
   }
+  /** When true, show "RETURNED BY ADMIN" label plus reason and returned-by. When false, show only "Returned". */
+  showReturnedByAdmin?: boolean
+  /** When true, we are showing only returned-by-admin certs (captain view). Pass returned=1 in API calls. */
+  isReturnedView?: boolean
 }
 
 const fmtTime = (secs: number) => {
@@ -133,7 +137,7 @@ function MultiSelect({
   )
 }
 
-export function CertsView({ initial }: Props) {
+export function CertsView({ initial, showReturnedByAdmin = false, isReturnedView = false }: Props) {
   const params = useSearchParams()
   const router = useRouter()
   const [ftType, setFtType] = useState(params.get('ftType') || 'all')
@@ -168,6 +172,7 @@ export function CertsView({ initial }: Props) {
       if (selectedTypes.length > 0) p.set('type', selectedTypes.join(','))
       if (ftType !== 'all') p.set('ftType', ftType)
       if (status !== 'all') p.set('status', status)
+      if (isReturnedView) p.set('returned', '1')
       p.set('sortBy', sortBy)
       p.set('lbMode', lbMode)
       if (search) p.set('search', search)
@@ -184,10 +189,11 @@ export function CertsView({ initial }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to])
+  }, [selectedTypes, ftType, status, sortBy, lbMode, search, from, to, isReturnedView])
 
   const hasUrlFilters = !!(
     params.get('status') ||
+    params.get('returned') ||
     params.get('ftType') ||
     params.get('type') ||
     params.get('search') ||
@@ -210,12 +216,13 @@ export function CertsView({ initial }: Props) {
     if (selectedTypes.length > 0) p.set('type', selectedTypes.join(','))
     if (ftType !== 'all') p.set('ftType', ftType)
     if (status !== 'pending') p.set('status', status)
+    if (isReturnedView) p.set('returned', '1')
     if (sortBy !== 'oldest') p.set('sortBy', sortBy)
     if (search) p.set('search', search)
     if (from) p.set('from', from)
     if (to) p.set('to', to)
     router.replace(`?${p}`, { scroll: false })
-  }, [ftType, status, sortBy, search, from, to, selectedTypes])
+  }, [ftType, status, sortBy, search, from, to, selectedTypes, isReturnedView])
 
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1000)
@@ -521,7 +528,7 @@ export function CertsView({ initial }: Props) {
                 )}
                 {c.yswsReturned ? (
                   <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
-                    RETURNED
+                    {showReturnedByAdmin ? 'RETURNED BY ADMIN' : 'RETURNED'}
                   </span>
                 ) : (
                   <span
@@ -532,7 +539,7 @@ export function CertsView({ initial }: Props) {
                 )}
               </div>
             </div>
-            {c.yswsReturned && (
+            {c.yswsReturned && showReturnedByAdmin && (
               <div className="text-purple-300/80 font-mono text-xs mb-2">
                 <div>{c.yswsReturnReason}</div>
                 <div className="text-gray-500">by {c.yswsReturnedBy}</div>
@@ -613,15 +620,21 @@ export function CertsView({ initial }: Props) {
                   </td>
                   <td className="p-4">
                     {c.yswsReturned ? (
-                      <div>
-                        <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
-                          RETURNED BY ADMIN
-                        </span>
-                        <div className="text-purple-300/70 font-mono text-xs mt-1">
-                          {c.yswsReturnReason}
+                      showReturnedByAdmin ? (
+                        <div>
+                          <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
+                            RETURNED BY ADMIN
+                          </span>
+                          <div className="text-purple-300/70 font-mono text-xs mt-1">
+                            {c.yswsReturnReason}
+                          </div>
+                          <div className="text-gray-500 font-mono text-xs">by {c.yswsReturnedBy}</div>
                         </div>
-                        <div className="text-gray-500 font-mono text-xs">by {c.yswsReturnedBy}</div>
-                      </div>
+                      ) : (
+                        <span className="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded font-mono text-xs">
+                          RETURNED
+                        </span>
+                      )
                     ) : (
                       <span
                         className={`inline-block px-2 py-1 rounded font-mono text-xs border ${verdictColor(c.verdict)}`}

@@ -67,6 +67,14 @@ export const GET = api(PERMS.captain_dashboard)(async ({ user, req }) => {
     where: {
       status: { notIn: ['approved', 'rejected'] },
       createdAt: { lt: backlogCutoff },
+      yswsReturnedAt: null,
+    },
+  })
+
+  const returnedCount = await prisma.shipCert.count({
+    where: {
+      status: 'pending',
+      yswsReturnedAt: { not: null },
     },
   })
 
@@ -91,5 +99,6 @@ export const GET = api(PERMS.captain_dashboard)(async ({ user, req }) => {
       byReviewer: byReviewerArray,
     },
     backlogCount,
+    returnedCount,
   })
 })
