@@ -36,6 +36,7 @@ export const PERMS = {
   billy_btn: 'billy_btn',
   joe_btn: 'joe_btn',
   spot_check: 'spot_check',
+  captain_dashboard: 'captain_dashboard',
 
   submitter_edit: 'submitter_edit',
   submitter_delete: 'submitter_delete',
@@ -61,6 +62,7 @@ export const ROLES = {
       PERMS.certs_admin,
       //PERMS.assign_admin,
       PERMS.support_admin,
+      PERMS.captain_dashboard,
     ],
   },
   shipwright: {
