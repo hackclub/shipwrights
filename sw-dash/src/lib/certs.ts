@@ -380,7 +380,7 @@ async function getList(filters: Filters) {
     from: filters.from || null,
     to: filters.to || null,
     search: filters.search || null,
-    returnedOnly: filters.returnedOnly || null,
+    returnedOnly: filters.returnedOnly ? '1' : null,
   })
   return cache(key, 15, () => fetchList(filters))
 }

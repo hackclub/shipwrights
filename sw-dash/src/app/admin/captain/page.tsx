@@ -181,19 +181,22 @@ export default function CaptainPage() {
                 ) : (
                   <ul className="space-y-2">
                     {data.reviewedSince.byReviewer.map((r) => (
-                      <li
-                        key={r.reviewerId}
-                        className="flex justify-between items-center font-mono text-sm text-amber-200"
-                      >
-                        <span>{r.username}</span>
-                        <span>
-                          <strong>{r.total}</strong> reviewed
-                          {r.oldCerts > 0 && (
-                            <span className="text-amber-500/80 ml-1">
-                              ({r.oldCerts} older than {data.oldCertDays}d)
-                            </span>
-                          )}
-                        </span>
+                      <li key={r.reviewerId}>
+                        <Link
+                          href={`/admin/captain/team/${r.reviewerId}`}
+                          className="flex justify-between items-center font-mono text-sm text-amber-200 hover:text-amber-100 hover:bg-amber-900/20 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                        >
+                          <span>{r.username}</span>
+                          <span>
+                            <strong>{r.total}</strong> reviewed
+                            {r.oldCerts > 0 && (
+                              <span className="text-amber-500/80 ml-1">
+                                ({r.oldCerts} older than {data.oldCertDays}d)
+                              </span>
+                            )}
+                            <span className="text-amber-500/60 ml-1.5" aria-hidden>→</span>
+                          </span>
+                        </Link>
                       </li>
                     ))}
                   </ul>

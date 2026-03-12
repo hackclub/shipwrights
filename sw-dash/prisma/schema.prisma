@@ -436,6 +436,7 @@ model SpotCheck {
   @@index([certId])
   @@index([staffId])
   @@index([reviewerId])
+  @@index([reviewerId, createdAt])
   @@index([status])
   @@map("spot_checks")
 }
