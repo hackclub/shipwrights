@@ -26,6 +26,59 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const idParam = searchParams.get('id')
+
+  if (idParam) {
+    const id = parseInt(idParam, 10)
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'invalid id' }, { status: 400 })
+    }
+
+    try {
+      const cert = await prisma.shipCert.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          projectName: true,
+          projectType: true,
+          description: true,
+          demoUrl: true,
+          repoUrl: true,
+          readmeUrl: true,
+          devTime: true,
+          status: true,
+          reviewFeedback: true,
+          proofVideoUrl: true,
+          reviewStartedAt: true,
+          reviewCompletedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          reviewer: {
+            select: { id: true, username: true, avatar: true, slackId: true },
+          },
+        },
+      })
+
+      if (!cert) {
+        return NextResponse.json({ error: 'not found' }, { status: 404 })
+      }
+
+      return NextResponse.json(cert)
+    } catch (e: any) {
+      await log({
+        action: 'wrights_api_exploded',
+        status: 500,
+        user,
+        error: {
+          name: e.name || 'Error',
+          message: e.message || 'unknown',
+          stack: e.stack,
+        },
+      })
+      return NextResponse.json({ error: 'obays API exploded' }, { status: 500 })
+    }
+  }
+
   const status = searchParams.get('status')
   const type = searchParams.get('type')
   const since = searchParams.get('since')
