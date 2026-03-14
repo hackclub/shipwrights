@@ -1,31 +1,8 @@
 services:
   app:
-    build:
-      context: .
-      target: dev
+    build: .
     ports:
       - '3000:3000'
-    volumes:
-      - .:/app
-      - /app/node_modules
     env_file:
       - .env
-    depends_on:
-      db:
-        condition: service_healthy
     restart: unless-stopped
-
-  db:
-    image: mysql:8.0
-    container_name: mysql-db-ships
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_PASSWORD: 37obay
-      MYSQL_DATABASE: mysql-db-ships
-    ports:
-      - '3306:3306'
-    healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
-      timeout: 5s
-      retries: 5
