@@ -515,3 +515,68 @@ def get_feedback(ticket_id):
     finally:
         cursor.close()
         db.close()
+
+def get_unresolved_tickets_past_24h():
+    db = get_db()
+    if not db:
+        return []
+    cursor = db.cursor(dictionary=True, buffered=True)
+    try:
+        cursor.execute("SELECT * FROM tickets WHERE status = 'open' AND createdAt <= (NOW() - INTERVAL 1 DAY)")
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"obays code couldnt get past 24h tickets: {e}")
+        return []
+    finally:
+        cursor.close()
+        db.close()
+
+def get_daily_ticket_stats():
+    db = get_db()
+    if not db:
+        return None
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        cursor.execute("SELECT COUNT(*) as count FROM tickets WHERE createdAt >= (NOW() - INTERVAL 1 DAY)")
+        opened_24h = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM tickets WHERE status = 'closed' AND closedAt >= (NOW() - INTERVAL 1 DAY)")
+        closed_24h = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM tickets WHERE status = 'open'")
+        total_open = cursor.fetchone()["count"]
+        
+        cursor.execute("""
+            SELECT closedBy as slackId, COUNT(*) as count 
+            FROM tickets 
+            WHERE status = 'closed' AND closedAt >= (NOW() - INTERVAL 1 DAY) AND closedBy IS NOT NULL 
+            GROUP BY closedBy 
+            ORDER BY count DESC 
+            LIMIT 3
+        """)
+        leaderboard = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT t.id, t.userId, t.question, t.staffThreadTs, t.createdAt, 
+                   (SELECT MAX(createdAt) FROM ticket_msgs WHERE ticketId = t.id) as last_reply 
+            FROM tickets t 
+            WHERE t.status = 'open' AND t.createdAt <= (NOW() - INTERVAL 1 DAY) 
+            ORDER BY t.createdAt ASC 
+            LIMIT 11
+        """)
+        old_tickets = cursor.fetchall()
+
+        return {
+            "opened_24h": opened_24h,
+            "closed_24h": closed_24h,
+            "total_open": total_open,
+            "leaderboard": leaderboard,
+            "old_tickets": old_tickets
+        }
+    except Exception as e:
+        print(f"Error fetching daily ticket stats: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()

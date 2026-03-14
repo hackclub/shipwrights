@@ -1,5 +1,5 @@
 import os, json, summary, threading
-import db, helpers, api, home, relay, ai, msg_blocks
+import db, helpers, api, home, relay, ai, msg_blocks, alerts
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED
@@ -344,6 +344,8 @@ def run_bot():
 if __name__ == "__main__":
     reminder_thread = threading.Thread(target=summary.reminders_loop, daemon=True)
     server_thread = threading.Thread(target=api.run_server, daemon=True)
+    alerts_thread = threading.Thread(target=alerts.alerts_loop, daemon=True)
     server_thread.start()
     reminder_thread.start()
+    alerts_thread.start()
     run_bot()

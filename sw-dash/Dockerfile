@@ -1,19 +1,35 @@
 FROM node:20-alpine AS base
-
 RUN npm i -g pnpm
 
+# install deps
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
-RUN pnpm i --frozen-lockfile
+RUN pnpm install
 
+# development stage
+FROM base AS dev
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+
+# Add this line right here!
+COPY prisma ./prisma 
+
+RUN pnpm install
+COPY . .
+
+EXPOSE 3000
+CMD ["pnpm", "run", "dev"]
+
+# build stage
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
 
+# production runner
 FROM base AS runner
 WORKDIR /app
 
