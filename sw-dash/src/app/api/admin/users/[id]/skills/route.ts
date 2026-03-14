@@ -27,7 +27,7 @@ export const GET = withParams()(async ({ user, params }) => {
       return NextResponse.json({ error: 'who dat' }, { status: 404 })
     }
 
-    return NextResponse.json({ skills: target.skills || [] })
+    return NextResponse.json({ skills: JSON.parse(target.skills || '[]') })
   } catch {
     return NextResponse.json({ error: 'couldnt grab skills' }, { status: 500 })
   }
@@ -67,7 +67,7 @@ export const POST = withParams()(async ({ user, req, params, ip, ua }) => {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { skills: skills },
+      data: { skills: JSON.stringify(skills) },
     })
 
     if (!isSelf) {

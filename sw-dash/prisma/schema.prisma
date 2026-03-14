@@ -8,46 +8,45 @@ datasource db {
 }
 
 model User {
-  id               Int           @id @default(autoincrement())
-  slackId          String        @unique
-  ftuid            String?       @unique
-  username         String
-  avatar           String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  isActive         Boolean       @default(true)
-  role             String        @default("observer")
-  sessionExpires   DateTime?
-  sessionToken     String?
-  currentChallenge String?
-  staffNotes       String?       @db.Text
-  skills           Json?
-  lastSeen         DateTime?
-  auditLogs        AuditLog[]
-  subscriptions    AssignSubsc[]
-  assignedReviews  Assignment[]  @relation("AssignedTo")
-  createdReviews   Assignment[]  @relation("CreatedBy")
-  yubikeys         Yubikey[]
-  shipCerts        ShipCert[]
-  claimedShipCerts ShipCert[]    @relation("ClaimedBy")
-  sessions         Session[]
-  pushSubs         PushSub[]
-  ticketNotes      TicketNote[]
-
-  cookieBalance   Float        @default(0)
-  cookiesEarned   Float        @default(0)
-  streak          Int          @default(0)
-  lastReviewDate  DateTime?    @db.Date
-  payoutReqs      PayoutReq[]  @relation("PayoutReqs")
-  payoutApprovals PayoutReq[]  @relation("PayoutApprovals")
-  yswsReviews     YswsReview[] @relation("YswsReviewer")
-
-  spotStaff    SpotCheck[] @relation("Staff")
-  spotReviewed SpotCheck[] @relation("Reviewed")
-  spotResolved SpotCheck[] @relation("Resolved")
-  swApiKey     String?     @unique @db.VarChar(64)
-
-  submitterNotes FtSubmitterNote[]
+  id                                                      Int                   @id @default(autoincrement())
+  slackId                                                 String                @unique
+  username                                                String
+  avatar                                                  String?
+  createdAt                                               DateTime              @default(now())
+  updatedAt                                               DateTime              @updatedAt
+  isActive                                                Boolean               @default(true)
+  role                                                    String                @default("observer")
+  sessionExpires                                          DateTime?
+  sessionToken                                            String?
+  currentChallenge                                        String?
+  staffNotes                                              String?               @db.Text
+  skills                                                  String?               @db.LongText
+  lastSeen                                                DateTime?
+  cookieBalance                                           Float                 @default(0)
+  cookiesEarned                                           Float                 @default(0)
+  ftuid                                                   String?               @unique
+  lastReviewDate                                          DateTime?             @db.Date
+  streak                                                  Int                   @default(0)
+  swApiKey                                                String?               @unique @db.VarChar(64)
+  subscriptions                                           AssignSubsc[]
+  assignedReviews                                         Assignment[]          @relation("AssignedTo")
+  createdReviews                                          Assignment[]          @relation("CreatedBy")
+  auditLogs                                               AuditLog[]
+  submitterNotes                                          FtSubmitterNote[]
+  payoutApprovals                                         PayoutReq[]           @relation("PayoutApprovals")
+  payoutReqs                                              PayoutReq[]           @relation("PayoutReqs")
+  pushSubs                                                PushSub[]
+  sessions                                                Session[]
+  claimedShipCerts                                        ShipCert[]            @relation("ClaimedBy")
+  shipCerts                                               ShipCert[]
+  spot_check_sessions_spot_check_sessions_staffIdTousers  spot_check_sessions[] @relation("spot_check_sessions_staffIdTousers")
+  spot_check_sessions_spot_check_sessions_wrightIdTousers spot_check_sessions[] @relation("spot_check_sessions_wrightIdTousers")
+  spotResolved                                            SpotCheck[]           @relation("Resolved")
+  spotReviewed                                            SpotCheck[]           @relation("Reviewed")
+  spotStaff                                               SpotCheck[]           @relation("Staff")
+  ticketNotes                                             TicketNote[]
+  yswsReviews                                             YswsReview[]          @relation("YswsReviewer")
+  yubikeys                                                Yubikey[]
 
   @@map("users")
 }
@@ -56,9 +55,6 @@ model PayoutReq {
   id          Int       @id @default(autoincrement())
   userId      Int
   amount      Float
-  bonus       Float     @default(0)
-  bonusReason String?
-  finalAmount Float?
   balBefore   Float
   balAfter    Float?
   status      String    @default("pending")
@@ -66,12 +62,15 @@ model PayoutReq {
   proofUrl    String?
   createdAt   DateTime  @default(now())
   approvedAt  DateTime?
-
-  user  User  @relation("PayoutReqs", fields: [userId], references: [id])
-  admin User? @relation("PayoutApprovals", fields: [adminId], references: [id])
+  bonus       Float     @default(0)
+  bonusReason String?
+  finalAmount Float?
+  admin       User?     @relation("PayoutApprovals", fields: [adminId], references: [id])
+  user        User      @relation("PayoutReqs", fields: [userId], references: [id])
 
   @@index([userId])
   @@index([status])
+  @@index([adminId], map: "payout_reqs_adminId_fkey")
   @@map("payout_reqs")
 }
 
@@ -93,12 +92,13 @@ model Session {
   id        String   @id @default(cuid())
   token     String   @unique
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   device    String?
-  ip        String?
   createdAt DateTime @default(now())
   expiresAt DateTime
+  ip        String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId], map: "sessions_userId_fkey")
   @@map("sessions")
 }
 
@@ -120,17 +120,17 @@ model Assignment {
   repoUrl       String        @db.Text
   description   String?
   status        String        @default("pending")
-  comments      String?       @db.Text
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   assigneeId    Int?
-  projectName   String?
+  comments      String?       @db.Text
   demoUrl       String?       @db.Text
+  projectName   String?
   shipCertId    Int?          @unique
   subscriptions AssignSubsc[]
   assignee      User?         @relation("AssignedTo", fields: [assigneeId], references: [id])
-  author        User          @relation("CreatedBy", fields: [userId], references: [id])
   shipCert      ShipCert?     @relation(fields: [shipCertId], references: [id])
+  author        User          @relation("CreatedBy", fields: [userId], references: [id])
 
   @@index([assigneeId])
   @@index([userId])
@@ -154,51 +154,47 @@ model AssignSubsc {
 }
 
 model ShipCert {
-  id          Int     @id @default(autoincrement())
-  ftProjectId String?
-  ftSlackId   String?
-  ftUsername  String?
-  ftType      String?
-
-  projectName String?
-  projectType String?
-  description String? @db.Text
-  demoUrl     String? @db.Text
-  repoUrl     String? @db.Text
-  readmeUrl   String? @db.Text
-  devTime     String?
-
-  status            String    @default("pending")
-  reviewerId        Int?
-  claimerId         Int?
-  internalNotes     String?   @db.Text
-  reviewFeedback    String?   @db.Text
-  proofVideoUrl     String?
-  reviewStartedAt   DateTime?
-  reviewCompletedAt DateTime?
-  syncedToFt        Boolean   @default(false)
-  cookiesEarned     Float?
-  payoutMulti       Float?
-  customBounty      Float?
-  aiSummary         String?   @db.Text
-
-  yswsReturnReason String?   @db.Text
-  yswsReturnedBy   String?
-  yswsReturnedAt   DateTime?
-
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  reviewer    User?        @relation(fields: [reviewerId], references: [id])
-  claimer     User?        @relation("ClaimedBy", fields: [claimerId], references: [id])
-  assignments Assignment[]
-  yswsReviews YswsReview[]
-  spotChecks  SpotCheck[]
-
-  spotChecked   Boolean   @default(false)
-  spotCheckedAt DateTime?
-  spotCheckedBy Int?
-  spotPassed    Boolean?
-  spotRemoved   Boolean   @default(false)
+  id                       Int                        @id @default(autoincrement())
+  ftProjectId              String?
+  ftSlackId                String?
+  ftUsername               String?
+  projectName              String?
+  projectType              String?
+  description              String?                    @db.Text
+  demoUrl                  String?                    @db.Text
+  repoUrl                  String?                    @db.Text
+  readmeUrl                String?                    @db.Text
+  devTime                  String?
+  status                   String                     @default("pending")
+  reviewerId               Int?
+  internalNotes            String?                    @db.Text
+  reviewFeedback           String?                    @db.Text
+  proofVideoUrl            String?
+  reviewStartedAt          DateTime?
+  reviewCompletedAt        DateTime?
+  syncedToFt               Boolean                    @default(false)
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  claimerId                Int?
+  cookiesEarned            Float?
+  payoutMulti              Float?
+  yswsReturnReason         String?                    @db.Text
+  yswsReturnedAt           DateTime?
+  yswsReturnedBy           String?
+  customBounty             Float?
+  aiSummary                String?                    @db.Text
+  ftType                   String?
+  spotChecked              Boolean                    @default(false)
+  spotCheckedAt            DateTime?
+  spotCheckedBy            Int?
+  spotPassed               Boolean?
+  spotRemoved              Boolean                    @default(false)
+  assignments              Assignment?
+  claimer                  User?                      @relation("ClaimedBy", fields: [claimerId], references: [id])
+  reviewer                 User?                      @relation(fields: [reviewerId], references: [id])
+  spot_check_session_certs spot_check_session_certs[]
+  spotChecks               SpotCheck[]
+  yswsReviews              YswsReview[]
 
   @@index([reviewerId])
   @@index([status])
@@ -209,6 +205,7 @@ model ShipCert {
   @@index([status, projectType])
   @@index([status, yswsReturnedAt, createdAt])
   @@index([status, reviewCompletedAt, reviewerId])
+  @@index([claimerId], map: "ship_certs_claimerId_fkey")
   @@map("ship_certs")
 }
 
@@ -223,6 +220,7 @@ model FtSubmitterNote {
   staff     User     @relation(fields: [staffId], references: [id])
 
   @@index([slackId])
+  @@index([staffId], map: "ft_submitter_notes_staffId_fkey")
   @@map("ft_submitter_notes")
 }
 
@@ -232,14 +230,13 @@ model YswsReview {
   status       String   @default("pending")
   reviewerId   Int?
   returnReason String?  @db.Text
-  devlogs      Json?
-  commits      Json?
-  decisions    Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  shipCert ShipCert @relation(fields: [shipCertId], references: [id], onDelete: Cascade)
-  reviewer User?    @relation("YswsReviewer", fields: [reviewerId], references: [id])
+  devlogs      String?  @db.LongText
+  commits      String?  @db.LongText
+  decisions    String?  @db.LongText
+  reviewer     User?    @relation("YswsReviewer", fields: [reviewerId], references: [id])
+  shipCert     ShipCert @relation(fields: [shipCertId], references: [id], onDelete: Cascade)
 
   @@index([shipCertId])
   @@index([status])
@@ -286,9 +283,9 @@ model Ticket {
   status        Ticket_status? @default(open)
   createdAt     DateTime?      @default(now()) @db.Timestamp(0)
   closedAt      DateTime?      @db.Timestamp(0)
-  closedBy      String?        @db.VarChar(50)
   userAvatar    String?        @db.VarChar(500)
   assignees     String?        @db.Text
+  closedBy      String?        @db.VarChar(50)
   messages      TicketMsg[]
   notes         TicketNote[]
 
@@ -311,17 +308,16 @@ model TicketFeedback {
 
 model TicketUser {
   id        Int     @id @default(autoincrement())
-  userId    String  @db.VarChar(50)
+  userId    String  @unique @db.VarChar(50)
   isOptedIn Boolean @default(true)
 
-  @@unique([userId])
   @@map("ticket_users")
 }
 
 model metricsHistory {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  output    Json?
+  output    String?  @db.LongText
 
   @@map("metrics_history")
 }
@@ -350,52 +346,44 @@ model TicketNote {
   authorId  Int
   text      String   @db.Text
   createdAt DateTime @default(now())
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+  @@index([authorId], map: "ticket_notes_authorId_fkey")
   @@map("ticket_notes")
 }
 
-enum Ticket_status {
-  open
-  closed
-}
-
 model SysLog {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     Int?
   slackId    String?
   username   String?
   role       String?
   action     String
-  context    String? @db.Text
+  context    String?  @db.Text
   statusCode Int
-  ip         String?
-  userAgent  String? @db.Text
-  email      String?
+  createdAt  DateTime @default(now())
   avatar     String?
+  email      String?
+  ip         String?
+  userAgent  String?  @db.Text
+  metadata   String?  @db.LongText
+  severity   String?  @default("info")
   targetId   Int?
   targetType String?
-  metadata   Json?
-  severity   String? @default("info") // not used anymore, leaving for old logs
-
-  reqMethod  String?
-  reqUrl     String? @db.Text
-  reqBody    Json?
-  reqHeaders Json?
-  resStatus  Int?
-  resBody    Json?
-  resHeaders Json?
-
+  changes    String?  @db.LongText
+  duration   Int?
+  errorMsg   String?  @db.Text
   errorName  String?
-  errorMsg   String? @db.Text
-  errorStack String? @db.Text
-
-  changes  Json?
-  duration Int?
-
-  createdAt DateTime @default(now())
+  errorStack String?  @db.Text
+  reqBody    String?  @db.LongText
+  reqHeaders String?  @db.LongText
+  reqMethod  String?
+  reqUrl     String?  @db.Text
+  resBody    String?  @db.LongText
+  resHeaders String?  @db.LongText
+  resStatus  Int?
 
   @@index([userId])
   @@index([action])
@@ -408,34 +396,66 @@ model SysLog {
 }
 
 model SpotCheck {
-  id         Int    @id @default(autoincrement())
-  caseId     String @unique
-  certId     Int
+  id         Int       @id @default(autoincrement())
+  caseId     String    @unique
   staffId    Int
-  reviewerId Int
-
-  decision String
-  status   String @default("unresolved")
-
-  notes     String? @db.Text
-  reasoning String? @db.Text
-
-  lbRemoved Boolean @default(false)
-  fpReason  String? @db.Text
-
+  decision   String
+  status     String    @default("unresolved")
+  notes      String?   @db.Text
+  reasoning  String?   @db.Text
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   resolvedAt DateTime?
   resolvedBy Int?
-
-  cert     ShipCert @relation(fields: [certId], references: [id])
-  staff    User     @relation("Staff", fields: [staffId], references: [id])
-  reviewed User     @relation("Reviewed", fields: [reviewerId], references: [id])
-  resolver User?    @relation("Resolved", fields: [resolvedBy], references: [id])
+  certId     Int
+  lbRemoved  Boolean   @default(false)
+  reviewerId Int
+  fpReason   String?   @db.Text
+  cert       ShipCert  @relation(fields: [certId], references: [id])
+  resolver   User?     @relation("Resolved", fields: [resolvedBy], references: [id])
+  reviewed   User      @relation("Reviewed", fields: [reviewerId], references: [id])
+  staff      User      @relation("Staff", fields: [staffId], references: [id])
 
   @@index([certId])
   @@index([staffId])
   @@index([reviewerId])
   @@index([status])
+  @@index([resolvedBy], map: "spot_checks_resolvedBy_fkey")
   @@map("spot_checks")
+}
+
+model spot_check_session_certs {
+  id                  Int                 @id @default(autoincrement())
+  sessionId           Int
+  certId              Int
+  addedAt             DateTime            @default(now())
+  ship_certs          ShipCert            @relation(fields: [certId], references: [id], onDelete: Cascade)
+  spot_check_sessions spot_check_sessions @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, certId])
+  @@index([certId])
+  @@index([sessionId])
+}
+
+model spot_check_sessions {
+  id                                        Int                        @id @default(autoincrement())
+  staffId                                   Int
+  startedAt                                 DateTime                   @default(now())
+  pausedAt                                  DateTime?
+  endedAt                                   DateTime?
+  totalSecondsAccrued                       Int                        @default(0)
+  status                                    String                     @default("active")
+  wrightId                                  Int?
+  spot_check_session_certs                  spot_check_session_certs[]
+  users_spot_check_sessions_staffIdTousers  User                       @relation("spot_check_sessions_staffIdTousers", fields: [staffId], references: [id], onDelete: Cascade)
+  users_spot_check_sessions_wrightIdTousers User?                      @relation("spot_check_sessions_wrightIdTousers", fields: [wrightId], references: [id])
+
+  @@index([staffId])
+  @@index([status])
+  @@index([wrightId])
+}
+
+enum Ticket_status {
+  open
+  closed
 }

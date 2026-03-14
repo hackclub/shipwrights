@@ -80,9 +80,64 @@ export const GET = withParams<Record<string, never>>(PERMS.spot_check)(async () 
 
     wrights.sort((a, b) => b.reviewed - a.reviewed)
 
+    const spotCheckStaff = await prisma.spotCheck.groupBy({
+      by: ['staffId'],
+      _count: { id: true },
+    })
+
+    const staffIds = spotCheckStaff.map((s) => s.staffId)
+    if (staffIds.length === 0) {
+      return NextResponse.json({
+        stats: { total, failRate, successRate, checked, unchecked },
+        wrights,
+        topCheckers: [],
+      })
+    }
+
+    const byStaffDecision = await prisma.spotCheck.groupBy({
+      by: ['staffId', 'decision'],
+      _count: { id: true },
+      where: { staffId: { in: staffIds } },
+    })
+
+    const decisionMap = new Map<number, { approved: number; rejected: number }>()
+    for (const row of byStaffDecision) {
+      if (!decisionMap.has(row.staffId)) {
+        decisionMap.set(row.staffId, { approved: 0, rejected: 0 })
+      }
+      const d = decisionMap.get(row.staffId)!
+      if (row.decision === 'approved') d.approved = row._count.id
+      else if (row.decision === 'rejected') d.rejected = row._count.id
+    }
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: staffIds } },
+      select: { id: true, username: true, avatar: true },
+    })
+    const userMap = new Map(users.map((u) => [u.id, u]))
+
+    const topCheckers = spotCheckStaff
+      .map((s) => {
+        const user = userMap.get(s.staffId)
+        const decisions = decisionMap.get(s.staffId) || { approved: 0, rejected: 0 }
+        return user
+          ? {
+              id: user.id,
+              username: user.username,
+              avatar: user.avatar,
+              total: s._count.id,
+              approved: decisions.approved,
+              rejected: decisions.rejected,
+            }
+          : null
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .sort((a, b) => b.total - a.total)
+
     return NextResponse.json({
       stats: { total, failRate, successRate, checked, unchecked },
       wrights,
+      topCheckers,
     })
   } catch (e) {
     return NextResponse.json({ error: 'stats load failed' }, { status: 500 })

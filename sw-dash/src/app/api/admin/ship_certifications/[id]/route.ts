@@ -53,8 +53,6 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
               },
             },
           },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
         },
       },
     })
@@ -127,12 +125,12 @@ export const GET = withParams(PERMS.certs_view)(async ({ user, params }) => {
           }
         : null,
       syncedToFt: cert.syncedToFt,
-      assignment: cert.assignments[0]
+      assignment: cert.assignments
         ? {
-            id: cert.assignments[0].id,
-            status: cert.assignments[0].status,
-            assignee: cert.assignments[0].assignee?.username || null,
-            createdAt: cert.assignments[0].createdAt.toISOString(),
+            id: cert.assignments.id,
+            status: cert.assignments.status,
+            assignee: cert.assignments.assignee?.username || null,
+            createdAt: cert.assignments.createdAt.toISOString(),
           }
         : null,
       notes: internalNotes.map((note) => ({

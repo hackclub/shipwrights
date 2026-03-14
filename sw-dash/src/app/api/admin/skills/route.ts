@@ -14,7 +14,7 @@ export const GET = api()(async ({ user }) => {
       return NextResponse.json({ error: 'user not found' }, { status: 404 })
     }
 
-    const userSkills = (dbUser.skills as string[]) || []
+    const userSkills = JSON.parse(dbUser.skills || '[]') as string[]
 
     return NextResponse.json({ skills: userSkills, available: SKILLS })
   } catch {
@@ -43,19 +43,19 @@ export const POST = api()(async ({ user, req }) => {
       select: { skills: true },
     })
 
-    const current = (dbUser?.skills as string[]) || []
+    const current = JSON.parse(dbUser?.skills || '[]') as string[]
 
     if (action === 'add') {
       if (!current.includes(skill)) {
         await prisma.user.update({
           where: { id: user.id },
-          data: { skills: [...current, skill] },
+          data: { skills: JSON.stringify([...current, skill]) },
         })
       }
     } else {
       await prisma.user.update({
         where: { id: user.id },
-        data: { skills: current.filter((s) => s !== skill) },
+        data: { skills: JSON.stringify(current.filter((s) => s !== skill)) },
       })
     }
 
