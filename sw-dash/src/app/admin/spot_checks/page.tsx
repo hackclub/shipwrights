@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import Stats from './stats'
+import SpotCheckLeaderboard from './spot-check-leaderboard'
 import List from './list'
 
 export default function Page() {
@@ -21,6 +22,19 @@ export default function Page() {
             }
           >
             <Stats />
+          </Suspense>
+        </div>
+
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-amber-500/70 font-mono text-xs uppercase tracking-wider mb-3 px-2">
+            Spot check leaderboard
+          </h2>
+          <Suspense
+            fallback={
+              <div className="bg-gradient-to-br from-zinc-900/90 to-black/90 border-4 border-amber-900/40 rounded-3xl p-6 animate-pulse h-48"></div>
+            }
+          >
+            <SpotCheckLeaderboard />
           </Suspense>
         </div>
 

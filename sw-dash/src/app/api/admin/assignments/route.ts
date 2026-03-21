@@ -72,7 +72,7 @@ export const POST = api()(async ({ user, req }) => {
     })
 
     let reviewers = allUsers.filter((u) => {
-      const userSkills = (u.skills as string[]) || []
+      const userSkills = JSON.parse(u.skills || '[]') as string[]
       return types.some((t: string) => userSkills.includes(t))
     })
 
@@ -89,7 +89,7 @@ export const POST = api()(async ({ user, req }) => {
       })
 
       if (selfUser) {
-        const selfSkills = (selfUser.skills as string[]) || []
+        const selfSkills = JSON.parse(selfUser.skills || '[]') as string[]
         if (types.some((t: string) => selfSkills.includes(t))) {
           reviewers = [selfUser]
         }

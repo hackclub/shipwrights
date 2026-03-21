@@ -1,5 +1,4 @@
 import { prisma } from './db'
-import { Prisma } from '@prisma/client'
 
 interface User {
   id?: number
@@ -56,18 +55,18 @@ export async function log(data: LogData) {
         userAgent: data.meta?.ua,
         targetId: data.target?.id,
         targetType: data.target?.type,
-        metadata: (data.meta || null) as Prisma.InputJsonValue,
+        metadata: data.meta ? JSON.stringify(data.meta) : null,
         reqMethod: data.req?.method,
         reqUrl: data.req?.url,
-        reqBody: data.req?.body as Prisma.InputJsonValue,
-        reqHeaders: data.req?.headers as Prisma.InputJsonValue,
+        reqBody: data.req?.body !== undefined ? JSON.stringify(data.req.body) : null,
+        reqHeaders: data.req?.headers ? JSON.stringify(data.req.headers) : null,
         resStatus: data.res?.status,
-        resBody: data.res?.body as Prisma.InputJsonValue,
-        resHeaders: data.res?.headers as Prisma.InputJsonValue,
+        resBody: data.res?.body !== undefined ? JSON.stringify(data.res.body) : null,
+        resHeaders: data.res?.headers ? JSON.stringify(data.res.headers) : null,
         errorName: data.error?.name,
         errorMsg: data.error?.message,
         errorStack: data.error?.stack,
-        changes: data.changes as Prisma.InputJsonValue,
+        changes: data.changes ? JSON.stringify(data.changes) : null,
       },
     })
   } catch (e) {

@@ -56,7 +56,7 @@ export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({
         status: 'pending',
         reviewerId: null,
         returnReason: null,
-        decisions: [],
+        decisions: '[]',
       },
     })
 
@@ -93,7 +93,7 @@ export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({
     })
     if (!review) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-    let decisions = (review.decisions as Decision[] | null) || []
+    let decisions = JSON.parse(review.decisions || '[]') as Decision[]
 
     if (updates && Array.isArray(updates)) {
       decisions = decisions.map((d) => {
@@ -116,7 +116,7 @@ export const PATCH = yswsApiWithParams(PERMS.ysws_edit)(async ({
         status: action === 'complete' ? 'done' : 'returned',
         returnReason: action === 'return' ? returnReason : null,
         reviewerId: user.id,
-        decisions: JSON.parse(JSON.stringify(decisions)),
+        decisions: JSON.stringify(decisions),
       },
     })
 

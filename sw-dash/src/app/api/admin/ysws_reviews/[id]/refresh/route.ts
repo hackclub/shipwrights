@@ -47,7 +47,7 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params, user }) 
     .filter((d) => d.created_at)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
-  const existingDecisions = (review.decisions as any[]) || []
+  const existingDecisions = JSON.parse((review.decisions as string) || '[]') as any[]
 
   const devlogs: any[] = []
   const commits: any[] = []
@@ -124,9 +124,9 @@ export const POST = yswsApiWithParams(PERMS.ysws_edit)(async ({ params, user }) 
   await prisma.yswsReview.update({
     where: { id: yswsId },
     data: {
-      devlogs: JSON.parse(JSON.stringify(devlogs)),
-      commits: JSON.parse(JSON.stringify(commits)),
-      decisions: JSON.parse(JSON.stringify(decisions)),
+      devlogs: JSON.stringify(devlogs),
+      commits: JSON.stringify(commits),
+      decisions: JSON.stringify(decisions),
     },
   })
 
