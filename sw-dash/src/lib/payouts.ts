@@ -19,6 +19,7 @@ const RATES: Record<string, number> = {
 }
 
 const MULTI = [1.75, 1.5, 1.25]
+const PAYOUT_LB_MODE: 'daily' | 'weekly' = 'daily'
 
 export function getBounty(type: string | null): number {
   if (!type) return 1
@@ -27,18 +28,35 @@ export function getBounty(type: string | null): number {
 
 export async function getMulti(userId: number): Promise<number> {
   const now = new Date()
-  const day = now.getDay()
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - day)
-  weekStart.setHours(0, 0, 0, 0)
-  const nextSunday = new Date(weekStart)
-  nextSunday.setDate(weekStart.getDate() + 7)
+  let periodStart: Date
+  let periodEnd: Date
+
+  if (PAYOUT_LB_MODE === 'weekly') {
+    const day = now.getDay()
+    periodStart = new Date(now)
+    periodStart.setDate(now.getDate() - day)
+    periodStart.setHours(0, 0, 0, 0)
+    periodEnd = new Date(periodStart)
+    periodEnd.setDate(periodStart.getDate() + 7)
+  } else {
+    // then it's daily mode: 12:00 UTC to 23:59 UTC
+    periodStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 0, 0, 0)
+    )
+
+    if (now.getUTCHours() < 12) {
+      periodStart.setUTCDate(periodStart.getUTCDate() - 1)
+    }
+
+    periodEnd = new Date(periodStart)
+    periodEnd.setUTCDate(periodStart.getUTCDate() + 1)
+  }
 
   const myCount = await prisma.shipCert.count({
     where: {
       reviewerId: userId,
       status: { in: ['approved', 'rejected'] },
-      reviewCompletedAt: { gte: weekStart, lt: nextSunday },
+      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
     },
   })
 
@@ -53,7 +71,7 @@ export async function getMulti(userId: number): Promise<number> {
     by: ['reviewerId'],
     where: {
       status: { in: ['approved', 'rejected'] },
-      reviewCompletedAt: { gte: weekStart, lt: nextSunday },
+      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
       reviewerId: sysUser ? { not: sysUser.id } : undefined,
     },
     _count: true,

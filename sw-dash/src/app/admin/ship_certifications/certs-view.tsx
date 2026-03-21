@@ -149,7 +149,7 @@ export function CertsView({ initial }: Props) {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [now, setNow] = useState(Date.now())
-  const [lbMode, setLbMode] = useState('weekly')
+  const [lbMode, setLbMode] = useState('daily')
   const [selectedTypes, setSelectedTypes] = useState<string[]>(
     params.get('type') ? params.get('type')!.split(',') : []
   )
@@ -334,6 +334,12 @@ export function CertsView({ initial }: Props) {
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-amber-400 font-mono text-sm">Leaderboard</h2>
             <div className="flex gap-1">
+              <button
+                onClick={() => setLbMode('daily')}
+                className={`font-mono text-xs px-2 py-1 rounded-xl border transition-all ${lbMode === 'daily' ? 'bg-green-900/50 text-green-300 border-green-600' : 'bg-zinc-900/50 text-gray-400 border-gray-700 hover:bg-zinc-800'}`}
+              >
+                Daily
+              </button>
               <button
                 onClick={() => setLbMode('weekly')}
                 className={`font-mono text-xs px-2 py-1 rounded-xl border transition-all ${lbMode === 'weekly' ? 'bg-cyan-900/50 text-cyan-300 border-cyan-600' : 'bg-zinc-900/50 text-gray-400 border-gray-700 hover:bg-zinc-800'}`}
