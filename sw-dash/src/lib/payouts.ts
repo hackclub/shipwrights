@@ -95,6 +95,7 @@ export async function calc(params: {
   projectType: string | null
   certCreatedAt: Date
   customBounty?: number | null
+  status?: string | null
 }) {
   const { userId, projectType, certCreatedAt, customBounty } = params
   const base = getBounty(projectType)
@@ -134,7 +135,31 @@ export async function calc(params: {
     oldProjectMulti = 1.2
   }
 
-  const totalMulti = rankMulti * firstReviewMulti * dailyGrindMulti * oldProjectMulti
+  let newProjectPenalty = 1
+  if (hoursOld <= 24) {
+    const oldProjectsInQueue = await prisma.shipCert.count({
+      where: {
+        status: 'pending',
+        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+    })
+    if (oldProjectsInQueue > 7) {
+      newProjectPenalty = 0.8
+    }
+  }
+
+  let rejectionPenalty = 1
+  if (params.status === 'rejected') {
+    rejectionPenalty = 0.8
+  }
+
+  const totalMulti =
+    rankMulti *
+    firstReviewMulti *
+    dailyGrindMulti *
+    oldProjectMulti *
+    newProjectPenalty *
+    rejectionPenalty
 
   const total = base * totalMulti + (customBounty || 0)
 

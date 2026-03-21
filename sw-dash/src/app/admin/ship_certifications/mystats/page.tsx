@@ -225,11 +225,15 @@ export default async function Stats() {
                 </h3>
                 <div className="space-y-1">
                   <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
-                    <span className="text-gray-300 font-mono text-sm">Desktop, Mobile, PyPI, Minecraft Mods, Other</span>
+                    <span className="text-gray-300 font-mono text-sm">
+                      Desktop, Mobile, PyPI, Minecraft Mods, Other
+                    </span>
                     <span className="text-purple-400 font-mono font-bold text-lg">1.5 🍪</span>
                   </div>
                   <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
-                    <span className="text-gray-300 font-mono text-sm">CLI, Cargo, Steam Games, Extension, Hardware</span>
+                    <span className="text-gray-300 font-mono text-sm">
+                      CLI, Cargo, Steam Games, Extension, Hardware
+                    </span>
                     <span className="text-purple-400 font-mono font-bold text-lg">1.0 🍪</span>
                   </div>
                   <div className="flex justify-between items-center p-2 rounded hover:bg-white/5 transition-colors">
