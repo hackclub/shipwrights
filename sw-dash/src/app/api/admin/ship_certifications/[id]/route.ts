@@ -8,6 +8,7 @@ import { bust } from '@/lib/cache'
 import { calc } from '@/lib/payouts'
 import { withParams } from '@/lib/api'
 import { create as createYsws } from '@/lib/ysws'
+import { updateStreakOnReview } from '@/lib/streaks'
 
 interface InternalNote {
   id: string
@@ -304,96 +305,8 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
     }
 
     if (verdict) {
-      const getESTComponents = (date: Date) => {
-        const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/New_York',
-          year: 'numeric',
-          month: 'numeric',
-          day: 'numeric',
-          hour: 'numeric',
-          hourCycle: 'h23',
-        }).formatToParts(date)
-        const getVal = (type: string) => parseInt(parts.find((p) => p.type === type)?.value || '0')
-
-        return {
-          y: getVal('year'),
-          m: getVal('month') - 1,
-          d: getVal('day'),
-          h: getVal('hour'),
-        }
-      }
-
-      const now = new Date()
-      const { y, m, d } = getESTComponents(now)
-
-      const cand1 = new Date(Date.UTC(y, m, d, 5, 0, 0, 0)) // 5 AM UTC
-      const cand2 = new Date(Date.UTC(y, m, d, 4, 0, 0, 0)) // 4 AM UTC
-
-      const check1 = getESTComponents(cand1)
-
-      let startOfTodayUTC = cand1
-      if (check1.h !== 0) {
-        startOfTodayUTC = cand2
-      }
-
-      const todayCount = await prisma.shipCert.count({
-        where: {
-          reviewerId: certifierId !== undefined ? certifierId : user.id,
-          status: { in: ['approved', 'rejected'] },
-          reviewCompletedAt: {
-            gte: startOfTodayUTC,
-          },
-        },
-      })
-
-      if (todayCount >= 7) {
-        const userIdToUpdate = certifierId !== undefined ? certifierId : user.id
-        const currentUser = await prisma.user.findUnique({
-          where: { id: userIdToUpdate },
-          select: { streak: true, lastReviewDate: true },
-        })
-
-        if (currentUser) {
-          let newStreak = currentUser.streak
-          let shouldUpdate = false
-
-          const todayNormalized = new Date(Date.UTC(y, m, d))
-          const yesterdayNormalized = new Date(todayNormalized)
-          yesterdayNormalized.setDate(yesterdayNormalized.getDate() - 1)
-
-          let lastReviewNormalized = null
-          if (currentUser.lastReviewDate) {
-            const ld = currentUser.lastReviewDate
-
-            lastReviewNormalized = new Date(
-              Date.UTC(ld.getUTCFullYear(), ld.getUTCMonth(), ld.getUTCDate())
-            )
-          }
-
-          if (
-            !lastReviewNormalized ||
-            lastReviewNormalized.getTime() < yesterdayNormalized.getTime()
-          ) {
-            newStreak = 1
-            shouldUpdate = true
-          } else if (lastReviewNormalized.getTime() === yesterdayNormalized.getTime()) {
-            newStreak += 1
-            shouldUpdate = true
-          } else if (lastReviewNormalized.getTime() === todayNormalized.getTime()) {
-            shouldUpdate = false
-          }
-
-          if (shouldUpdate) {
-            await prisma.user.update({
-              where: { id: userIdToUpdate },
-              data: {
-                streak: newStreak,
-                lastReviewDate: todayNormalized,
-              },
-            })
-          }
-        }
-      }
+      const userIdToUpdate = certifierId !== undefined ? certifierId : user.id
+      await updateStreakOnReview(userIdToUpdate)
     }
 
     if (
