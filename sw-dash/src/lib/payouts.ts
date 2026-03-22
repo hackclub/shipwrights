@@ -93,80 +93,19 @@ export async function getMulti(userId: number): Promise<number> {
 export async function calc(params: {
   userId: number
   projectType: string | null
-  certCreatedAt: Date
   customBounty?: number | null
-  status?: string | null
 }) {
-  const { userId, projectType, certCreatedAt, customBounty } = params
+  const { userId, projectType, customBounty } = params
   const base = getBounty(projectType)
 
   const rankMulti = await getMulti(userId)
 
-  const { start: periodStart, end: periodEnd } = getDailyPeriod()
-
-  const myCountToday = await prisma.shipCert.count({
-    where: {
-      reviewerId: userId,
-      status: { in: ['approved', 'rejected'] },
-      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
-    },
-  })
-
-  // First Review
-  let firstReviewMulti = 1
-  if (myCountToday === 0) {
-    firstReviewMulti = 1.5
-  }
-
-  // Daily Grind
-  let dailyGrindMulti = 1
-  if (myCountToday >= 15) {
-    dailyGrindMulti = 1.3
-  } else if (myCountToday >= 7) {
-    dailyGrindMulti = 1.2
-  }
-
-  // Old Projects
-  let oldProjectMulti = 1
-  const hoursOld = (Date.now() - certCreatedAt.getTime()) / (1000 * 60 * 60)
-  if (hoursOld > 4 * 24) {
-    oldProjectMulti = 1.5
-  } else if (hoursOld > 24) {
-    oldProjectMulti = 1.2
-  }
-
-  let newProjectPenalty = 1
-  if (hoursOld <= 24) {
-    const oldProjectsInQueue = await prisma.shipCert.count({
-      where: {
-        status: 'pending',
-        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-      },
-    })
-    if (oldProjectsInQueue > 7) {
-      newProjectPenalty = 0.8
-    }
-  }
-
-  let rejectionPenalty = 1
-  if (params.status === 'rejected') {
-    rejectionPenalty = 0.8
-  }
-
-  const totalMulti =
-    rankMulti *
-    firstReviewMulti *
-    dailyGrindMulti *
-    oldProjectMulti *
-    newProjectPenalty *
-    rejectionPenalty
-
-  const total = base * totalMulti + (customBounty || 0)
+  const total = base * rankMulti + (customBounty || 0)
 
   return {
     cookies: total,
     base,
-    multi: totalMulti,
+    multi: rankMulti,
     customBounty: customBounty || 0,
   }
 }

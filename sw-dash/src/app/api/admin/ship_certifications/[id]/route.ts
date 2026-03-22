@@ -243,9 +243,7 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
         const payout = await calc({
           userId: payoutUserId,
           projectType: cert.projectType,
-          certCreatedAt: cert.createdAt,
           customBounty: cert.customBounty,
-          status: verdict.toLowerCase(),
         })
         updateData.cookiesEarned = payout.cookies
         updateData.payoutMulti = Number(payout.multi.toFixed(2))

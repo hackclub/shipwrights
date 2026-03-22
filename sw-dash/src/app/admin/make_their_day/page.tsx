@@ -86,7 +86,9 @@ export default function MakeTheirDay() {
             </h1>
             <p className="text-zinc-400 text-sm md:text-base leading-relaxed mb-8">
               Send stickers directly to projects that made you automatically say{' '}
-              <span className="text-pink-300 font-semibold">&quot;Wow... this is so cool&quot;</span>
+              <span className="text-pink-300 font-semibold">
+                &quot;Wow... this is so cool&quot;
+              </span>
               . Make someone&apos;s day by nominating their project below! :333
             </p>
 
@@ -150,9 +152,7 @@ export default function MakeTheirDay() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-zinc-500 text-xs font-mono">
-                      {r.requester.username}
-                    </span>
+                    <span className="text-zinc-500 text-xs font-mono">{r.requester.username}</span>
                     <span className="text-zinc-600 text-xs font-mono">
                       {new Date(r.createdAt).toLocaleDateString()}
                     </span>
