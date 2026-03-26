@@ -181,8 +181,8 @@ model ShipCert {
   customBounty      Float?
   aiSummary         String?   @db.Text
 
-  rejectionReason      String?   @db.VarChar(64)
-  rejectionExplanation String?   @db.Text
+  rejectionReason      String? @db.VarChar(64)
+  rejectionExplanation String? @db.Text
 
   yswsReturnReason String?   @db.Text
   yswsReturnedBy   String?
