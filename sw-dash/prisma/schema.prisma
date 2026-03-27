@@ -452,3 +452,12 @@ model SpotCheck {
   @@index([status])
   @@map("spot_checks")
 }
+
+model MetaPost {
+  id        Int      @id @default(autoincrement())
+  text      String   @db.Text
+  votes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("meta_posts")
+}
