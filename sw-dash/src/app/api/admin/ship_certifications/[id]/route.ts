@@ -464,6 +464,19 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
           }
         })
       }
+
+      if (verdict.toLowerCase() === 'rejected') {
+        after(() => {
+          fetch(`${process.env.SW_AI_URL}/analysis/rejection`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': process.env.SW_API_KEY ?? '',
+            },
+            body: JSON.stringify({ cert_id: updated.id }),
+          }).catch(() => {})
+        })
+      }
     }
 
     if (verdict) {
