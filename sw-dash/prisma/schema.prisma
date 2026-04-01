@@ -456,6 +456,7 @@ model SpotCheck {
 model MetaPost {
   id             Int      @id @default(autoincrement())
   text           String   @db.Text
+  votes          Int      @default(0)
   upvotes        Int      @default(0)
   downvotes      Int      @default(0)
   metaMessageTs  String?  @db.VarChar(50)
