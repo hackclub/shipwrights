@@ -128,7 +128,7 @@ async function syncYswsReviews(pg: Pool): Promise<number> {
       values.push(...row)
       const p = (n: number) => `$${b + n}`
       const jsonbCols = new Set([6, 7, 8])
-      return `(${row.map((_, n) => jsonbCols.has(n + 1) ? `${p(n + 1)}::jsonb` : p(n + 1)).join(', ')})`
+      return `(${row.map((_, n) => (jsonbCols.has(n + 1) ? `${p(n + 1)}::jsonb` : p(n + 1))).join(', ')})`
     })
 
     await pg.query(
