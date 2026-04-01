@@ -5,4 +5,5 @@ ALTER TABLE `meta_posts`
 
 UPDATE `meta_posts` SET `upvotes` = GREATEST(`votes`, 0), `downvotes` = GREATEST(-`votes`, 0);
 
-ALTER TABLE `meta_posts` DROP COLUMN `votes`;
+-- NOTE: Intentionally keeping the `votes` column for backward compatibility with existing consumers (e.g., sw-bot).
+--       Once all consumers are migrated to use `upvotes` and `downvotes`, a separate migration can safely drop `votes`.
