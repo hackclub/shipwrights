@@ -140,8 +140,10 @@ def analyze_rejection_reason():
     data = request.json
     cert_id = data.get("cert_id")
 
+    logger.info(f"[rejection] looking up cert_id={cert_id!r} (type={type(cert_id).__name__})")
     cert_data = get_cert_rejection_info(cert_id)
-    if not cert_data:
+    logger.info(f"[rejection] cert_data={cert_data!r}")
+    if cert_data is None:
         return jsonify({"error": "cert not found"}), 404
 
     prompt = format_rejection_analysis_prompt(

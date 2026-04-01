@@ -68,12 +68,13 @@ def get_cert_rejection_info(cert_id):
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
-            """
-            SELECT reviewFeedback, description FROM ship_certs WHERE id = %s
-            """, (cert_id,)
+            "SELECT reviewFeedback, description FROM ship_certs WHERE id = %s",
+            (cert_id,)
         )
-        result = cursor.fetchone()
-        return result if result else None
+        return cursor.fetchone()
+    except Exception as e:
+        print(f"[get_cert_rejection_info] DB error for cert_id={cert_id!r}: {e}")
+        return None
     finally:
         cursor.close()
         conn.close()
