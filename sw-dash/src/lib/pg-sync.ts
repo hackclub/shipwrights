@@ -28,38 +28,34 @@ async function syncShipCerts(pg: Pool): Promise<number> {
 
     const values: unknown[] = []
     const placeholders = rows.map((r, i) => {
-      const b = i * 22
-      values.push(
-        r.id, // 1
-        r.ftProjectId, // 2
-        r.ftSlackId, // 3
-        r.ftUsername, // 4
-        r.projectName, // 5
-        r.projectType, // 6
-        r.description, // 7
-        r.demoUrl, // 8
-        r.repoUrl, // 9
-        r.readmeUrl, // 10
-        r.devTime, // 11
-        r.status, // 12
-        r.reviewerId, // 13
-        r.reviewFeedback, // 14
-        r.proofVideoUrl, // 15
-        r.reviewStartedAt, // 16
-        r.reviewCompletedAt, // 17
-        r.syncedToFt != null ? Boolean(r.syncedToFt) : null, // 18
-        r.yswsReturnReason, // 19
-        r.yswsReturnedBy, // 20
-        r.yswsReturnedAt, // 21
-        r.createdAt // 22
-      )
+      const row = [
+        r.id,
+        r.ftProjectId,
+        r.ftSlackId,
+        r.ftUsername,
+        r.projectName,
+        r.projectType,
+        r.description,
+        r.demoUrl,
+        r.repoUrl,
+        r.readmeUrl,
+        r.devTime,
+        r.status,
+        r.reviewerId,
+        r.reviewFeedback,
+        r.proofVideoUrl,
+        r.reviewStartedAt,
+        r.reviewCompletedAt,
+        r.syncedToFt != null ? Boolean(r.syncedToFt) : null,
+        r.yswsReturnReason,
+        r.yswsReturnedBy,
+        r.yswsReturnedAt,
+        r.createdAt,
+      ]
+      const b = i * row.length
+      values.push(...row)
       const p = (n: number) => `$${b + n}`
-      return `(
-        ${p(1)}, ${p(2)}, ${p(3)}, ${p(4)}, ${p(5)}, ${p(6)},
-        ${p(7)}, ${p(8)}, ${p(9)}, ${p(10)}, ${p(11)}, ${p(12)},
-        ${p(13)}, ${p(14)}, ${p(15)}, ${p(16)}, ${p(17)}, ${p(18)},
-        ${p(19)}, ${p(20)}, ${p(21)}, ${p(22)}
-      )`
+      return `(${row.map((_, n) => p(n + 1)).join(', ')})`
     })
 
     await pg.query(
@@ -116,8 +112,7 @@ async function syncYswsReviews(pg: Pool): Promise<number> {
 
     const values: unknown[] = []
     const placeholders = rows.map((r, i) => {
-      const b = i * 10
-      values.push(
+      const row = [
         r.id,
         r.shipCertId,
         r.status,
@@ -127,10 +122,13 @@ async function syncYswsReviews(pg: Pool): Promise<number> {
         r.commits == null ? null : JSON.stringify(r.commits),
         r.decisions == null ? null : JSON.stringify(r.decisions),
         r.createdAt,
-        r.updatedAt
-      )
+        r.updatedAt,
+      ]
+      const b = i * row.length
+      values.push(...row)
       const p = (n: number) => `$${b + n}`
-      return `(${p(1)}, ${p(2)}, ${p(3)}, ${p(4)}, ${p(5)}, ${p(6)}::jsonb, ${p(7)}::jsonb, ${p(8)}::jsonb, ${p(9)}, ${p(10)})`
+      const jsonbCols = new Set([6, 7, 8])
+      return `(${row.map((_, n) => jsonbCols.has(n + 1) ? `${p(n + 1)}::jsonb` : p(n + 1)).join(', ')})`
     })
 
     await pg.query(
