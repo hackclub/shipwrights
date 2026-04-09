@@ -1,21 +1,21 @@
 import { prisma } from './db'
 
 const RATES: Record<string, number> = {
-  'Web App': 0.75,
-  'Chat Bot': 0.75,
+  'Web App': 0.6,
+  'Chat Bot': 0.6,
   Extension: 1.0,
   CLI: 1.0,
   Cargo: 1.0,
-  'Desktop App (Windows)': 1.2,
-  'Minecraft Mods': 1.4,
-  'Android App': 1.4,
-  'iOS App': 1.4,
+  'Desktop App (Windows)': 1.5,
+  'Minecraft Mods': 1.5,
+  'Android App': 1.5,
+  'iOS App': 1.5,
   'Steam Games': 1.0,
   PyPI: 1.5,
-  'Desktop App (Linux)': 1.4,
-  'Desktop App (macOS)': 1.4,
+  'Desktop App (Linux)': 1.5,
+  'Desktop App (macOS)': 1.5,
   Hardware: 1.0,
-  Other: 1.4,
+  Other: 1.5,
 }
 
 const MULTI = [1.75, 1.5, 1.25]
@@ -84,7 +84,7 @@ export async function getMulti(userId: number): Promise<number> {
     orderBy: { _count: { reviewerId: 'desc' } },
   })
 
-  const pos = lb.findIndex((r) => r.reviewerId === userId)
+  const pos = lb.findIndex((r: any) => r.reviewerId === userId)
   if (pos < 0) return 1
   if (pos < 3) return MULTI[pos]
   return 1
@@ -93,19 +93,76 @@ export async function getMulti(userId: number): Promise<number> {
 export async function calc(params: {
   userId: number
   projectType: string | null
+  certCreatedAt: Date
   customBounty?: number | null
+  status: 'approved' | 'rejected'
 }) {
-  const { userId, projectType, customBounty } = params
+  const { userId, projectType, certCreatedAt, customBounty, status } = params
   const base = getBounty(projectType)
 
   const rankMulti = await getMulti(userId)
 
-  const total = base * rankMulti + (customBounty || 0)
+  const { start: periodStart, end: periodEnd } = getDailyPeriod()
+
+  const myCountToday = await prisma.shipCert.count({
+    where: {
+      reviewerId: userId,
+      status: { in: ['approved', 'rejected'] },
+      reviewCompletedAt: { gte: periodStart, lt: periodEnd },
+    },
+  })
+
+  // First Review
+  let firstReviewMulti = 1
+  if (myCountToday === 0) {
+    firstReviewMulti = 1.5
+  }
+
+  // Daily Grind
+  let dailyGrindMulti = 1
+  if (myCountToday >= 15) {
+    dailyGrindMulti = 1.3
+  } else if (myCountToday >= 7) {
+    dailyGrindMulti = 1.2
+  }
+
+  // Rejection penalty
+  let rejectionMulti = 1
+  if (status === 'rejected') {
+    rejectionMulti = 0.8
+  }
+
+  // Old Projects
+  let oldProjectMulti = 1
+  const hoursOld = (Date.now() - certCreatedAt.getTime()) / (1000 * 60 * 60)
+  if (hoursOld > 4 * 24) {
+    oldProjectMulti = 1.5
+  } else if (hoursOld > 24) {
+    oldProjectMulti = 1.2
+  }
+
+  // Skip queue bonus
+  let queueMulti = 1
+  if (hoursOld <= 24) {
+    const oldPendingCount = await prisma.shipCert.count({
+      where: {
+        status: 'pending',
+        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      }
+    })
+    if (oldPendingCount > 10) {
+      queueMulti = 0.9
+    }
+  }
+
+  const totalMulti = rankMulti * firstReviewMulti * dailyGrindMulti * rejectionMulti * oldProjectMulti * queueMulti
+
+  const total = base * totalMulti + (customBounty || 0)
 
   return {
     cookies: total,
     base,
-    multi: rankMulti,
+    multi: totalMulti,
     customBounty: customBounty || 0,
   }
 }
