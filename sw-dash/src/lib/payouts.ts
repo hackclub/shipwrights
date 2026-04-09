@@ -147,15 +147,16 @@ export async function calc(params: {
     const oldPendingCount = await prisma.shipCert.count({
       where: {
         status: 'pending',
-        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-      }
+        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
     })
     if (oldPendingCount > 10) {
       queueMulti = 0.9
     }
   }
 
-  const totalMulti = rankMulti * firstReviewMulti * dailyGrindMulti * rejectionMulti * oldProjectMulti * queueMulti
+  const totalMulti =
+    rankMulti * firstReviewMulti * dailyGrindMulti * rejectionMulti * oldProjectMulti * queueMulti
 
   const total = base * totalMulti + (customBounty || 0)
 
