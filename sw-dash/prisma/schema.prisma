@@ -410,13 +410,13 @@ model SysLog {
 }
 
 model StickerRequest {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   ftProjectId String
   requestedBy Int
-  shipped     Boolean  @default(false)
+  shipped     Boolean   @default(false)
   shippedAt   DateTime?
-  createdAt   DateTime @default(now())
-  requester   User     @relation(fields: [requestedBy], references: [id])
+  createdAt   DateTime  @default(now())
+  requester   User      @relation(fields: [requestedBy], references: [id])
 
   @@index([requestedBy])
   @@map("sticker_requests")

@@ -6,10 +6,9 @@ load_dotenv()
 SW_API_KEY = os.environ.get("SW_API_KEY")
 PORT = 45200
 OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY")
-AI_MODEL = "google/gemini-3-flash-preview"
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.ERROR,
     format='[%(asctime)s] %(levelname)s: %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -52,6 +51,20 @@ TYPES = [
   "Other",
 ]
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-GPC": "1",
+    "Priority": "u=0, i",
+    "TE": "trailers",
+}
 
 def format_messages(ticket_messages, show_discussion=True):
     conversation=""
@@ -166,7 +179,7 @@ def format_project_summary_prompt(project_name, project_type, readme_content, de
 Hey you are a project review assistant, 
 You need to help the reviewer to make an accurate decision by checking the project, you need to explain to them what's the project how to test it, is it fine from the first look or not
 They are required to make a video testing the project but may need more explanation about how to run it and what is it ?
-You need to provide helpful things to make it as easy as possible to get the project up and test it well or reject it from the first look because of a reamde or a bad demo
+You need to provide helpful things to make it as easy as possible to get the project up and test it well or reject it from the first look because of a remade or a bad demo
 
 
 you should get all the info and if you not sure just say this pls
@@ -265,7 +278,7 @@ Repo URL: {repo_url}
 ## README Content
 {readme_content}
 
-You need to be helpufl and provide as much "unnoticable info" or hard ones, don't try to give a reject or accept, just your thoughts
+You need to be helpufl and provide as much "unnoticeable info" or hard ones, don't try to give a reject or accept, just your thoughts
 But try to lean towards a one, like if it's really obvious just say it and try to be really concise but detailed for hard/weird projects
 
 ## Response Format
@@ -324,7 +337,7 @@ def get_readme(url):
             return "Readme doesn't exist"
         return ""
     except Exception as e:
-        print(f"Error occured whilst fetching readme for {url}: {e}")
+        print(f"Error occurred whilst fetching readme for {url}: {e}")
         return ""
 
 def get_releases(url):
@@ -377,8 +390,48 @@ def get_releases(url):
             "hints": list(set(hints)),
         }
     except Exception as e:
-        print(f"Error occured whilst fetching releases for {url}: {e}")
+        print(f"Error occurred whilst fetching releases for {url}: {e}")
         return data
+
+def get_first_commit_date(repo_url):
+    if not repo_url or "github.com" not in repo_url:
+        return None
+    try:
+        match = re.search(r'github\.com/([^/]+)/([^/]+)', repo_url)
+        if not match:
+            return None
+        owner, repo = match.groups()
+        repo = repo.replace(".git", "")
+
+        res = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=1",
+            timeout=10,
+            headers={"Accept": "application/vnd.github.v3+json"},
+        )
+        if not res.ok:
+            return None
+
+        link_header = res.headers.get("Link", "")
+        last_url = None
+        for part in link_header.split(","):
+            if 'rel="last"' in part:
+                last_url = part.split(";")[0].strip().strip("<>")
+                break
+
+        if last_url:
+            res = requests.get(last_url, timeout=10, headers={"Accept": "application/vnd.github.v3+json"})
+            if not res.ok:
+                return None
+
+        commits = res.json()
+        if not commits:
+            return None
+
+        return commits[-1]["commit"]["committer"]["date"]
+    except Exception as e:
+        print(f"Error fetching first commit date for {repo_url}: {e}")
+        return None
+
 
 def check_type(data: dict) -> dict:
     readme = get_readme(data.get("readmeUrl", ""))
@@ -491,7 +544,101 @@ def format_vibes_message(tickets, old_tickets):
 {{"positive": {{"result": true, "reason": "short but detailed", "sentiment": "number from 0 to 1"}}, "quotes": [{{"ticket_id": "123", "text": "quote", "reason": "short but detailed"}}], "suggestion": {{"action": "what", "reason": "short but detailed referencing the ticket this originates from."}}}}"""""
 
 
-def get_ai_response(content=None, tokens=1000, timeout=60, keys=()):
+def format_submission_validation_message(readme, readme_link, demo_link, repo_url, description, is_updated, ai_declaration):
+    project_releases = get_releases(repo_url)
+
+    try:
+        demo_status = requests.get(url=demo_link, headers=HEADERS, timeout=10, allow_redirects=True).status_code
+        logger.error(f"[demo check] {demo_link} -> {demo_status}")
+        if demo_status < 400:
+            return_code = "Reachable"
+        elif demo_status in (401, 403, 406, 429):
+            return_code = "Reachable (access restricted to bots/crawlers, likely works in browser)"
+        elif demo_status == 404:
+            return_code = "Not Found (404)"
+        elif demo_status >= 500:
+            return_code = f"Server Error ({demo_status})"
+        else:
+            return_code = f"Returned {demo_status}"
+    except Exception as e:
+        logger.error(f"[demo check] {demo_link} -> exception: {e}")
+        return_code = "Could not connect (DNS failure or host unreachable)"
+
+    if not project_releases.get("has"):
+        project_releases = "Failed to fetch. Please ignore."
+
+    return f""" You are an automation being ran for the shipwrights to ensure that user submissions are valid. You will look through the following submission and decide if something looks off.
+        
+        #Valid submission rules
+            - A submission MUST have a readme
+            - Submission Readme's MUST explain simply what the project does and how to use it but this may depend on project complexity. Complex projects require complex explanations whilst a simple project such as a todo list may not require a how to use
+            - Submissions must have a valid demo linked. Websites should be live and hosted. Games should preferably be on itch.io and such.
+            - Demo links must be valid and existing. A broken demo link means an instant rejection.
+            - If a project has a commit made before December 15th 2025, The project MUST be marked as updated.
+            - If a project has been submitted before to any other hackclub program it MUST be marked as updated.
+            - School/College projects are NOT allowed.
+            - If user used AI in their project, they MUST adequately declare it.
+        
+        #Shipwright guidelines
+            - Web Apps: Web apps must have a live demo, this could be GitHub pages, Vercel, Netlify, etc. 
+            - Web Apps Cannot be only local hosting instructions or an ngrok link, cloudflared link or DuckDNS.
+            - We also don’t accept Render, Hugging Face and Railway links
+            - Executable Files: Must be in a GitHub releases as a .exe, .app, .deb or similar and should include instructions on how to run it properly.
+            - Android App: Should be a .apk in a GitHub releases (like an executable) or in the Google Play Store.
+            - iOS  App: Should be a TestFlight or the App Store.
+            - APIs: Needs to be on something like Swagger where can test each endpoint and must have a detailed README.
+            - Bots: Bots need to be hosted and online in order to test it out. Shipwright should never host it themselves. Demo link should be to the channel or server or a bot invite. proper documentation on each command is required.
+            - Readme's MUST be raw.
+        
+        #Why
+            - These submissions are sent for review by the Shipwrights team. The Shipwrights team decide if submissions are valid through the following criteria.
+        
+        #Task
+            - You are being asked to help find mistakes before they even reach the Shipwrights team.
+            - You are to identify what is being done incorrectly by a shipper and provide a detailed explanation of why it is incorrect.
+            - You primary job is to flag mistakes helping users understand what they did wrong and how they could potentially fix it.
+            - You MUST not directly quote the Shipwrights guidelines above.
+            - You MUST not give the user direct instruction which includes giving them a readme to copy and paste.
+            - You MUST only ever guide users and NOT provide step by step instructions.
+            - You MUST never link the users outside of the platform.
+            - You MUST phrase your messages in a friendly and clear manner.
+            - You MUST make it clear that this is only a check and they can still continue with shipping if its a false alarm.
+            - You MUST always return output in the form of JSON to be parsed by the Shipwrights team.
+        
+        #Notes
+            - If a project is relatively simple then their readme may also be simple. For example a static website is allowed to only have a brief summary of what it does.
+            - Try to be more lenient on users with easier projects as they tend to be newer users requiring more guidance.
+            - Users are allowed to discuss their personal experience creating a project in their readme.
+            - Projects may be distributed alternatively through package managers which include LuaRocks, Cargo and PyPi
+            - Users shipping APIs may link documentation and not write it directly inside the readme.
+            - Simple webapps don't need to include usage instructions but they should optionally do it.
+            - Users often add env based install guides and guides on how to compile in their readme, That should not mean an automatic rejection if an exe is required. Users often provide both a ready exe and a guide to compile/install. This also applies to webapps as often live applications are included too.
+            - For simple issues you should flag them as warnings not errors.
+            - You should not push users to include usage instructions for simple webapps.
+        
+        #AI Declaration
+            - Users MUST declare if their readme was AI generated.
+            - You may be able to tell if a readme was AI generated via overuse of emojis and the presence of comments inside the raw readme. Another way is unfilled placeholder which include for example "YOUR PROJECT NAME", "YOUR REPO LINK", etc.
+            - If you are unsure if the AI Declaration is sufficient then assume it is.
+        
+        #Data
+            - Project Readme: {readme}
+            - Project Demo Link: {demo_link}
+            - Project Description: {description}
+            - Demo link return Code: {return_code}
+            - Project Readme Link: {readme_link}
+            - Project Repo Link: {repo_url}
+            - Project Releases: {project_releases}
+            - Has the project been marked as updated: {is_updated}
+            - Date of project's first commit: {get_first_commit_date(repo_url) or "N/A"}
+            - Project AI Declaration: {ai_declaration}       
+         
+         #JSON Response (no markdown)         
+         Return ONLY valid JSON with no markdown, no code blocks, no explanation:         
+         {{"valid": true|false, "flags": [{{"field": "demo|readme|description|declaration|updated", "severity": "error|warning|suggestion", "message": "Friendly user-facing explanation"}}], "summary": "Overall message shown to the user"}}        
+        """
+
+def get_ai_response(content=None, tokens=1000, timeout=60, ai_model="google/gemini-3-flash-preview", keys=()):
     try:
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
@@ -500,7 +647,7 @@ def get_ai_response(content=None, tokens=1000, timeout=60, keys=()):
                 "Content-Type": "application/json"
             },
             json={
-                "model": AI_MODEL,
+                "model": ai_model,
                 "max_tokens": tokens,
                 "messages": [
                     {
@@ -550,6 +697,3 @@ def get_ai_response(content=None, tokens=1000, timeout=60, keys=()):
         return {"error": "Missing required fields in AI response", "content": content}
 
     return {"error": None, "content": ai_response}
-
-"['action', 'status', 'summary']"
-"helpers.format_summary_prompt(ticket_messages, ticket_question)"

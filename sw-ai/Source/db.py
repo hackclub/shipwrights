@@ -79,6 +79,22 @@ def get_cert_rejection_info(cert_id):
         cursor.close()
         conn.close()
 
+def get_cert(cert_id):
+    conn = db_pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT * FROM ship_certs WHERE id = %s",
+            (cert_id,)
+        )
+        return cursor.fetchone()
+    except Exception as e:
+        print(f"[get_cert_rejection_info] DB error for cert_id={cert_id!r}: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
 def get_recent_tickets():
     conn = db_pool.get_connection()
     cursor = conn.cursor(dictionary=True)

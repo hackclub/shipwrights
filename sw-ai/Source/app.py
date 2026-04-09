@@ -163,7 +163,33 @@ def analyze_rejection_reason():
         "explanation": ai_response["explanation"],
     }), 200
 
+@app.get("/projects/check")
+def check_project():
+    data = request.json
 
+    repo_url = data.get("repo_url", "")
+    readme_url = data.get("readme_url", "")
+    demo_url = data.get("demo_url", data.get("demoUrl", ""))
+    ai_declaration = data.get("ai_declaration", "")
+    is_updated = data.get("is_updated", False)
+    project_description = data.get("project_description", "")
+
+    readme = get_readme(readme_url)
+
+    response = get_ai_response(
+        content=format_submission_validation_message(
+            readme=readme,
+            ai_declaration=ai_declaration,
+            readme_link=readme_url,
+            demo_link=demo_url,
+            repo_url=repo_url,
+            is_updated=is_updated,
+            description=project_description,
+        ),
+        timeout=10,
+    )
+
+    return jsonify(response.get("content", {})), 200
 
 if __name__ == "__main__":
     try:

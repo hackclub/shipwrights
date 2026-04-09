@@ -1,5 +1,5 @@
 import schedule, time, requests, json
-from helpers import OPENROUTER_KEY, AI_MODEL
+from helpers import OPENROUTER_KEY
 from helpers import format_vibes_message, clean_json_response, logger
 from db import save_metrics_history, get_recent_tickets, get_context_tickets
 from datetime import datetime
@@ -18,7 +18,7 @@ def save_metrics():
                 "Content-Type": "application/json"
             },
             json={
-                "model": AI_MODEL,
+                "model": "google/gemini-3-flash-preview",
                 "max_tokens": 1000,
                 "messages": [
                     {
