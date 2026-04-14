@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { api } from '@/lib/api'
+import { fetchUniqueProjectStats } from '@/lib/certs'
 
 export const GET = api()(async () => {
   const logs = await prisma.shipCert.findMany({
@@ -24,23 +25,7 @@ export const GET = api()(async () => {
     take: 300,
   })
 
-  const stats = await prisma.shipCert.groupBy({
-    by: ['status'],
-    _count: true,
-  })
-
-  const totalJudged = await prisma.shipCert.count({
-    where: {
-      status: {
-        not: 'pending',
-      },
-    },
-  })
-
-  const approved = stats.find((s) => s.status === 'approved')?._count || 0
-  const rejected = stats.find((s) => s.status === 'rejected')?._count || 0
-
-  const approvalRate = totalJudged > 0 ? ((approved / totalJudged) * 100).toFixed(1) : 0
+  const { approved, rejected, totalJudged, approvalRate } = await fetchUniqueProjectStats()
 
   const completedReviews = await prisma.shipCert.findMany({
     where: {

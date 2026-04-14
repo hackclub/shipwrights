@@ -146,9 +146,23 @@ export default function Logs() {
               <span className="text-gray-400">Rejected:</span>
               <span className="text-red-400 font-bold">{stats?.rejected || 0}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Rate:</span>
+            <div className="flex items-center gap-2 relative group">
+              <button
+                type="button"
+                className="text-gray-400 cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded"
+                aria-describedby="approval-rate-tooltip-logs"
+              >
+                Rate ⓘ:
+              </button>
               <span className="text-amber-400 font-bold">{stats?.approvalRate || 0}%</span>
+              <div
+                id="approval-rate-tooltip-logs"
+                role="tooltip"
+                className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-opacity z-50"
+              >
+                Based on unique projects, not individual reviews. If a project is rejected then
+                resubmitted and approved, it counts as 1 approval — not 1 rejection + 1 approval.
+              </div>
             </div>
           </div>
         </div>

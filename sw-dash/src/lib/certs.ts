@@ -47,6 +47,58 @@ function fmtDuration(seconds: number): string {
   return `${days}d ${hours}h`
 }
 
+type UniqueProjectRow = { approved: bigint; rejected: bigint }
+
+/**
+ * Count approved/rejected by unique project (latest verdict per ftProjectId).
+ * If a project was rejected 3x then approved, it counts as 1 approval.
+ * Certs with null ftProjectId are counted individually (no dedup possible).
+ * Pass `before` to exclude verdicts completed on or after that date (for yesterday's rate).
+ */
+export async function fetchUniqueProjectStats(before?: Date) {
+  const params: unknown[] = []
+  const scDateFilter = before ? (params.push(before), `AND sc.reviewCompletedAt < ?`) : ''
+  const sc2DateFilter = before ? (params.push(before), `AND sc2.reviewCompletedAt < ?`) : ''
+  const nullDateFilter = before ? (params.push(before), `AND reviewCompletedAt < ?`) : ''
+
+  const rows = await prisma.$queryRawUnsafe<UniqueProjectRow[]>(
+    `
+    SELECT
+      SUM(status = 'approved') AS approved,
+      SUM(status = 'rejected') AS rejected
+    FROM (
+      SELECT ftProjectId, status
+      FROM ship_certs sc
+      WHERE sc.status IN ('approved', 'rejected')
+        AND sc.ftProjectId IS NOT NULL
+        ${scDateFilter}
+        AND sc.id = (
+          SELECT sc2.id FROM ship_certs sc2
+          WHERE sc2.ftProjectId = sc.ftProjectId
+            AND sc2.status IN ('approved', 'rejected')
+            ${sc2DateFilter}
+          ORDER BY sc2.reviewCompletedAt DESC, sc2.id DESC
+          LIMIT 1
+        )
+      UNION ALL
+      SELECT NULL AS ftProjectId, status
+      FROM ship_certs
+      WHERE status IN ('approved', 'rejected')
+        AND ftProjectId IS NULL
+        ${nullDateFilter}
+    ) latest
+  `,
+    ...params
+  )
+
+  const approved = Number(rows[0]?.approved ?? 0)
+  const rejected = Number(rows[0]?.rejected ?? 0)
+  const totalJudged = approved + rejected
+  const approvalRate = totalJudged > 0 ? Number(((approved / totalJudged) * 100).toFixed(1)) : 0
+
+  return { approved, rejected, totalJudged, approvalRate }
+}
+
 // Fetch stats separately - cached independently of sortBy
 async function fetchStats(lbMode: string) {
   const today = new Date()
@@ -81,9 +133,10 @@ async function fetchStats(lbMode: string) {
     yesterdayEndUTC = weekStart // prevCount will be 0, no rank changes displayed
   }
 
-  const [historyRows, statsRows, leaderRows] = await Promise.all([
-    // Historical avg wait (last 14 days) - for trend chart
-    prisma.$queryRaw<{ date: Date; avgWaitSeconds: number }[]>`
+  const [historyRows, statsRows, leaderRows, uniqueStats, uniqueStatsYesterday] = await Promise.all(
+    [
+      // Historical avg wait (last 14 days) - for trend chart
+      prisma.$queryRaw<{ date: Date; avgWaitSeconds: number }[]>`
       SELECT 
         DATE(reviewCompletedAt) as date,
         AVG(TIMESTAMPDIFF(SECOND, createdAt, reviewCompletedAt)) as avgWaitSeconds
@@ -94,8 +147,8 @@ async function fetchStats(lbMode: string) {
       ORDER BY date ASC
     `,
 
-    // Stats + queue in ONE SQL query
-    prisma.$queryRaw<StatsRow[]>`
+      // Stats + queue in ONE SQL query
+      prisma.$queryRaw<StatsRow[]>`
       SELECT
         SUM(status = 'approved') AS approved,
         SUM(status = 'rejected') AS rejected,
@@ -113,9 +166,9 @@ async function fetchStats(lbMode: string) {
       FROM ship_certs
     `,
 
-    // Leaderboard with usernames + rank comparison in ONE query
-    lbMode === 'weekly' || lbMode === 'daily'
-      ? prisma.$queryRaw<LeaderRow[]>`
+      // Leaderboard with usernames + rank comparison in ONE query
+      lbMode === 'weekly' || lbMode === 'daily'
+        ? prisma.$queryRaw<LeaderRow[]>`
           SELECT
             sc.reviewerId AS reviewerId,
             u.username AS username,
@@ -131,7 +184,7 @@ async function fetchStats(lbMode: string) {
             AND sc.reviewCompletedAt < ${weekEnd}
           GROUP BY sc.reviewerId, u.username, u.streak
         `
-      : prisma.$queryRaw<LeaderRow[]>`
+        : prisma.$queryRaw<LeaderRow[]>`
           SELECT
             sc.reviewerId AS reviewerId,
             u.username AS username,
@@ -146,16 +199,21 @@ async function fetchStats(lbMode: string) {
             AND sc.reviewCompletedAt IS NOT NULL
           GROUP BY sc.reviewerId, u.username, u.streak
         `,
-  ])
+
+      // Unique project approval rate (latest verdict per ftProjectId)
+      fetchUniqueProjectStats(),
+      fetchUniqueProjectStats(today),
+    ]
+  )
 
   // Process stats
   const statsRow = statsRows[0]
   const toNum = (val: bigint | null | undefined) => Number(val ?? 0)
-  const approved = toNum(statsRow?.approved)
-  const rejected = toNum(statsRow?.rejected)
   const pending = toNum(statsRow?.pending)
-  const totalJudged = approved + rejected
-  const approvalRate = totalJudged > 0 ? Number(((approved / totalJudged) * 100).toFixed(1)) : 0
+
+  // Use unique-project counts for approval rate (latest verdict per project)
+  const { approved, rejected, totalJudged, approvalRate } = uniqueStats
+  const approvalRateYesterday = uniqueStatsYesterday.approvalRate
 
   const decisionsToday = toNum(statsRow?.decisionsToday)
   const newShipsToday = toNum(statsRow?.newShipsToday)
@@ -165,14 +223,6 @@ async function fetchStats(lbMode: string) {
   const newShipsYesterday = toNum(statsRow?.newShipsYesterday)
   const netFlowYesterday = decisionsYesterday - newShipsYesterday
   const pendingYesterday = pending + decisionsToday - newShipsToday
-
-  const approvedBeforeToday = toNum(statsRow?.approvedBeforeToday)
-  const rejectedBeforeToday = toNum(statsRow?.rejectedBeforeToday)
-  const totalJudgedYesterday = approvedBeforeToday + rejectedBeforeToday
-  const approvalRateYesterday =
-    totalJudgedYesterday > 0
-      ? Number(((approvedBeforeToday / totalJudgedYesterday) * 100).toFixed(1))
-      : 0
 
   const calcDelta = (current: number, previous: number) => {
     if (previous === 0) return current > 0 ? 100 : 0
