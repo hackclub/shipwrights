@@ -84,7 +84,7 @@ async function fetchStats(lbMode: string) {
   const [historyRows, statsRows, leaderRows] = await Promise.all([
     // Historical avg wait (last 14 days) - for trend chart
     prisma.$queryRaw<{ date: Date; avgWaitSeconds: number }[]>`
-      SELECT 
+      SELECT
         DATE(reviewCompletedAt) as date,
         AVG(TIMESTAMPDIFF(SECOND, createdAt, reviewCompletedAt)) as avgWaitSeconds
       FROM ship_certs

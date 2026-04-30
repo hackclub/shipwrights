@@ -33,9 +33,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ft project id? :3' }, { status: 400 })
   }
 
+  const ftId = ftProjectId.trim()
+  const dupe = await prisma.stickerRequest.findFirst({ where: { ftProjectId: ftId } })
+  if (dupe) {
+    return NextResponse.json({ error: 'already on the list!' }, { status: 400 })
+  }
+
   const entry = await prisma.stickerRequest.create({
     data: {
-      ftProjectId: ftProjectId.trim(),
+      ftProjectId: ftId,
       requestedBy: user.id,
     },
     include: { requester: { select: { id: true, username: true, avatar: true } } },

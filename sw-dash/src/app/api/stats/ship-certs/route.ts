@@ -33,7 +33,11 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       getStats('weekly'),
       prisma.shipCert.findMany({
-        where: { status: 'pending', yswsReturnedAt: null },
+        where: {
+          status: 'pending',
+          yswsReturnedAt: null,
+          OR: [{ ftType: { not: 'reship' } }, { ftType: null }],
+        },
         orderBy: { createdAt: 'asc' },
         select: { createdAt: true },
       }),
@@ -55,6 +59,7 @@ export async function GET(req: NextRequest) {
         FROM ship_certs
         WHERE reviewCompletedAt >= ${windowStart}
           AND status IN ('approved', 'rejected')
+          AND (ftType IS NULL OR ftType != 'reship')
         GROUP BY DATE(reviewCompletedAt), status, rejectionReason
         ORDER BY date ASC
       `,
@@ -64,6 +69,7 @@ export async function GET(req: NextRequest) {
           COUNT(*) as shipCount
         FROM ship_certs
         WHERE createdAt >= ${windowStart}
+          AND (ftType IS NULL OR ftType != 'reship')
         GROUP BY DATE(createdAt)
         ORDER BY date ASC
       `,

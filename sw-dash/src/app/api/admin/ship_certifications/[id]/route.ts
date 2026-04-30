@@ -469,15 +469,42 @@ export const PATCH = withParams(PERMS.certs_edit)(async ({ user, req, params, ip
       }
 
       if (verdict.toLowerCase() === 'rejected') {
-        after(() => {
-          fetch(`${process.env.SW_AI_URL}/analysis/rejection`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Key': process.env.SW_API_KEY ?? '',
-            },
-            body: JSON.stringify({ cert_id: updated.id }),
-          }).catch(() => {})
+        after(async () => {
+          const swAiUrl = process.env.SW_AI_URL
+          if (!swAiUrl) {
+            console.error(
+              '[rejection-analysis] SW_AI_URL environment variable is not set; skipping analysis trigger',
+              {
+                certId: updated.id,
+              }
+            )
+            return
+          }
+
+          try {
+            const response = await fetch(`${swAiUrl}/analysis/rejection`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': process.env.SW_API_KEY ?? '',
+              },
+              body: JSON.stringify({ cert_id: updated.id }),
+            })
+
+            if (!response.ok) {
+              const errorBody = await response.text().catch(() => '')
+              console.error('[rejection-analysis] SW-AI request failed', {
+                certId: updated.id,
+                status: response.status,
+                body: errorBody.slice(0, 400),
+              })
+            }
+          } catch (err) {
+            console.error('[rejection-analysis] SW-AI request errored', {
+              certId: updated.id,
+              err,
+            })
+          }
         })
       }
     }

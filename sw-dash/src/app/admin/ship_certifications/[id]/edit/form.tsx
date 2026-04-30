@@ -115,6 +115,22 @@ export function Form({ shipId }: Props) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [nomBusy, setNomBusy] = useState(false)
+  const [nomMsg, setNomMsg] = useState('')
+
+  async function nominate() {
+    if (!cert?.ftId || nomBusy) return
+    setNomBusy(true)
+    const res = await fetch('/api/admin/sticker_requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ftProjectId: String(cert.ftId) }),
+    })
+    const data = await res.json()
+    setNomMsg(res.ok ? 'nominated! :3' : data.error || 'shit broke')
+    setNomBusy(false)
+    setTimeout(() => setNomMsg(''), 3000)
+  }
 
   useEffect(() => {
     if (!cert?.claimedAt) {
@@ -206,13 +222,27 @@ export function Form({ shipId }: Props) {
             {cert.submitter.slackId && (
               <SubmitterCard slackId={cert.submitter.slackId} username={cert.submitter.username} />
             )}
-            {canReport && cert.ftId && (
-              <button
-                onClick={() => setShowReport(true)}
-                className="shrink-0 bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all"
-              >
-                🚩 Report to Fraud Squad!
-              </button>
+            {cert.ftId && (
+              <div className="flex flex-col gap-2 shrink-0">
+                {canReport && (
+                  <button
+                    onClick={() => setShowReport(true)}
+                    className="bg-red-950/30 text-red-400 border-2 border-red-700/60 hover:bg-red-900/40 px-4 py-2 rounded-2xl font-mono text-sm transition-all"
+                  >
+                    🚩 Report to Fraud Squad!
+                  </button>
+                )}
+                <button
+                  onClick={nominate}
+                  disabled={nomBusy}
+                  className="bg-pink-500/20 text-pink-300 border-2 border-dashed border-pink-500 hover:border-pink-400 hover:bg-pink-500/30 px-4 py-2 rounded-2xl font-mono text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {nomBusy ? '...' : 'Nominate!!'}
+                </button>
+                {nomMsg && (
+                  <span className="text-pink-300 font-mono text-xs text-center">{nomMsg}</span>
+                )}
+              </div>
             )}
           </div>
         </div>

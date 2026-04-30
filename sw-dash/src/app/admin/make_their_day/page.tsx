@@ -17,6 +17,7 @@ export default function MakeTheirDay() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [err, setErr] = useState('')
   const [showFull, setShowFull] = useState(false)
   const [myRole, setMyRole] = useState<string | null>(null)
 
@@ -48,23 +49,34 @@ export default function MakeTheirDay() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!projectId.trim() || submitting) return
+    const id = projectId.trim()
+    if (!id || submitting) return
+
+    if (requests.some((r) => r.ftProjectId === id)) {
+      setErr('already on the list!')
+      setTimeout(() => setErr(''), 3000)
+      return
+    }
 
     setSubmitting(true)
     setSuccess(false)
+    setErr('')
 
     const res = await fetch('/api/admin/sticker_requests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ftProjectId: projectId.trim() }),
+      body: JSON.stringify({ ftProjectId: id }),
     })
 
+    const data = await res.json()
     if (res.ok) {
-      const entry = await res.json()
-      setRequests((prev) => [entry, ...prev])
+      setRequests((prev) => [data, ...prev])
       setProjectId('')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
+    } else {
+      setErr(data.error || 'shit broke')
+      setTimeout(() => setErr(''), 3000)
     }
 
     setSubmitting(false)
@@ -144,6 +156,7 @@ export default function MakeTheirDay() {
                     Nominated! You just made someone&apos;s day :3
                   </p>
                 )}
+                {err && <p className="text-red-400 font-mono text-xs mt-3">{err}</p>}
               </div>
             </form>
           </div>

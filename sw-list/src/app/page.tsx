@@ -99,7 +99,11 @@ function Card({
             <span
               className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${color(m.role)}`}
             >
-              {m.role}
+              {m.role === 'ysws_reviewer'
+                ? 'GOI'
+                : m.role === 'sw_ysws'
+                  ? 'sw_goi'
+                  : m.role}
             </span>
           )}
         </div>
@@ -153,7 +157,7 @@ export default async function Page() {
         {reviewers.length > 0 && (
           <>
             <header className="text-center mb-8 mt-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">The YSWS Reviewers</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">The Guardians of Integrity</h2>
               <p className="text-zinc-500">{reviewers.length} people reviewing YSWS projects</p>
             </header>
 
