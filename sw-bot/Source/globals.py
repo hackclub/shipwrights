@@ -25,6 +25,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 DB_HOST = os.getenv("DB_HOST")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "PRODUCTION")
+OPEN_TICKET_REACTION = os.getenv("OPEN_TICKET_REACTION", "frog-diabolical")
 
 MACROS = {
     "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",

@@ -1,22 +1,21 @@
 import os, json, summary, threading, logging
+import db, helpers, api, home, relay, ai, msg_blocks, alerts
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
+from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, \
+    ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, META_CHANNEL, ENVIRONMENT, ADMINS, OPEN_TICKET_REACTION
+from cache import cache
+from worker import worker
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-import db, helpers, api, home, relay, ai, msg_blocks, alerts
-from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
-from globals import BOT_TOKEN, USER_CHANNEL, STAFF_CHANNEL, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE, TICKET_CLAIMED, ALREADY_CLAIMED, CANNOT_CLOSE_OWN, MESSAGE_NOT_RECEIVED, META_CHANNEL, ENVIRONMENT, ADMINS
-from cache import cache
-from worker import worker
-
 
 slack_app = App(token=BOT_TOKEN, signing_secret=os.getenv("SLACK_SIGNING_SECRET"), process_before_response=True)
 seen = set()
 MAX_SEEN = 1000
-
 
 
 def seen_already(event_id):
@@ -54,6 +53,7 @@ def msg(event):
     elif channel == STAFF_CHANNEL:
         relay.handle_staff_reply(event)
 
+
 @slack_app.event("app_home_opened")
 def render_app_home(event):
     user_id = event.get("user")
@@ -64,6 +64,7 @@ def render_app_home(event):
         return
     home.publish_home(user_id, home.not_user())
     return
+
 
 @slack_app.action("send_paraphrased")
 def send_paraphrased(client, body, ack):
@@ -79,7 +80,7 @@ def send_paraphrased(client, body, ack):
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
             user=user_id,
-            text= MESSAGE_NOT_RECEIVED
+            text=MESSAGE_NOT_RECEIVED
         )
         return
     client.chat_postMessage(
@@ -96,8 +97,10 @@ def send_paraphrased(client, body, ack):
         username=f"{user_info['username']} | AI Paraphrased",
         icon_url=user_info["pfp"],
     )
-    db.save_message(ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased, True, None, staff_resp["ts"])
+    db.save_message(ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased,
+                    True, None, staff_resp["ts"])
     relay.ping_ws(ticket_id)
+
 
 @slack_app.action("delete_message")
 def delete_message(ack, body, client, respond):
@@ -112,12 +115,14 @@ def delete_message(ack, body, client, respond):
             client.chat_delete(channel=USER_CHANNEL, ts=ts)
         respond("Attachments deleted")
 
+
 @slack_app.action("edit_message")
 def edit_message(ack, body, client):
     ack()
     payload = json.loads(body["actions"][0]["value"])
     message_ts = payload["ts"]
     helpers.show_edit_modal(client, body, message_ts)
+
 
 @slack_app.action("modify_opt")
 def modify_opt(ack, body, client):
@@ -131,6 +136,7 @@ def modify_opt(ack, body, client):
         channel=USER_CHANNEL,
         user=user_id,
     )
+
 
 @slack_app.action("resolve_detected")
 def resolve_detected(ack, body, client):
@@ -171,6 +177,20 @@ def resolve_detected(ack, body, client):
             timestamp=ticket["userThreadTs"],
             name="checks-passed-octicon"
         )
+
+        try:
+            client.reactions_remove(
+                channel=USER_CHANNEL,
+                timestamp=ticket["userThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+            client.reactions_remove(
+                channel=STAFF_CHANNEL,
+                timestamp=ticket["staffThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+        except Exception as e:
+            print(f"Failed to remove open ticket reaction: {e}")
         client.chat_postMessage(
             thread_ts=ticket["userThreadTs"],
             channel=USER_CHANNEL,
@@ -189,6 +209,7 @@ def resolve_detected(ack, body, client):
             ai.summarize_ticket(ticket_id)
     else:
         helpers.show_unauthorized_close(client, body, "closing")
+
 
 @slack_app.action("resolve_ticket")
 def resolve_ticket(ack, body, client):
@@ -227,6 +248,19 @@ def resolve_ticket(ack, body, client):
             blocks=msg_blocks.feedback_message(json.dumps(ticket_id)),
             username="Shipwrighter Feedback"
         )
+        try:
+            client.reactions_remove(
+                channel=USER_CHANNEL,
+                timestamp=ticket["userThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+            client.reactions_remove(
+                channel=STAFF_CHANNEL,
+                timestamp=ticket["staffThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+        except Exception as e:
+            print(f"Failed to remove open ticket reaction: {e}")
 
         if cache.get_user_opt_in(ticket["userId"]):
             ai.summarize_ticket(ticket_id)
@@ -243,6 +277,19 @@ def resolve_ticket(ack, body, client):
             thread_ts=ticket["userThreadTs"],
             text=RESOLVE_MESSAGES["user"],
         )
+        try:
+            client.reactions_remove(
+                channel=USER_CHANNEL,
+                timestamp=ticket["userThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+            client.reactions_remove(
+                channel=STAFF_CHANNEL,
+                timestamp=ticket["staffThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+        except Exception as e:
+            print(f"Failed to remove open ticket reaction: {e}")
         client.reactions_add(
             channel=STAFF_CHANNEL,
             timestamp=ticket["staffThreadTs"],
@@ -294,6 +341,7 @@ def resolve_ticket(ack, body, client):
     else:
         helpers.show_unauthorized_close(client, body, "closing")
 
+
 @slack_app.action("submit_feedback")
 def submit_feedback(ack, body, client):
     ack()
@@ -304,6 +352,7 @@ def submit_feedback(ack, body, client):
         helpers.show_unauthorized_close(client, body, "feedback")
     else:
         helpers.show_feedback_modal(client, body, ticket_id)
+
 
 @slack_app.action("claim_ticket")
 def claim_ticket(body, client, ack):
@@ -316,15 +365,16 @@ def claim_ticket(body, client, ack):
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
             user=user_id,
-            text= ALREADY_CLAIMED.replace("(user_id)", ticket['closedBy'])
+            text=ALREADY_CLAIMED.replace("(user_id)", ticket['closedBy'])
         )
     else:
         cache.claim_ticket(ticket_id, user_id)
         client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staffThreadTs"],
-            text= TICKET_CLAIMED.replace("(user_id)", user_id),
+            text=TICKET_CLAIMED.replace("(user_id)", user_id),
         )
+
 
 @slack_app.view("edited_message")
 def edited_message(ack, client, view):
@@ -339,6 +389,7 @@ def edited_message(ack, client, view):
     )
     db.edit_message(message_ts, user_input)
 
+
 @slack_app.view("rating_form")
 def rating_form(ack, view):
     ack()
@@ -346,6 +397,7 @@ def rating_form(ack, view):
     rating = view["state"]["values"]["rating_block"]["number_input-action"]["value"]
     comment = view["state"]["values"]["comment_block"]["plain_text_input-action"]["value"]
     cache.save_feedback(ticket_id, rating, comment)
+
 
 @slack_app.command("/metasw" if ENVIRONMENT == "PRODUCTION" else "/metastaging")
 def meta_us(ack, client, respond, body):
@@ -370,6 +422,7 @@ def meta_us(ack, client, respond, body):
         cache.save_meta(text, meta_ts, vote_resp["ts"])
     else:
         respond("You are not a shipwright!")
+
 
 @slack_app.action("modify_votes")
 def modify_votes(ack, body, client):
@@ -404,9 +457,11 @@ def delete_meta(ack, body, client):
         client.chat_delete(channel=META_CHANNEL, ts=meta["votes_message_ts"])
     client.chat_delete(channel=META_CHANNEL, ts=meta_message_ts)
 
+
 def run_bot():
     handler = SocketModeHandler(slack_app, os.getenv("SLACK_APP_TOKEN"))
     handler.start()
+
 
 if __name__ == "__main__":
     reminder_thread = threading.Thread(target=summary.reminders_loop, daemon=True)

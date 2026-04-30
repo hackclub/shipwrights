@@ -1,8 +1,10 @@
 import json, requests, tempfile, time, os
 import db, ai, msg_blocks
-from globals import STAFF_CHANNEL, USER_CHANNEL, BOT_TOKEN, DASH_URL, API_KEY, BOT_URL, MACROS, client
+from globals import STAFF_CHANNEL, USER_CHANNEL, BOT_TOKEN, DASH_URL, API_KEY, BOT_URL, MACROS, client, \
+    OPEN_TICKET_REACTION
 from helpers import get_flavortown_project
 from cache import cache
+
 
 def send_files(event, dest_channel, dest_ts):
     files = event.get("files") or []
@@ -73,7 +75,6 @@ def handle_staff_reply(event):
         return
 
     user_id = event["user"]
-
 
     user_info = client.users_info(user=user_id)
     staff_name = user_info["user"]["profile"].get("display_name") or user_info["user"]["profile"].get("real_name")
@@ -154,7 +155,8 @@ def handle_staff_reply(event):
             )
             dest_ts = resp["ts"]
 
-        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, file_info if file_info else None, dest_ts)
+        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text, True, file_info if file_info else None,
+                        dest_ts)
         ping_ws(ticket["id"])
 
         if not files:
@@ -280,7 +282,8 @@ def handle_staff_reply(event):
                 blocks=msg_blocks.feedback_message(json.dumps(ticket["id"])),
                 username="Shipwrighter Feedback"
             )
-            db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'ticket resolved by <@{user_id}>', True, None, resp["ts"])
+            db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'ticket resolved by <@{user_id}>', True, None,
+                            resp["ts"])
             ping_ws(ticket["id"])
             client.chat_postMessage(
                 channel=USER_CHANNEL,
@@ -297,6 +300,19 @@ def handle_staff_reply(event):
                 timestamp=ticket["userThreadTs"],
                 name="checks-passed-octicon"
             )
+            try:
+                client.reactions_remove(
+                    channel=USER_CHANNEL,
+                    timestamp=ticket["userThreadTs"],
+                    name=OPEN_TICKET_REACTION
+                )
+                client.reactions_remove(
+                    channel=STAFF_CHANNEL,
+                    timestamp=ticket["staffThreadTs"],
+                    name=OPEN_TICKET_REACTION
+                )
+            except Exception as e:
+                print(f"Failed to remove open ticket reaction: {e}")
 
     elif text.strip().lower().split(' ')[0] in ["!tldr", "!ai"] and not cache.get_user_opt_in(ticket["userId"]):
         client.chat_postMessage(
@@ -326,7 +342,8 @@ def handle_staff_reply(event):
             thread_ts=ticket["staffThreadTs"],
             text=f"<@{user_id}> has reopened this ticket.",
         )
-        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'<@{user_id}> has reopened this ticket', True, None, resp["ts"])
+        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'<@{user_id}> has reopened this ticket', True, None,
+                        resp["ts"])
         ping_ws(ticket["id"])
         client.reactions_remove(
             channel=STAFF_CHANNEL,
@@ -337,6 +354,16 @@ def handle_staff_reply(event):
             channel=USER_CHANNEL,
             timestamp=ticket["userThreadTs"],
             name="checks-passed-octicon"
+        )
+        client.reactions_add(
+            channel=STAFF_CHANNEL,
+            timestamp=ticket["staffThreadTs"],
+            name=OPEN_TICKET_REACTION
+        )
+        client.reactions_add(
+            channel=USER_CHANNEL,
+            timestamp=ticket["userThreadTs"],
+            name=OPEN_TICKET_REACTION
         )
 
     elif text.strip().lower().startswith('!resolve'):
@@ -362,12 +389,27 @@ def handle_staff_reply(event):
         except Exception as e:
             print(f"Failed to add client thread reaction for a ticket: {e}")
 
+        try:
+            client.reactions_remove(
+                channel=USER_CHANNEL,
+                timestamp=ticket["userThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+            client.reactions_remove(
+                channel=STAFF_CHANNEL,
+                timestamp=ticket["staffThreadTs"],
+                name=OPEN_TICKET_REACTION
+            )
+        except Exception as e:
+            print(f"Failed to remove open ticket reaction: {e}")
+
         resp = client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=thread,
             text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!"
         )
-        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'ticket closed by <@{user_id}>', True, None, resp["ts"])
+        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, f'ticket closed by <@{user_id}>', True, None,
+                        resp["ts"])
         ping_ws(ticket["id"])
 
         client.chat_postMessage(
@@ -392,9 +434,11 @@ def handle_staff_reply(event):
                     'mimetype': f.get('mimetype'),
                     'size': f.get('size')
                 })
-        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text.lstrip('?'), True, file_info if file_info else None,
+        db.save_message(ticket["id"], user_id, staff_name, staff_avatar, text.lstrip('?'), True,
+                        file_info if file_info else None,
                         event.get("ts"))
         ping_ws(ticket["id"])
+
 
 def handle_client_reply(event):
     user_id = event["user"]
@@ -423,7 +467,6 @@ def handle_client_reply(event):
                     'size': f.get('size')
                 })
 
-
         if text:
             resp = client.chat_postMessage(
                 channel=STAFF_CHANNEL,
@@ -433,7 +476,8 @@ def handle_client_reply(event):
                 icon_url=user_avatar
             )
             dest_ts = resp["ts"]
-            db.save_message(ticket["id"], user_id, user_name, user_avatar, text or "", False, file_info if file_info else None, dest_ts, event.get("ts"))
+            db.save_message(ticket["id"], user_id, user_name, user_avatar, text or "", False,
+                            file_info if file_info else None, dest_ts, event.get("ts"))
             project_id = get_flavortown_project(text)
             if project_id:
                 project = db.get_project_by_ft_id(str(project_id))
@@ -443,37 +487,37 @@ def handle_client_reply(event):
                         thread_ts=ticket["staffThreadTs"],
                         text=f"Project identified!",
                         blocks=[
-                                {
-                                    "type": "header",
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "Project Found!",
-                                        "emoji": True
-                                    }
-                                },
-                                {
-                                    "type": "divider"
-                                },
-                                {
-                                    "type": "section",
-                                    "text": {
-                                        "type": "mrkdwn",
-                                        "text": f"*User:* <@{project['ftSlackId']}>\n\n*Project:* <https://review.hackclub.com/admin/ship_certifications/{project['id']}/edit |{project['projectName']}>\n\n*Status:* {project['status']}"
-                                    }
-                                },
-                                {
-                                    "type": "divider"
-                                },
-                                {
-                                    "type": "context",
-                                    "elements": [
-                                        {
-                                            "type": "mrkdwn",
-                                            "text": f"*Project Type:* {project['projectType']}"
-                                        }
-                                    ]
+                            {
+                                "type": "header",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Project Found!",
+                                    "emoji": True
                                 }
-                            ]
+                            },
+                            {
+                                "type": "divider"
+                            },
+                            {
+                                "type": "section",
+                                "text": {
+                                    "type": "mrkdwn",
+                                    "text": f"*User:* <@{project['ftSlackId']}>\n\n*Project:* <https://review.hackclub.com/admin/ship_certifications/{project['id']}/edit |{project['projectName']}>\n\n*Status:* {project['status']}"
+                                }
+                            },
+                            {
+                                "type": "divider"
+                            },
+                            {
+                                "type": "context",
+                                "elements": [
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": f"*Project Type:* {project['projectType']}"
+                                    }
+                                ]
+                            }
+                        ]
                     )
                 else:
                     client.chat_postMessage(
@@ -482,12 +526,12 @@ def handle_client_reply(event):
                         text=f"Failed to fetch project.. Perhaps it hasn't been shipped?",
                     )
 
-
         if files:
             send_files(event, STAFF_CHANNEL, ticket["staffThreadTs"])
 
         try:
-            requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket["id"]}, headers={'X-API-Key': API_KEY}, timeout=0.5)
+            requests.post(f'{BOT_URL}/ws/notify', json={'ticketId': ticket["id"]}, headers={'X-API-Key': API_KEY},
+                          timeout=0.5)
         except Exception as e:
             print(f"failed to send notification: {e}")
     elif ticket.get("status", None) == "closed" and USER_CHANNEL == event.get("channel"):
@@ -501,6 +545,7 @@ def handle_client_reply(event):
     else:
         return False
     return True
+
 
 def create_ticket(event):
     user_id = event["user"]
@@ -566,7 +611,8 @@ def create_ticket(event):
                 {
                     "type": "context",
                     "elements": [
-                        {"type": "mrkdwn", "text": f"#sw-{ticket_id} | <{dash_link}|view on dash> | <{DASH_URL + '/admin/ship_certifications?search=' + user_id}| user projects (search)>"}
+                        {"type": "mrkdwn",
+                         "text": f"#sw-{ticket_id} | <{dash_link}|view on dash> | <{DASH_URL + '/admin/ship_certifications?search=' + user_id}| user projects (search)>"}
                     ]
                 },
             ]
@@ -622,7 +668,7 @@ def create_ticket(event):
                         "type": "button",
                         "text": {"type": "plain_text", "text": "Opt Out" if user_opt_in else "Opt In"},
                         "style": "primary",
-                        "value": json.dumps({"opt":'0' if user_opt_in else '1', "thread_ts":str(event["ts"])}),
+                        "value": json.dumps({"opt": '0' if user_opt_in else '1', "thread_ts": str(event["ts"])}),
                         "action_id": "modify_opt"
                     }
                 },
@@ -635,6 +681,17 @@ def create_ticket(event):
             requests.post(f'{DASH_URL}/api/admin/tickets/bust', headers={'X-API-Key': API_KEY}, timeout=1)
         except Exception:
             pass
+        client.reactions_add(
+            channel=STAFF_CHANNEL,
+            timestamp=staff_msg["ts"],
+            name=OPEN_TICKET_REACTION
+        )
+        client.reactions_add(
+            channel=USER_CHANNEL,
+            timestamp=event["ts"],
+            name=OPEN_TICKET_REACTION
+        )
+
 
 def edit_message(event):
     message_ts = event.get("previous_message").get("ts")
@@ -646,28 +703,31 @@ def edit_message(event):
             thread_ts=ticket["staffThreadTs"],
             text="User has deleted message header, If no messages have been sent please don't send a reply or resolve as this could cause messages to be sent directly in the channel and not threaded."
         )
-        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None, "User has deleted message header, don't reply or resolve - messages won't be threaded.", True, None, resp["ts"])
+        db.save_message(ticket["id"], 'BOT', 'Shipwrighter', None,
+                        "User has deleted message header, don't reply or resolve - messages won't be threaded.", True,
+                        None, resp["ts"])
         ping_ws(ticket["id"])
         return
     if event.get("message").get("thread_ts") == event.get("message").get("ts"):
         user_thread_link_resp = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=message_ts)
         user_thread_link = user_thread_link_resp["permalink"]
         client.chat_update(
-                channel=STAFF_CHANNEL,
-                ts=ticket["staffThreadTs"],
-                text="Ticket!",
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {"type": "mrkdwn", "text": message}
-                    },
-                    {
-                        "type": "context",
-                        "elements": [
-                            {"type": "mrkdwn", "text": f"<@{ticket['userId']}> `{ticket['userId']}` | <{user_thread_link}|thread>"}
-                        ]
-                    }
-                ]
+            channel=STAFF_CHANNEL,
+            ts=ticket["staffThreadTs"],
+            text="Ticket!",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": message}
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {"type": "mrkdwn",
+                         "text": f"<@{ticket['userId']}> `{ticket['userId']}` | <{user_thread_link}|thread>"}
+                    ]
+                }
+            ]
         )
         return
     dest_message_ts = db.get_dest_message_ts(message_ts)
@@ -676,6 +736,7 @@ def edit_message(event):
         ts=dest_message_ts,
         text=event.get("message").get("text"),
     )
+
 
 def ping_ws(ticket_id):
     try:
