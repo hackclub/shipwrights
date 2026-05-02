@@ -103,11 +103,12 @@ export async function GET(req: Request) {
   if (sinceReviewed) {
     const date = new Date(sinceReviewed)
     if (!isNaN(date.getTime())) where.reviewCompletedAt = { gt: date }
-  }                                                                                                                         
-  if (reviewerId) {                                                                                                                                                          
+  }
+
+  if (reviewerId) {
     const parsed = parseInt(reviewerId, 10)
-    if (!isNaN(parsed)) where.reviewerId = parsed                                                                                                                            
-  }    
+    if (!isNaN(parsed)) where.reviewerId = parsed
+  }
   try {
     const logs = await prisma.shipCert.findMany({
       where,
