@@ -85,7 +85,7 @@ export async function GET(req: Request) {
   const sinceReviewed = searchParams.get('since_reviewed')
   const sort = searchParams.get('sort')
   const limitParam = searchParams.get('limit')
-  const reviewerId = searchParams.get('reviewerId') 
+  const reviewerId = searchParams.get('reviewerId')
 
   let take: number | undefined = undefined
   if (limitParam) {
