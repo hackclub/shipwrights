@@ -1,18 +1,16 @@
-FROM node:20-alpine AS base
-
-RUN npm i -g pnpm
+FROM oven/bun:1-alpine AS base
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json bun.lock ./
 COPY prisma ./prisma
-RUN pnpm i --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN pnpm build
+RUN bun run build
 
 FROM base AS runner
 WORKDIR /app
@@ -37,4 +35,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+CMD ["sh", "-c", "bun node_modules/prisma/build/index.js migrate deploy && bun server.js"]
