@@ -334,6 +334,22 @@ def get_dest_message_ts(message_ts):
         return None
 
 
+def get_linked_message_ts(ts):
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT message_ts FROM ticket_msgs WHERE origin_message_ts = %s", (ts,))
+                row = cur.fetchone()
+                if row:
+                    return row[0]
+                cur.execute("SELECT origin_message_ts FROM ticket_msgs WHERE message_ts = %s", (ts,))
+                row = cur.fetchone()
+                return row[0] if row else None
+    except psycopg2.Error as e:
+        logging.error(f"get_linked_message_ts failed: {e}")
+        return None
+
+
 
 def get_monthly_feedback_winners(year: int, month: int, count: int = 3) -> list[dict]:
     try:
