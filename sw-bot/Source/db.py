@@ -239,7 +239,7 @@ def update_ticket_user_opt(user_id, state: bool):
         return False
 
 
-def add_cookies(slack_id, ticket_id=None, amount=TICKET_PAY):
+def add_stardust(slack_id, ticket_id=None, amount=TICKET_PAY):
     if not slack_id:
         return None
     try:
@@ -278,8 +278,8 @@ def add_cookies(slack_id, ticket_id=None, amount=TICKET_PAY):
                         slack_id,
                         row.get("username"),
                         row.get("role"),
-                        "ticket_cookie_payout",
-                        f"Awarded {increment:.2f} cookies for claiming a ticket",
+                        "ticket_stardust_payout",
+                        f"Awarded {increment:.2f} stardust for claiming a ticket",
                         200,
                         row.get("avatar"),
                         str(ticket_id) if ticket_id else None,
@@ -289,7 +289,7 @@ def add_cookies(slack_id, ticket_id=None, amount=TICKET_PAY):
                 )
                 return float(row["cookie_balance"]) if row.get("cookie_balance") is not None else 0.0
     except psycopg2.Error as e:
-        logging.error(f"add_cookies failed: {e}")
+        logging.error(f"add_stardust failed: {e}")
         return None
 
 
@@ -569,28 +569,28 @@ def find_meta_by_meta_ts(meta_message_ts):
         return None
 
 
-# def get_project_by_ft_id(ft_project_id):  # ship_certs
+# def get_project_by_sd_id(sd_project_id):  # ship_certs
 #     try:
 #         with get_db() as conn:
 #             with conn.cursor(cursor_factory=RealDictCursor) as cur:
 #                 cur.execute(
-#                     "SELECT * FROM ship_certs WHERE ft_project_id = %s ORDER BY id DESC LIMIT 1",
-#                     (ft_project_id,),
+#                     "SELECT * FROM ship_certs WHERE sd_project_id = %s ORDER BY id DESC LIMIT 1",
+#                     (sd_project_id,),
 #                 )
 #                 row = cur.fetchone()
 #                 return dict(row) if row else None
 #     except psycopg2.Error as e:
-#         logging.error(f"get_project_by_ft_id failed: {e}")
+#         logging.error(f"get_project_by_sd_id failed: {e}")
 #         return None
 #
 #
-# def insert_project_type(ft_project_id, project_type):  # ship_certs
+# def insert_project_type(sd_project_id, project_type):  # ship_certs
 #     try:
 #         with get_db() as conn:
 #             with conn.cursor() as cur:
 #                 cur.execute(
-#                     "UPDATE ship_certs SET project_type = %s WHERE ft_project_id = %s",
-#                     (project_type, ft_project_id),
+#                     "UPDATE ship_certs SET project_type = %s WHERE sd_project_id = %s",
+#                     (project_type, sd_project_id),
 #                 )
 #     except psycopg2.Error as e:
 #         logging.error(f"insert_project_type failed: {e}")
@@ -690,6 +690,44 @@ def find_meta_by_meta_ts(meta_message_ts):
 #     except psycopg2.Error as e:
 #         logging.error(f"top_reviewer_yesterday failed: {e}")
 #         return {"slack_ids": [], "counts": []}
+
+
+def mark_feedback_requested(ticket_id) -> bool:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE tickets SET feedback_requested = TRUE WHERE id = %s AND feedback_requested = FALSE RETURNING id",
+                    (ticket_id,),
+                )
+                return cur.fetchone() is not None
+    except psycopg2.Error as e:
+        logging.error(f"mark_feedback_requested failed: {e}")
+        return False
+
+
+def save_resolve_message_ts(ticket_id, ts):
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE tickets SET resolve_message_ts = %s WHERE id = %s",
+                    (ts, ticket_id),
+                )
+    except psycopg2.Error as e:
+        logging.error(f"save_resolve_message_ts failed: {e}")
+
+
+def get_resolve_message_ts(ticket_id):
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT resolve_message_ts FROM tickets WHERE id = %s", (ticket_id,))
+                row = cur.fetchone()
+                return row[0] if row else None
+    except psycopg2.Error as e:
+        logging.error(f"get_resolve_message_ts failed: {e}")
+        return None
 
 
 def save_error(level, logger, message, full_trace=None):

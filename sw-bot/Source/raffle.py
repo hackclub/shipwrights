@@ -24,7 +24,7 @@ def run_raffle():
     month_name = datetime(year, month, 1).strftime("%B %Y")
 
     for winner in winners:
-        db.add_cookies(winner["user_id"], amount=RAFFLE_PRIZE)
+        db.add_stardust(winner["user_id"], amount=RAFFLE_PRIZE)
 
     try:
         client.chat_postMessage(
@@ -35,7 +35,7 @@ def run_raffle():
     except SlackApiError as e:
         logging.error(f"raffle: failed to post winners: {e}")
 
-    logging.info(f"raffle: {len(winners)} winner(s) awarded {RAFFLE_PRIZE} cookies each for {month_name}")
+    logging.info(f"raffle: {len(winners)} winner(s) awarded {RAFFLE_PRIZE} stardust each for {month_name}")
 
 
 def maybe_run_raffle():

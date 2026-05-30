@@ -112,7 +112,7 @@ class Cache:
             return
         self.tickets[ticket_id]["closed_by"] = claimer
         worker.enqueue(db.claim_ticket, ticket_id, claimer)
-        worker.enqueue(db.add_cookies, claimer, ticket_id)
+        worker.enqueue(db.add_stardust, claimer, ticket_id)
 
     def get_shipwrights(self):
         if self.shipwrights and not self.is_stale("shipwrights", SHIPWRIGHTS_TTL):

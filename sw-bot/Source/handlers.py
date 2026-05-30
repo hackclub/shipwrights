@@ -1,5 +1,6 @@
 import json
 import ai, blocks, db, errors, relay, views, worker
+from slack_sdk.errors import SlackApiError
 from cache import cache
 from globals import (
     ADMINS, CANNOT_CLOSE_OWN, ALREADY_CLAIMED, MESSAGE_NOT_RECEIVED, META_CHANNEL,
@@ -213,12 +214,48 @@ def handle_edited_message(payload: dict) -> None:
     worker.enqueue(db.edit_message, message_ts, user_input)
 
 
+def handle_reopen_ticket(payload: dict) -> None:
+    ticket_id = json.loads(payload["actions"][0]["value"])
+    ticket = cache.get_ticket_by_id(ticket_id)
+    if not ticket:
+        return
+    user_id = payload["user"]["id"]
+    if user_id != ticket["user_id"] or ticket.get("status") != "closed":
+        return
+    cache.open_ticket(ticket_id)
+    resolve_ts = db.get_resolve_message_ts(ticket_id)
+    if resolve_ts and not cache.get_feedback(ticket_id):
+        try:
+            client.chat_delete(channel=USER_CHANNEL, ts=resolve_ts)
+        except SlackApiError:
+            pass
+    client.chat_postMessage(
+        channel=USER_CHANNEL,
+        thread_ts=ticket["user_thread_ts"],
+        text="Your ticket has been reopened! Shipwrights will receive your replies again.",
+    )
+    client.chat_postMessage(
+        channel=STAFF_CHANNEL,
+        thread_ts=ticket["staff_thread_ts"],
+        text=f"<@{user_id}> has reopened this ticket.",
+    )
+    relay.swap_reactions(client, ticket, OPEN_TICKET_REACTION, "checks-passed-octicon")
+
+
 def handle_rating_form(payload: dict) -> None:
     view = payload["view"]
     ticket_id = int(view["private_metadata"])
     rating = view["state"]["values"]["rating_block"]["number_input-action"]["value"]
     comment = view["state"]["values"]["comment_block"]["plain_text_input-action"]["value"]
     cache.save_feedback(ticket_id, rating, comment)
+    ticket = cache.get_ticket_by_id(ticket_id)
+    if ticket:
+        closer = ticket.get("closed_by")
+        ping = f" <@{closer}>" if closer and closer != ticket["user_id"] else ""
+        text = f"*Feedback received!*{ping}\n*Rating:* {rating}/10"
+        if comment:
+            text += f"\n*Comment:* _{comment}_"
+        client.chat_postMessage(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], text=text)
 
 
 def handle_create_meta(payload: dict) -> None:

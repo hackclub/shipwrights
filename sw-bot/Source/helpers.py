@@ -65,8 +65,8 @@ def is_shipwright(user_id) -> bool:
     return user_id in cache.get_shipwrights()
 
 
-# def get_flavortown_project(link: str):  # ship_certs
-#     match = re.search(r"https://flavortown\.hackclub\.com/projects/(\d+)", link)
+# def get_stardance_project(link: str):  # ship_certs
+#     match = re.search(r"https://stardance\.hackclub\.com/projects/(\d+)", link)
 #     return match.group(1) if match else None
 
 

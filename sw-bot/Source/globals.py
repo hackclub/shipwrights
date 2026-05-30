@@ -28,7 +28,7 @@ PORT = int(os.getenv("PORT", "3000"))
 
 MACROS = {
     "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",
-    "fthelp": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward related questions to <#C09MATKQM8C>.",
+    "sdhelp": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward related questions to <#C0AP0NMSP3P>.",
     "faq": "Hey there!\nPlease have a look at our FAQ <https://us.review.hackclub.com/faq | here>",
     "queue": "Hey there!\nWe currently have a backlog of projects waiting to be certified. Please be patient.\n\n*You can keep track of the queue <https://us.review.hackclub.com/queue | here>!*",
     "declare": "Hey there! We have noticed patterns of AI usage in your project. Please declare AI usage on your project. If you think this is a mistake please let us know!",
@@ -44,6 +44,6 @@ ALREADY_CLAIMED = "*This ticket is already claimed by <@(user_id)>!*"
 TICKET_CLAIMED = "*This ticket has been claimed by <@(user_id)>!*"
 CANNOT_CLOSE_OWN = "You cannot close your own ticket as a shipwright."
 MESSAGE_NOT_RECEIVED = "Hey! Looks like this ticket was resolved. Shipwrights did not receive your response."
-FEEDBACK_MESSAGE = "If you could give us 20 seconds of your time, we would love to know how we did in this ticket!\n3 random fillers get picked each month to earn 10 cookies each!"
+FEEDBACK_MESSAGE = "If you could give us 20 seconds of your time, we would love to know how we did in this ticket!\n3 random fillers get picked each month to earn 10 stardust each!"
 
 TICKET_PAY = 0.3

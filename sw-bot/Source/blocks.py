@@ -1,7 +1,7 @@
 import json
 import re
 
-from globals import ANNOUNCE_META, FEEDBACK_MESSAGE, USER_CLOSED_MESSAGE
+from globals import ANNOUNCE_META, FEEDBACK_MESSAGE, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE
 
 
 def raffle_winners(month_name: str, winners: list) -> list:
@@ -12,7 +12,7 @@ def raffle_winners(month_name: str, winners: list) -> list:
         lines.append(f"• <@{w['user_id']}> rated *{w['rating']}/10*{snippet}")
     body = "\n".join(lines) if lines else "No winners this month."
     return [
-        {"type": "header", "text": {"type": "plain_text", "text": f":cookie: Feedback Raffle — {month_name}", "emoji": True}},
+        {"type": "header", "text": {"type": "plain_text", "text": f":sparkles: Feedback Raffle — {month_name}", "emoji": True}},
         {"type": "divider"},
         {
             "type": "section",
@@ -20,7 +20,7 @@ def raffle_winners(month_name: str, winners: list) -> list:
                 "type": "mrkdwn",
                 "text": (
                     f"*{len(winners)} winner{'s' if len(winners) != 1 else ''} selected from last month's feedback.*\n"
-                    f"Each receives *10 cookies* — handle payouts manually.\n\n{body}"
+                    f"Each receives *10 stardust* — handle payouts manually.\n\n{body}"
                 ),
             },
         },
@@ -136,7 +136,7 @@ def ai_opt_notice(user_opt_in, thread_ts):
 #             "text": {
 #                 "type": "mrkdwn",
 #                 "text": (
-#                     f"*User:* <@{project['ft_slack_id']}>\n\n"
+#                     f"*User:* <@{project['sd_slack_id']}>\n\n"
 #                     f"*Project:* <https://review.hackclub.com/admin/ship_certifications/{project['id']}/edit|{project['project_name']}>\n\n"
 #                     f"*Status:* {project['status']}"
 #                 ),
@@ -190,6 +190,46 @@ def sent_files_controls(uploaded_ts_list):
     ]
 
 
+def ticket_user_resolve(ticket_id):
+    return [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": RESOLVE_MESSAGES["user"]},
+            "accessory": {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "Reopen Ticket"},
+                "value": str(ticket_id),
+                "action_id": "reopen_ticket",
+            },
+        }
+    ]
+
+
+def ticket_user_resolve_with_feedback(ticket_id):
+    return [
+        {"type": "section", "text": {"type": "mrkdwn", "text": RESOLVE_MESSAGES["user"]}},
+        {"type": "section", "text": {"type": "mrkdwn", "text": FEEDBACK_MESSAGE}},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Reopen Ticket"},
+                    "value": str(ticket_id),
+                    "action_id": "reopen_ticket",
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Submit Feedback"},
+                    "style": "primary",
+                    "value": str(ticket_id),
+                    "action_id": "submit_feedback",
+                },
+            ],
+        },
+    ]
+
+
 def claim_ticket_prompt(ticket_id):
     return [
         {
@@ -208,7 +248,7 @@ def claim_ticket_prompt(ticket_id):
 
 def feedback_message(ticket_id):
     return [
-        {"type": "section", "text": {"type": "mrkdwn", "text": "*Hey there, fellow chef!* :wave-pikachu-2:\n"}},
+        {"type": "section", "text": {"type": "mrkdwn", "text": "*Hey there, fellow astronaut!* :wave-pikachu-2:\n"}},
         {
             "type": "section",
             "text": {"type": "mrkdwn", "text": FEEDBACK_MESSAGE},

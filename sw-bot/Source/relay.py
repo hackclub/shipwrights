@@ -7,7 +7,7 @@ from globals import (
     ADMINS, BOT_TOKEN, MACROS, OPEN_TICKET_REACTION,
     RESOLVE_MESSAGES, STAFF_CHANNEL, USER_CHANNEL, client,
 )
-# from helpers import get_flavortown_project  # ship_certs
+# from helpers import get_stardance_project  # ship_certs
 from helpers import is_shipwright, parse_slack_link
 
 
@@ -44,18 +44,21 @@ def post_resolve_messages(client_inst, ticket, ticket_id, user_id):
         thread_ts=ticket["staff_thread_ts"],
         text=RESOLVE_MESSAGES["staff"].replace("(user_id)", user_id),
     )
-    client_inst.chat_postMessage(
-        channel=USER_CHANNEL,
-        thread_ts=ticket["user_thread_ts"],
-        text=RESOLVE_MESSAGES["user"],
-    )
-    client_inst.chat_postMessage(
-        thread_ts=ticket["user_thread_ts"],
-        channel=USER_CHANNEL,
-        text="Feedback form!",
-        blocks=blocks.feedback_message(json.dumps(ticket_id)),
-        username="Shipwrighter Feedback",
-    )
+    if db.mark_feedback_requested(ticket_id):
+        resp = client_inst.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["user_thread_ts"],
+            text=RESOLVE_MESSAGES["user"],
+            blocks=blocks.ticket_user_resolve_with_feedback(ticket_id),
+        )
+        worker.enqueue(db.save_resolve_message_ts, ticket_id, resp["ts"])
+    else:
+        client_inst.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["user_thread_ts"],
+            text=RESOLVE_MESSAGES["user"],
+            blocks=blocks.ticket_user_resolve(ticket_id),
+        )
 
 
 def send_files(event, dest_channel, dest_ts):
@@ -107,11 +110,11 @@ def send_files(event, dest_channel, dest_ts):
 #     )
 #
 #
-# def check_flavortown(text, ticket):  # ship_certs
-#     project_id = get_flavortown_project(text)
+# def check_stardance(text, ticket):  # ship_certs
+#     project_id = get_stardance_project(text)
 #     if not project_id:
 #         return
-#     project = db.get_project_by_ft_id(str(project_id))
+#     project = db.get_project_by_sd_id(str(project_id))
 #     if project:
 #         post_project_block(ticket, project)
 #     else:
@@ -141,7 +144,7 @@ def handle_staff_reply(event):
     staff_name = user_info_resp["user"]["profile"].get("display_name") or user_info_resp["user"]["profile"].get("real_name")
     staff_avatar = user_info_resp["user"]["profile"]["image_48"]
 
-    # check_flavortown(text, ticket)  # ship_certs
+    # check_stardance(text, ticket)  # ship_certs
 
     if text.startswith("?"):
         if ticket.get("status") == "closed":
@@ -228,18 +231,21 @@ def handle_staff_reply(event):
             text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
         )
         worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket resolved by <@{user_id}>", True, None, close_resp["ts"])
-        client.chat_postMessage(
-            channel=USER_CHANNEL,
-            thread_ts=ticket["user_thread_ts"],
-            text=RESOLVE_MESSAGES["user"],
-        )
-        client.chat_postMessage(
-            thread_ts=ticket["user_thread_ts"],
-            channel=USER_CHANNEL,
-            text="Feedback form!",
-            blocks=blocks.feedback_message(json.dumps(ticket["id"])),
-            username="Shipwrighter Feedback",
-        )
+        if db.mark_feedback_requested(ticket["id"]):
+            resp = client.chat_postMessage(
+                channel=USER_CHANNEL,
+                thread_ts=ticket["user_thread_ts"],
+                text=RESOLVE_MESSAGES["user"],
+                blocks=blocks.ticket_user_resolve_with_feedback(ticket["id"]),
+            )
+            worker.enqueue(db.save_resolve_message_ts, ticket["id"], resp["ts"])
+        else:
+            client.chat_postMessage(
+                channel=USER_CHANNEL,
+                thread_ts=ticket["user_thread_ts"],
+                text=RESOLVE_MESSAGES["user"],
+                blocks=blocks.ticket_user_resolve(ticket["id"]),
+            )
         swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
         return
 
@@ -313,18 +319,21 @@ def handle_staff_reply(event):
         )
         worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket closed by <@{user_id}>", True, None, resp["ts"])
         worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        client.chat_postMessage(
-            channel=USER_CHANNEL,
-            thread_ts=ticket["user_thread_ts"],
-            text=RESOLVE_MESSAGES["user"],
-        )
-        client.chat_postMessage(
-            thread_ts=ticket["user_thread_ts"],
-            channel=USER_CHANNEL,
-            text="Feedback form!",
-            blocks=blocks.feedback_message(json.dumps(ticket["id"])),
-            username="Shipwrighter Feedback",
-        )
+        if db.mark_feedback_requested(ticket["id"]):
+            resp = client.chat_postMessage(
+                channel=USER_CHANNEL,
+                thread_ts=ticket["user_thread_ts"],
+                text=RESOLVE_MESSAGES["user"],
+                blocks=blocks.ticket_user_resolve_with_feedback(ticket["id"]),
+            )
+            worker.enqueue(db.save_resolve_message_ts, ticket["id"], resp["ts"])
+        else:
+            client.chat_postMessage(
+                channel=USER_CHANNEL,
+                thread_ts=ticket["user_thread_ts"],
+                text=RESOLVE_MESSAGES["user"],
+                blocks=blocks.ticket_user_resolve(ticket["id"]),
+            )
         return
 
     if cmd == "!purge":
@@ -466,7 +475,7 @@ def handle_client_reply(event):
         )
         dest_ts = resp["ts"]
         worker.enqueue(db.save_message, ticket["id"], user_id, user_name, user_avatar, text, False, file_info, dest_ts, event.get("ts"))
-        # check_flavortown(text, ticket)  # ship_certs
+        # check_stardance(text, ticket)  # ship_certs
 
     if files:
         send_files(event, STAFF_CHANNEL, ticket["staff_thread_ts"])

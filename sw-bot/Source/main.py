@@ -11,7 +11,7 @@ from handlers import (
     handle_claim_ticket, handle_create_meta, handle_delete_message, handle_delete_meta,
     handle_edit_message, handle_edited_message, handle_message, handle_meta_command,
     handle_modify_opt, handle_modify_votes, handle_open_create_meta, handle_rating_form,
-    handle_resolve_detected, handle_resolve_ticket, handle_send_paraphrased,
+    handle_reopen_ticket, handle_resolve_detected, handle_resolve_ticket, handle_send_paraphrased,
     handle_submit_feedback, handle_view_error,
 )
 from helpers import seen_already
@@ -37,6 +37,7 @@ ACTION_HANDLERS = {
     "edit_message": handle_edit_message,
     "modify_opt": handle_modify_opt,
     "resolve_detected": handle_resolve_detected,
+    "reopen_ticket": handle_reopen_ticket,
     "resolve_ticket": handle_resolve_ticket,
     "submit_feedback": handle_submit_feedback,
     "claim_ticket": handle_claim_ticket,
