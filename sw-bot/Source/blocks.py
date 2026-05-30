@@ -41,7 +41,7 @@ def meta_create_button():
             "elements": [
                 {
                     "type": "button",
-                    "text": {"type": "plain_text", "text": "Meta us.", "emoji": True},
+                    "text": {"type": "plain_text", "text": "meta us", "emoji": True},
                     "style": "primary",
                     "action_id": "open_create_meta",
                 }

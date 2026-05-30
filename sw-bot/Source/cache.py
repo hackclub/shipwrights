@@ -17,6 +17,8 @@ class Cache:
         self.metas: dict = {}
         self.shipwrights: list = []
         self.ignorable: list = []
+        self.deleted_headers: set = set()
+        self.closed_notified: dict[tuple, float] = {}
         self.metrics: dict = {
             "cached_at": None,
             "quote_otd": None,
@@ -25,6 +27,14 @@ class Cache:
             "paused": False,
         }
         self.fetch_times: dict[str, float] = {}
+
+    def can_notify_closed(self, user_id: str, ticket_id, ttl: float = 30.0) -> bool:
+        key = (user_id, ticket_id)
+        now = monotonic()
+        if now - self.closed_notified.get(key, 0.0) < ttl:
+            return False
+        self.closed_notified[key] = now
+        return True
 
     def is_stale(self, key: str, ttl: float) -> bool:
         return monotonic() - self.fetch_times.get(key, 0.0) > ttl

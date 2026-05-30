@@ -148,12 +148,13 @@ def handle_staff_reply(event):
 
     if text.startswith("?"):
         if ticket.get("status") == "closed":
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL,
-                thread_ts=ticket["staff_thread_ts"],
-                user=user_id,
-                text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
-            )
+            if cache.can_notify_closed(user_id, ticket["id"]):
+                client.chat_postEphemeral(
+                    channel=STAFF_CHANNEL,
+                    thread_ts=ticket["staff_thread_ts"],
+                    user=user_id,
+                    text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
+                )
             return
 
         clean_text = text[1:].strip()
@@ -200,12 +201,13 @@ def handle_staff_reply(event):
     macro_key = cmd.lstrip("!")
     if macro_key in MACROS:
         if ticket.get("status") == "closed":
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL,
-                thread_ts=ticket["staff_thread_ts"],
-                user=user_id,
-                text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
-            )
+            if cache.can_notify_closed(user_id, ticket["id"]):
+                client.chat_postEphemeral(
+                    channel=STAFF_CHANNEL,
+                    thread_ts=ticket["staff_thread_ts"],
+                    user=user_id,
+                    text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
+                )
             return
         resp = client.chat_postMessage(
             channel=USER_CHANNEL,
@@ -451,12 +453,13 @@ def handle_client_reply(event):
         return False
 
     if ticket.get("status") == "closed":
-        client.chat_postEphemeral(
-            channel=USER_CHANNEL,
-            thread_ts=ticket["user_thread_ts"],
-            user=user_id,
-            text="Hey there! Looks like this ticket was resolved. Shipwrights did not receive your response.",
-        )
+        if cache.can_notify_closed(user_id, ticket["id"]):
+            client.chat_postEphemeral(
+                channel=USER_CHANNEL,
+                thread_ts=ticket["user_thread_ts"],
+                user=user_id,
+                text="Hey there! Looks like this ticket was resolved. Shipwrights did not receive your response.",
+            )
         return True
 
     user_info_resp = client.users_info(user=user_id)
@@ -564,6 +567,9 @@ def edit_message(event):
         return
 
     if message == "This message was deleted.":
+        if message_ts in cache.deleted_headers:
+            return
+        cache.deleted_headers.add(message_ts)
         resp = client.chat_postMessage(
             channel=STAFF_CHANNEL,
             thread_ts=ticket["staff_thread_ts"],
