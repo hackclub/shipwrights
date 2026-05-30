@@ -87,10 +87,17 @@ async def health():
 
 
 @app.post("/slack/events")
-async def slack_events(background: BackgroundTasks, body: bytes = Depends(verified_body)):
+async def slack_events(background: BackgroundTasks, request: Request):
+    body = await request.body()
     payload = json.loads(body)
     if payload.get("type") == "url_verification":
         return JSONResponse({"challenge": payload["challenge"]})
+    if not verifier.is_valid(
+        body=body.decode(),
+        timestamp=request.headers.get("X-Slack-Request-Timestamp", ""),
+        signature=request.headers.get("X-Slack-Signature", ""),
+    ):
+        raise HTTPException(status_code=401)
     event = payload.get("event", {})
     if event.get("type") == "message":
         msg_id = event.get("client_msg_id") or event.get("event_ts") or ""
