@@ -34,7 +34,7 @@ def handle_message(event: dict) -> None:
     elif channel == STAFF_CHANNEL:
         relay.handle_staff_reply(event)
     elif channel == META_CHANNEL:
-        if not event.get("thread_ts"):
+        if not subtype and not event.get("thread_ts"):
             worker.task_runner.enqueue_meta_sticky_update()
 
 
