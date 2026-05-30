@@ -173,7 +173,7 @@ def handle_staff_reply(event):
             )
             dest_ts = resp["ts"]
 
-        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts)
+        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts, event["ts"])
 
         if not files:
             client.chat_postEphemeral(
@@ -189,6 +189,7 @@ def handle_staff_reply(event):
                 thread_ts=thread,
                 blocks=blocks.sent_files_controls(uploaded),
             )
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         return
 
     cmd = text.strip().lower().split()[0] if text.strip() else ""
@@ -211,13 +212,14 @@ def handle_staff_reply(event):
             icon_url=staff_avatar,
         )
         dest_ts = resp["ts"]
-        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, MACROS[macro_key], True, None, dest_ts)
+        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, MACROS[macro_key], True, None, dest_ts, event["ts"])
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL,
             user=user_id,
             thread_ts=thread,
             blocks=blocks.sent_message_controls(dest_ts),
         )
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         cache.close_ticket(ticket["id"])
         cache.claim_ticket(ticket["id"], user_id)
         close_resp = client.chat_postMessage(
@@ -246,12 +248,14 @@ def handle_staff_reply(event):
         return
 
     if cmd == "!tldr":
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         ai.summarize_ticket(ticket["id"])
         return
 
     if cmd == "!ai":
         clean_text = text.strip()[len("!ai"):].strip()
         worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, event.get("ts"))
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         ai.paraphrase_message(ticket["id"], clean_text)
         return
 
@@ -268,6 +272,7 @@ def handle_staff_reply(event):
             text=f"<@{user_id}> has reopened this ticket.",
         )
         worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"<@{user_id}> has reopened this ticket", True, None, resp["ts"])
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         swap_reactions(client, ticket, OPEN_TICKET_REACTION, "checks-passed-octicon")
         return
 
@@ -283,6 +288,7 @@ def handle_staff_reply(event):
             text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
         )
         worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket closed by <@{user_id}>", True, None, resp["ts"])
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         client.chat_postMessage(
             channel=USER_CHANNEL,
             thread_ts=ticket["user_thread_ts"],
@@ -326,6 +332,7 @@ def handle_staff_reply(event):
         cache.close_ticket(ticket["id"])
         cache.claim_ticket(ticket["id"], user_id)
         clear_reactions(ticket)
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
             user=user_id, text=f"Purged {deleted} messages and closed ticket.",
@@ -384,6 +391,8 @@ def handle_staff_reply(event):
                 deleted.append("user" if ch == USER_CHANNEL else "staff")
             except SlackApiError:
                 pass
+        if deleted:
+            worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
             user=user_id, text=f"Deleted from: {', '.join(deleted)}." if deleted else "Could not delete message.",

@@ -269,6 +269,7 @@ def meta_message_blocks(text, user_id):
         lambda m: m.group(1) if m.group(1) else "",
         text,
     )
+    cleaned = re.sub(r'@[a-zA-Z][a-zA-Z0-9._-]*', "", cleaned)
     cleaned = re.sub(r'\*\*|__', "", cleaned)
     indented = "\n".join(f">{line}" for line in cleaned.split("\n"))
     result = [
@@ -276,7 +277,9 @@ def meta_message_blocks(text, user_id):
         {"type": "section", "text": {"type": "mrkdwn", "text": indented}},
         {"type": "divider"},
     ]
-    has_mention = bool(re.search(r'<@[A-Z0-9]+', text))
+    has_mention = bool(
+        re.search(r'<@[A-Z0-9]+', text) or re.search(r'@[a-zA-Z][a-zA-Z0-9._-]*', text)
+    )
     if has_mention and ANNOUNCE_META:
         result.append({"type": "context", "elements": [{"type": "mrkdwn", "text": f"sent by <@{user_id}> - <!subteam^S0AFZAHP955>"}]})
     elif ANNOUNCE_META:
