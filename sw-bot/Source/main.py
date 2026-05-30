@@ -109,8 +109,11 @@ async def slack_events(background: BackgroundTasks, request: Request):
 
 @app.post("/slack/actions")
 async def slack_actions(background: BackgroundTasks, body: bytes = Depends(verified_body)):
-    form = parse_qs(body.decode())
-    payload = json.loads(form["payload"][0])
+    try:
+        form = parse_qs(body.decode())
+        payload = json.loads(form["payload"][0])
+    except Exception:
+        return JSONResponse({})
     ptype = payload.get("type")
     if ptype == "block_actions":
         handler = ACTION_HANDLERS.get(payload["actions"][0]["action_id"])

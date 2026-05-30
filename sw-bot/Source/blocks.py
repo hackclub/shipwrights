@@ -227,7 +227,7 @@ def meta_votes_message(upvotes, downvotes, meta_ts):
     return [
         {
             "type": "section",
-            "text": {"type": "mrkdwn", "text": f":upvote: *{upvotes}*   :downvote: *{downvotes}*"},
+            "text": {"type": "mrkdwn", "text": f"upvotes : *{upvotes}* :upvote:\ndownvotes : *{downvotes}* :downvote:"},
             "accessory": {
                 "type": "button",
                 "text": {"type": "plain_text", "text": "Delete Post", "emoji": True},
