@@ -439,6 +439,8 @@ def handle_staff_reply(event):
 
 
 def handle_client_reply(event):
+    if event.get("subtype") == "thread_broadcast":
+        return True
     user_id = event["user"]
     text = event.get("text", "")
     files = event.get("files", [])
@@ -450,7 +452,7 @@ def handle_client_reply(event):
 
     ticket = cache.find_ticket_by_ts(event["thread_ts"])
     if not ticket:
-        return False
+        return True
 
     if ticket.get("status") == "closed":
         if cache.can_notify_closed(user_id, ticket["id"]):
@@ -487,6 +489,8 @@ def handle_client_reply(event):
 
 
 def create_ticket(event):
+    if event.get("thread_ts"):
+        return
     user_id = event["user"]
     text = event.get("text", "")
     files = event.get("files", [])

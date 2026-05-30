@@ -29,19 +29,28 @@ def init_pool():
 
 @contextmanager
 def get_db():
+    global connection_pool
     if connection_pool is None:
         init_pool()
     conn = connection_pool.getconn()
+    if conn.closed:
+        connection_pool.putconn(conn, close=True)
+        conn = connection_pool.getconn()
     ok = False
     try:
         yield conn
         ok = True
     finally:
-        if ok:
-            conn.commit()
-        else:
-            conn.rollback()
-        connection_pool.putconn(conn)
+        bad = bool(conn.closed)
+        if not bad:
+            try:
+                if ok:
+                    conn.commit()
+                else:
+                    conn.rollback()
+            except Exception:
+                bad = True
+        connection_pool.putconn(conn, close=bad)
 
 
 def format_seconds(seconds):
