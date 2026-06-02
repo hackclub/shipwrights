@@ -542,12 +542,17 @@ def cache_dump_trigger():
         {
             "type": "section",
             "text": {"type": "mrkdwn", "text": "Cache dump ready."},
-            "accessory": {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "View Cache"},
-                "action_id": "open_cache_dump",
-            },
-        }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "View Cache"},
+                    "action_id": "open_cache_dump",
+                }
+            ],
+        },
     ]
 
 
