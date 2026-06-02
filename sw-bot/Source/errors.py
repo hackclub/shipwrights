@@ -1,8 +1,9 @@
-import contextlib, logging, uuid
+import contextlib, logging, threading, uuid
 import blocks, db, worker
 from globals import ERROR_DM_USER, client
 
 error_store: dict[str, str] = {}
+_store_lock = threading.Lock()
 
 
 class SlackDMErrorHandler(logging.Handler):
@@ -11,7 +12,8 @@ class SlackDMErrorHandler(logging.Handler):
             return
         error_id = str(uuid.uuid4())
         full = self.format(record)
-        error_store[error_id] = full
+        with _store_lock:
+            error_store[error_id] = full
         short = record.getMessage()[:150]
         worker.enqueue(db.save_error, record.levelname, record.name, short, full)
         with contextlib.suppress(Exception):

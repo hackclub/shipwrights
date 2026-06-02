@@ -15,12 +15,12 @@ def swap_reactions(client_inst, ticket, add_name, remove_name):
     for channel, ts in [(STAFF_CHANNEL, ticket["staff_thread_ts"]), (USER_CHANNEL, ticket["user_thread_ts"])]:
         try:
             client_inst.reactions_add(channel=channel, timestamp=ts, name=add_name)
-        except SlackApiError:
-            pass
+        except SlackApiError as e:
+            logging.warning(f"reactions_add {add_name} failed: {e}")
         try:
             client_inst.reactions_remove(channel=channel, timestamp=ts, name=remove_name)
-        except SlackApiError:
-            pass
+        except SlackApiError as e:
+            logging.warning(f"reactions_remove {remove_name} failed: {e}")
 
 
 def clear_reactions(ticket):
@@ -32,10 +32,10 @@ def clear_reactions(ticket):
                     continue
                 try:
                     client.reactions_remove(channel=channel, timestamp=ts, name=reaction["name"])
-                except SlackApiError:
-                    pass
-        except SlackApiError:
-            pass
+                except SlackApiError as e:
+                    logging.warning(f"reactions_remove {reaction['name']} failed: {e}")
+        except SlackApiError as e:
+            logging.warning(f"reactions_get failed: {e}")
 
 
 def post_resolve_messages(client_inst, ticket, ticket_id, user_id):
@@ -125,15 +125,268 @@ def send_files(event, dest_channel, dest_ts):
 #         )
 
 
+def _notify_closed(user_id, ticket):
+    if cache.can_notify_closed(user_id, ticket["id"]):
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staff_thread_ts"],
+            user=user_id,
+            text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
+        )
+
+
+def _send_resolve_feedback(ticket):
+    if db.mark_feedback_requested(ticket["id"]):
+        resp = client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["user_thread_ts"],
+            text=RESOLVE_MESSAGES["user"],
+            blocks=blocks.ticket_user_resolve_with_feedback(ticket["id"]),
+        )
+        worker.enqueue(db.save_resolve_message_ts, ticket["id"], resp["ts"])
+    else:
+        client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["user_thread_ts"],
+            text=RESOLVE_MESSAGES["user"],
+            blocks=blocks.ticket_user_resolve(ticket["id"]),
+        )
+
+
+def _handle_question(event, ticket, user_id, staff_name, staff_avatar, text, files, thread):
+    if ticket.get("status") == "closed":
+        _notify_closed(user_id, ticket)
+        return
+    clean_text = text[1:].strip()
+    if not clean_text and not files:
+        return
+    dest_ts = ticket["user_thread_ts"]
+    uploaded = []
+    if files:
+        uploaded = send_files(event, USER_CHANNEL, dest_ts)
+    if clean_text:
+        resp = client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["user_thread_ts"],
+            text=clean_text,
+            username=f"{staff_name} | Shipwrights Team",
+            icon_url=staff_avatar,
+        )
+        dest_ts = resp["ts"]
+    worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts, event["ts"])
+    if not files:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, user=user_id, thread_ts=thread,
+            text="Message sent.", blocks=blocks.sent_message_controls(dest_ts),
+        )
+    else:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, user=user_id, thread_ts=thread,
+            text="Files sent.", blocks=blocks.sent_files_controls(uploaded),
+        )
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="heavy_check_mark")
+
+
+def _handle_macro(event, ticket, user_id, staff_name, staff_avatar, thread, macro_key):
+    if ticket.get("status") == "closed":
+        _notify_closed(user_id, ticket)
+        return
+    resp = client.chat_postMessage(
+        channel=USER_CHANNEL,
+        thread_ts=ticket["user_thread_ts"],
+        text=MACROS[macro_key],
+        username=f"{staff_name} | Shipwrights Team",
+        icon_url=staff_avatar,
+    )
+    dest_ts = resp["ts"]
+    worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, MACROS[macro_key], True, None, dest_ts, event["ts"])
+    client.chat_postEphemeral(
+        channel=STAFF_CHANNEL, user=user_id, thread_ts=thread,
+        text="Message sent.", blocks=blocks.sent_message_controls(dest_ts),
+    )
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    cache.close_ticket(ticket["id"])
+    cache.claim_ticket(ticket["id"], user_id)
+    close_resp = client.chat_postMessage(
+        channel=STAFF_CHANNEL,
+        thread_ts=ticket["staff_thread_ts"],
+        text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
+    )
+    worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket resolved by <@{user_id}>", True, None, close_resp["ts"])
+    _send_resolve_feedback(ticket)
+    swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
+
+
+def _handle_help(ticket, user_id):
+    macro_list = "\n".join(f"  `!{k}` — {v[:60]}{'…' if len(v) > 60 else ''}" for k, v in MACROS.items())
+    help_text = (
+        "*Shipwrights Bot Commands*\n\n"
+        "*Sending messages*\n"
+        "  `?<text>` — relay a message to the user\n\n"
+        "*Ticket actions*\n"
+        "  `!resolve` — close this ticket\n"
+        "  `!reopen` — reopen a closed ticket\n"
+        "  `!delete <link>` — delete a message from both sides\n"
+        "  `!purge` _(admin)_ — delete all user-side messages and close ticket\n\n"
+        "*AI*\n"
+        "  `!tldr` — generate a ticket summary _(requires user opt-in)_\n"
+        "  `!ai <text>` — AI-paraphrase a reply before sending _(requires user opt-in)_\n\n"
+        f"*Macros* _(send message + auto-close)_\n{macro_list}"
+    )
+    client.chat_postEphemeral(
+        channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+        user=user_id, text=help_text,
+    )
+
+
+def _handle_tldr(event, ticket):
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    ai.summarize_ticket(ticket["id"])
+
+
+def _handle_ai(event, ticket, user_id, staff_name, staff_avatar, text):
+    clean_text = text.strip()[len("!ai"):].strip()
+    worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, event.get("ts"))
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    ai.paraphrase_message(ticket["id"], clean_text)
+
+
+def _handle_reopen(event, ticket, user_id):
+    cache.open_ticket(ticket["id"])
+    client.chat_postMessage(
+        channel=USER_CHANNEL,
+        thread_ts=ticket["user_thread_ts"],
+        text=f"Hey it seems that this ticket was reopened by <@{user_id}>!",
+    )
+    resp = client.chat_postMessage(
+        channel=STAFF_CHANNEL,
+        thread_ts=ticket["staff_thread_ts"],
+        text=f"<@{user_id}> has reopened this ticket.",
+    )
+    worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"<@{user_id}> has reopened this ticket", True, None, resp["ts"])
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    swap_reactions(client, ticket, OPEN_TICKET_REACTION, "checks-passed-octicon")
+
+
+def _handle_resolve(event, ticket, user_id):
+    if ticket["status"] != "open":
+        return
+    cache.close_ticket(ticket["id"])
+    cache.claim_ticket(ticket["id"], user_id)
+    swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
+    resp = client.chat_postMessage(
+        channel=STAFF_CHANNEL,
+        thread_ts=ticket["staff_thread_ts"],
+        text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
+    )
+    worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket closed by <@{user_id}>", True, None, resp["ts"])
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    _send_resolve_feedback(ticket)
+
+
+def _handle_purge(event, ticket, user_id):
+    if user_id not in ADMINS:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Only admins can use !purge.",
+        )
+        return
+    header_ts = ticket["user_thread_ts"]
+    deleted = 0
+    cursor = None
+    while True:
+        kwargs = {"channel": USER_CHANNEL, "ts": header_ts, "limit": 200}
+        if cursor:
+            kwargs["cursor"] = cursor
+        result = client.conversations_replies(**kwargs)
+        for msg in result.get("messages", []):
+            if msg["ts"] == header_ts:
+                continue
+            try:
+                client.chat_delete(channel=USER_CHANNEL, ts=msg["ts"])
+                deleted += 1
+            except SlackApiError:
+                pass
+        cursor = result.get("response_metadata", {}).get("next_cursor")
+        if not cursor:
+            break
+    cache.close_ticket(ticket["id"])
+    cache.claim_ticket(ticket["id"], user_id)
+    clear_reactions(ticket)
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    client.chat_postEphemeral(
+        channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+        user=user_id, text=f"Purged {deleted} messages and closed ticket.",
+    )
+
+
+def _handle_delete(event, ticket, user_id, text):
+    if not is_shipwright(user_id) and user_id not in ADMINS:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Only shipwrights and admins can use !delete.",
+        )
+        return
+    parts = text.strip().split(None, 1)
+    if len(parts) < 2:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Usage: !delete <message_link>",
+        )
+        return
+    parsed = parse_slack_link(parts[1].strip())
+    if not parsed:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Could not parse that link.",
+        )
+        return
+    link_channel, link_ts = parsed
+    if link_channel not in (USER_CHANNEL, STAFF_CHANNEL):
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Link must point to a message in the user or staff channel.",
+        )
+        return
+    if link_ts in (ticket["user_thread_ts"], ticket["staff_thread_ts"]):
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Cannot delete the ticket header message.",
+        )
+        return
+    if not db.message_belongs_to_ticket(link_ts, ticket["id"]):
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="That message does not belong to this ticket.",
+        )
+        return
+    linked_ts = db.get_linked_message_ts(link_ts)
+    user_ts = link_ts if link_channel == USER_CHANNEL else linked_ts
+    staff_ts = link_ts if link_channel == STAFF_CHANNEL else linked_ts
+    deleted = []
+    for ch, ts in ((USER_CHANNEL, user_ts), (STAFF_CHANNEL, staff_ts)):
+        if not ts:
+            continue
+        try:
+            client.chat_delete(channel=ch, ts=ts)
+            deleted.append("user" if ch == USER_CHANNEL else "staff")
+        except SlackApiError:
+            pass
+    if deleted:
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    client.chat_postEphemeral(
+        channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+        user=user_id, text=f"Deleted from: {', '.join(deleted)}." if deleted else "Could not delete message.",
+    )
+
+
 def handle_staff_reply(event):
     thread = event.get("thread_ts")
     if not thread:
         return
-
     ticket = cache.find_ticket_by_ts(thread)
     if not ticket:
         return
-
     text = event.get("text", "")
     files = event.get("files", [])
     if not text and not files:
@@ -147,291 +400,31 @@ def handle_staff_reply(event):
     # check_stardance(text, ticket)  # ship_certs
 
     if text.startswith("?"):
-        if ticket.get("status") == "closed":
-            if cache.can_notify_closed(user_id, ticket["id"]):
-                client.chat_postEphemeral(
-                    channel=STAFF_CHANNEL,
-                    thread_ts=ticket["staff_thread_ts"],
-                    user=user_id,
-                    text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
-                )
-            return
-
-        clean_text = text[1:].strip()
-        if not clean_text and not files:
-            return
-
-        dest_ts = ticket["user_thread_ts"]
-        uploaded = []
-
-        if files:
-            uploaded = send_files(event, USER_CHANNEL, dest_ts)
-
-        if clean_text:
-            resp = client.chat_postMessage(
-                channel=USER_CHANNEL,
-                thread_ts=ticket["user_thread_ts"],
-                text=clean_text,
-                username=f"{staff_name} | Shipwrights Team",
-                icon_url=staff_avatar,
-            )
-            dest_ts = resp["ts"]
-
-        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts, event["ts"])
-
-        if not files:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL,
-                user=user_id,
-                thread_ts=thread,
-                blocks=blocks.sent_message_controls(dest_ts),
-            )
-        else:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL,
-                user=user_id,
-                thread_ts=thread,
-                blocks=blocks.sent_files_controls(uploaded),
-            )
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="heavy_check_mark")
+        _handle_question(event, ticket, user_id, staff_name, staff_avatar, text, files, thread)
         return
 
     cmd = text.strip().lower().split()[0] if text.strip() else ""
-
     macro_key = cmd.lstrip("!")
+
     if macro_key in MACROS:
-        if ticket.get("status") == "closed":
-            if cache.can_notify_closed(user_id, ticket["id"]):
-                client.chat_postEphemeral(
-                    channel=STAFF_CHANNEL,
-                    thread_ts=ticket["staff_thread_ts"],
-                    user=user_id,
-                    text="Hey there! Looks like this ticket was resolved. The user did not receive your response.",
-                )
-            return
-        resp = client.chat_postMessage(
-            channel=USER_CHANNEL,
-            thread_ts=ticket["user_thread_ts"],
-            text=MACROS[macro_key],
-            username=f"{staff_name} | Shipwrights Team",
-            icon_url=staff_avatar,
-        )
-        dest_ts = resp["ts"]
-        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, MACROS[macro_key], True, None, dest_ts, event["ts"])
-        client.chat_postEphemeral(
-            channel=STAFF_CHANNEL,
-            user=user_id,
-            thread_ts=thread,
-            blocks=blocks.sent_message_controls(dest_ts),
-        )
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        cache.close_ticket(ticket["id"])
-        cache.claim_ticket(ticket["id"], user_id)
-        close_resp = client.chat_postMessage(
-            channel=STAFF_CHANNEL,
-            thread_ts=ticket["staff_thread_ts"],
-            text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
-        )
-        worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket resolved by <@{user_id}>", True, None, close_resp["ts"])
-        if db.mark_feedback_requested(ticket["id"]):
-            resp = client.chat_postMessage(
-                channel=USER_CHANNEL,
-                thread_ts=ticket["user_thread_ts"],
-                text=RESOLVE_MESSAGES["user"],
-                blocks=blocks.ticket_user_resolve_with_feedback(ticket["id"]),
-            )
-            worker.enqueue(db.save_resolve_message_ts, ticket["id"], resp["ts"])
-        else:
-            client.chat_postMessage(
-                channel=USER_CHANNEL,
-                thread_ts=ticket["user_thread_ts"],
-                text=RESOLVE_MESSAGES["user"],
-                blocks=blocks.ticket_user_resolve(ticket["id"]),
-            )
-        swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
+        _handle_macro(event, ticket, user_id, staff_name, staff_avatar, thread, macro_key)
         return
 
     if cmd in ("!tldr", "!ai") and not cache.get_user_opt_in(ticket["user_id"]):
         client.chat_postMessage(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], text="User has opted out of AI use.")
         return
 
-    if cmd == "!help":
-        macro_list = "\n".join(f"  `!{k}` — {v[:60]}{'…' if len(v) > 60 else ''}" for k, v in MACROS.items())
-        help_text = (
-            "*Shipwrights Bot Commands*\n\n"
-            "*Sending messages*\n"
-            "  `?<text>` — relay a message to the user\n\n"
-            "*Ticket actions*\n"
-            "  `!resolve` — close this ticket\n"
-            "  `!reopen` — reopen a closed ticket\n"
-            "  `!delete <link>` — delete a message from both sides\n"
-            "  `!purge` _(admin)_ — delete all user-side messages and close ticket\n\n"
-            "*AI*\n"
-            "  `!tldr` — generate a ticket summary _(requires user opt-in)_\n"
-            "  `!ai <text>` — AI-paraphrase a reply before sending _(requires user opt-in)_\n\n"
-            f"*Macros* _(send message + auto-close)_\n{macro_list}"
-        )
-        client.chat_postEphemeral(
-            channel=STAFF_CHANNEL,
-            thread_ts=ticket["staff_thread_ts"],
-            user=user_id,
-            text=help_text,
-        )
-        return
-
-    if cmd == "!tldr":
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        ai.summarize_ticket(ticket["id"])
-        return
-
-    if cmd == "!ai":
-        clean_text = text.strip()[len("!ai"):].strip()
-        worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, event.get("ts"))
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        ai.paraphrase_message(ticket["id"], clean_text)
-        return
-
-    if cmd == "!reopen":
-        cache.open_ticket(ticket["id"])
-        client.chat_postMessage(
-            channel=USER_CHANNEL,
-            thread_ts=ticket["user_thread_ts"],
-            text=f"Hey it seems that this ticket was reopened by <@{user_id}>!",
-        )
-        resp = client.chat_postMessage(
-            channel=STAFF_CHANNEL,
-            thread_ts=ticket["staff_thread_ts"],
-            text=f"<@{user_id}> has reopened this ticket.",
-        )
-        worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"<@{user_id}> has reopened this ticket", True, None, resp["ts"])
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        swap_reactions(client, ticket, OPEN_TICKET_REACTION, "checks-passed-octicon")
-        return
-
-    if cmd == "!resolve":
-        if ticket["status"] != "open":
-            return
-        cache.close_ticket(ticket["id"])
-        cache.claim_ticket(ticket["id"], user_id)
-        swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
-        resp = client.chat_postMessage(
-            channel=STAFF_CHANNEL,
-            thread_ts=ticket["staff_thread_ts"],
-            text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
-        )
-        worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket closed by <@{user_id}>", True, None, resp["ts"])
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        if db.mark_feedback_requested(ticket["id"]):
-            resp = client.chat_postMessage(
-                channel=USER_CHANNEL,
-                thread_ts=ticket["user_thread_ts"],
-                text=RESOLVE_MESSAGES["user"],
-                blocks=blocks.ticket_user_resolve_with_feedback(ticket["id"]),
-            )
-            worker.enqueue(db.save_resolve_message_ts, ticket["id"], resp["ts"])
-        else:
-            client.chat_postMessage(
-                channel=USER_CHANNEL,
-                thread_ts=ticket["user_thread_ts"],
-                text=RESOLVE_MESSAGES["user"],
-                blocks=blocks.ticket_user_resolve(ticket["id"]),
-            )
-        return
-
-    if cmd == "!purge":
-        if user_id not in ADMINS:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="Only admins can use !purge.",
-            )
-            return
-        header_ts = ticket["user_thread_ts"]
-        deleted = 0
-        cursor = None
-        while True:
-            kwargs = {"channel": USER_CHANNEL, "ts": header_ts, "limit": 200}
-            if cursor:
-                kwargs["cursor"] = cursor
-            result = client.conversations_replies(**kwargs)
-            for msg in result.get("messages", []):
-                if msg["ts"] == header_ts:
-                    continue
-                try:
-                    client.chat_delete(channel=USER_CHANNEL, ts=msg["ts"])
-                    deleted += 1
-                except SlackApiError:
-                    pass
-            cursor = result.get("response_metadata", {}).get("next_cursor")
-            if not cursor:
-                break
-        cache.close_ticket(ticket["id"])
-        cache.claim_ticket(ticket["id"], user_id)
-        clear_reactions(ticket)
-        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        client.chat_postEphemeral(
-            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-            user=user_id, text=f"Purged {deleted} messages and closed ticket.",
-        )
-        return
-
-    if cmd == "!delete":
-        if not is_shipwright(user_id) and user_id not in ADMINS:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="Only shipwrights and admins can use !delete.",
-            )
-            return
-        parts = text.strip().split(None, 1)
-        if len(parts) < 2:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="Usage: !delete <message_link>",
-            )
-            return
-        parsed = parse_slack_link(parts[1].strip())
-        if not parsed:
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="Could not parse that link.",
-            )
-            return
-        link_channel, link_ts = parsed
-        if link_channel not in (USER_CHANNEL, STAFF_CHANNEL):
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="Link must point to a message in the user or staff channel.",
-            )
-            return
-        if link_ts in (ticket["user_thread_ts"], ticket["staff_thread_ts"]):
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="Cannot delete the ticket header message.",
-            )
-            return
-        if not db.message_belongs_to_ticket(link_ts, ticket["id"]):
-            client.chat_postEphemeral(
-                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-                user=user_id, text="That message does not belong to this ticket.",
-            )
-            return
-        linked_ts = db.get_linked_message_ts(link_ts)
-        user_ts = link_ts if link_channel == USER_CHANNEL else linked_ts
-        staff_ts = link_ts if link_channel == STAFF_CHANNEL else linked_ts
-        deleted = []
-        for ch, ts in ((USER_CHANNEL, user_ts), (STAFF_CHANNEL, staff_ts)):
-            if not ts:
-                continue
-            try:
-                client.chat_delete(channel=ch, ts=ts)
-                deleted.append("user" if ch == USER_CHANNEL else "staff")
-            except SlackApiError:
-                pass
-        if deleted:
-            worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
-        client.chat_postEphemeral(
-            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
-            user=user_id, text=f"Deleted from: {', '.join(deleted)}." if deleted else "Could not delete message.",
-        )
+    handlers = {
+        "!help":    lambda: _handle_help(ticket, user_id),
+        "!tldr":    lambda: _handle_tldr(event, ticket),
+        "!ai":      lambda: _handle_ai(event, ticket, user_id, staff_name, staff_avatar, text),
+        "!reopen":  lambda: _handle_reopen(event, ticket, user_id),
+        "!resolve": lambda: _handle_resolve(event, ticket, user_id),
+        "!purge":   lambda: _handle_purge(event, ticket, user_id),
+        "!delete":  lambda: _handle_delete(event, ticket, user_id, text),
+    }
+    if cmd in handlers:
+        handlers[cmd]()
         return
 
     file_info = [{"name": f.get("name"), "url": f.get("url_private"), "mimetype": f.get("mimetype"), "size": f.get("size")} for f in files] if files else None
@@ -441,7 +434,9 @@ def handle_staff_reply(event):
 def handle_client_reply(event):
     if event.get("subtype") == "thread_broadcast":
         return True
-    user_id = event["user"]
+    user_id = event.get("user")
+    if not user_id:
+        return True
     text = event.get("text", "")
     files = event.get("files", [])
 

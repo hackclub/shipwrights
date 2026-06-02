@@ -60,7 +60,7 @@ def handle_send_paraphrased(payload: dict) -> None:
         username=f"{user_info['username']} | AI Paraphrased", icon_url=user_info["pfp"],
     )
     worker.enqueue(db.save_message, ticket_id, user_id, f"{user_info['username']} | AI Paraphrased", user_info["pfp"], paraphrased, True, None, staff_resp["ts"])
-    client.chat_postEphemeral(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], user=user_id, blocks=blocks.sent_message_controls(user_resp["ts"]))
+    client.chat_postEphemeral(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], user=user_id, text="Message sent.", blocks=blocks.sent_message_controls(user_resp["ts"]))
 
 
 def handle_delete_message(payload: dict) -> None:
@@ -110,7 +110,7 @@ def handle_resolve_detected(payload: dict) -> None:
     cache.close_ticket(ticket_id)
     cache.claim_ticket(ticket_id, user_id)
     reply_resp = client.chat_postMessage(channel=USER_CHANNEL, thread_ts=ticket["user_thread_ts"], text=reply, username=f"{user_info['username']} | Shipwrights Team", icon_url=user_info["pfp"])
-    client.chat_postEphemeral(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], user=user_id, blocks=blocks.sent_message_controls(reply_resp["ts"]))
+    client.chat_postEphemeral(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], user=user_id, text="Message sent.", blocks=blocks.sent_message_controls(reply_resp["ts"]))
     relay.post_resolve_messages(client, ticket, ticket_id, user_id)
     client.chat_postMessage(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], text=reply, username=f"{user_info['username']} | AI Auto Detection", icon_url=user_info["pfp"])
     relay.swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)

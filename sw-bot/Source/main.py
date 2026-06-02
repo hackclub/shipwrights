@@ -113,7 +113,8 @@ async def slack_actions(background: BackgroundTasks, body: bytes = Depends(verif
     try:
         form = parse_qs(body.decode())
         payload = json.loads(form["payload"][0])
-    except Exception:
+    except Exception as e:
+        logging.error(f"Failed to parse Slack action payload: {e}")
         return JSONResponse({})
     ptype = payload.get("type")
     if ptype == "block_actions":

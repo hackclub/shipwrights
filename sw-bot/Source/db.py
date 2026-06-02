@@ -24,33 +24,50 @@ def init_pool():
         user=DB_USER,
         password=DB_PASSWORD,
         dbname=DB_NAME,
+        keepalives=1,
+        keepalives_idle=60,
+        keepalives_interval=10,
+        keepalives_count=5,
     )
 
 
-@contextmanager
-def get_db():
-    global connection_pool
+def _acquire_conn() -> psycopg2.extensions.connection:
     if connection_pool is None:
         init_pool()
     conn = connection_pool.getconn()
     if conn.closed:
         connection_pool.putconn(conn, close=True)
         conn = connection_pool.getconn()
-    ok = False
+    try:
+        conn.cursor().execute("SELECT 1")
+    except Exception as e:
+        logging.error(f"DB connection validation failed, replacing: {e}")
+        connection_pool.putconn(conn, close=True)
+        conn = connection_pool.getconn()
+    return conn
+
+
+def _release_conn(conn, *, success: bool) -> None:
+    bad = bool(conn.closed)
+    if not bad:
+        try:
+            conn.commit() if success else conn.rollback()
+        except Exception as e:
+            logging.error(f"DB {'commit' if success else 'rollback'} failed: {e}")
+            bad = True
+    connection_pool.putconn(conn, close=bad)
+
+
+@contextmanager
+def get_db():
+    conn = _acquire_conn()
     try:
         yield conn
-        ok = True
-    finally:
-        bad = bool(conn.closed)
-        if not bad:
-            try:
-                if ok:
-                    conn.commit()
-                else:
-                    conn.rollback()
-            except Exception:
-                bad = True
-        connection_pool.putconn(conn, close=bad)
+        _release_conn(conn, success=True)
+    except Exception as e:
+        logging.error(f"DB query failed: {e}")
+        _release_conn(conn, success=False)
+        raise
 
 
 def format_seconds(seconds):
@@ -446,7 +463,8 @@ def avg_close_time(period="all"):
                     except (TypeError, ValueError):
                         avg_seconds = None
                 return format_seconds(avg_seconds or 0)
-    except psycopg2.Error:
+    except psycopg2.Error as e:
+        logging.error(f"avg_close_time failed: {e}")
         return "N/A"
 
 
@@ -461,7 +479,8 @@ def count_tickets(status="all"):
                     cur.execute("SELECT COUNT(*) FROM tickets WHERE status = %s", (s,))
                 row = cur.fetchone()
                 return int(row[0] or 0)
-    except psycopg2.Error:
+    except psycopg2.Error as e:
+        logging.error(f"count_tickets failed: {e}")
         return 0
 
 

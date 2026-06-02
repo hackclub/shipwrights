@@ -12,8 +12,13 @@ write_queue: queue.Queue = queue.Queue()
 
 TASK_REGISTRY: dict[str, Callable] = {
     f"db.{name}": getattr(db, name)
-    for name in dir(db)
-    if callable(getattr(db, name)) and not name.startswith("_")
+    for name in (
+        "save_ticket", "save_message", "save_error",
+        "close_ticket", "open_ticket", "claim_ticket",
+        "add_stardust", "update_ticket_user_opt", "create_ticket_user",
+        "save_feedback", "update_meta_votes", "save_meta",
+        "save_resolve_message_ts", "mark_feedback_requested",
+    )
 }
 
 
