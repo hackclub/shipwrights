@@ -32,19 +32,26 @@ def init_pool():
 
 
 def _acquire_conn() -> psycopg2.extensions.connection:
+    global connection_pool
     if connection_pool is None:
         init_pool()
-    conn = connection_pool.getconn()
-    if conn.closed:
-        connection_pool.putconn(conn, close=True)
+    for attempt in range(3):
         conn = connection_pool.getconn()
-    try:
-        conn.cursor().execute("SELECT 1")
-    except Exception as e:
-        logging.error(f"DB connection validation failed, replacing: {e}")
-        connection_pool.putconn(conn, close=True)
-        conn = connection_pool.getconn()
-    return conn
+        if conn.closed:
+            connection_pool.putconn(conn, close=True)
+            continue
+        try:
+            conn.cursor().execute("SELECT 1")
+            return conn
+        except Exception as e:
+            logging.error(f"DB connection validation failed (attempt {attempt + 1}): {e}")
+            connection_pool.putconn(conn, close=True)
+            try:
+                connection_pool.closeall()
+            except Exception:
+                pass
+            init_pool()
+    raise psycopg2.OperationalError("DB connection unavailable after 3 attempts")
 
 
 def _release_conn(conn, *, success: bool) -> None:
