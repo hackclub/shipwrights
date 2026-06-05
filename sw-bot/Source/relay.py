@@ -154,9 +154,6 @@ def _send_resolve_feedback(ticket):
 
 
 def _handle_question(event, ticket, user_id, staff_name, staff_avatar, text, files, thread):
-    if ticket.get("status") == "closed":
-        _notify_closed(user_id, ticket)
-        return
     clean_text = text[1:].strip()
     if not clean_text and not files:
         return
@@ -188,9 +185,6 @@ def _handle_question(event, ticket, user_id, staff_name, staff_avatar, text, fil
 
 
 def _handle_macro(event, ticket, user_id, staff_name, staff_avatar, thread, macro_key):
-    if ticket.get("status") == "closed":
-        _notify_closed(user_id, ticket)
-        return
     resp = client.chat_postMessage(
         channel=USER_CHANNEL,
         thread_ts=ticket["user_thread_ts"],
@@ -449,15 +443,7 @@ def handle_client_reply(event):
     if not ticket:
         return True
 
-    if ticket.get("status") == "closed":
-        if cache.can_notify_closed(user_id, ticket["id"]):
-            client.chat_postEphemeral(
-                channel=USER_CHANNEL,
-                thread_ts=ticket["user_thread_ts"],
-                user=user_id,
-                text="Hey there! Looks like this ticket was resolved. Shipwrights did not receive your response.",
-            )
-        return True
+
 
     user_info_resp = client.users_info(user=user_id)
     user_name = user_info_resp["user"]["profile"].get("display_name") or user_info_resp["user"]["profile"].get("real_name")
