@@ -84,9 +84,6 @@ def handle_send_paraphrased(payload: dict) -> None:
     ticket = cache.get_ticket_by_id(ticket_id)
     if not ticket:
         return
-    if ticket.get("status") == "closed":
-        client.chat_postEphemeral(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], user=user_id, text=MESSAGE_NOT_RECEIVED)
-        return
     user_resp = client.chat_postMessage(
         channel=USER_CHANNEL, text=paraphrased, thread_ts=ticket["user_thread_ts"],
         username=f"{user_info['username']} | Shipwrights Team", icon_url=user_info["pfp"],
