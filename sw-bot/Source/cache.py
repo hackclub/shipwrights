@@ -4,6 +4,7 @@ import db, worker
 
 SHIPWRIGHTS_TTL = 600.0
 DEFAULT_TTL = 7200.0
+BUMP_TTL = 3300.0  # 55 min — just under the hourly poll interval
 
 
 class Cache:
@@ -20,6 +21,7 @@ class Cache:
         self.ignorable: list = []
         self.deleted_headers: set = set()
         self.closed_notified: dict[tuple, float] = {}
+        self._bump_candidates: list = []
         self.metrics: dict = {
             "cached_at": None,
             "quote_otd": None,
@@ -213,6 +215,19 @@ class Cache:
         worker.enqueue(db.update_meta_votes, meta_message_ts, upvote_delta, downvote_delta)
         return (meta["upvotes"], meta["downvotes"])
 
+
+    def get_tickets_due_for_bump(self) -> list:
+        with self._lock:
+            if self._bump_candidates and not self.is_stale("bump_candidates", BUMP_TTL):
+                return self._bump_candidates
+            self._bump_candidates = db.get_tickets_due_for_bump()
+            self.mark_fresh("bump_candidates")
+            return self._bump_candidates
+
+    def invalidate_bump_cache(self):
+        with self._lock:
+            self._bump_candidates = []
+            self.fetch_times.pop("bump_candidates", None)
 
     def snapshot(self) -> dict:
         with self._lock:

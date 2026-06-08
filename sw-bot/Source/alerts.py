@@ -2,6 +2,7 @@ import logging, time
 import pytz
 import schedule
 import blocks, db
+from cache import cache
 from globals import REMINDERS_CHANNEL, STAFF_CHANNEL, client
 
 scheduler = schedule.Scheduler()
@@ -25,7 +26,7 @@ def check_unresolved_tickets():
 
 def bump_stale_tickets():
     try:
-        tickets = db.get_tickets_due_for_bump()
+        tickets = cache.get_tickets_due_for_bump()
         for ticket in tickets:
             try:
                 created_at = ticket["created_at"]
@@ -42,6 +43,7 @@ def bump_stale_tickets():
                     reply_broadcast=True,
                 )
                 db.mark_ticket_bumped(ticket["id"])
+                cache.invalidate_bump_cache()
                 time.sleep(1)  # slack rate limiting
             except Exception as e:
                 logging.error(f"Bump failed for ticket {ticket.get('id')}: {e}")
