@@ -504,6 +504,45 @@ def get_unresolved_tickets_past_24h():
         return []
 
 
+def get_tickets_due_for_bump():
+    """Returns open tickets that are due for a bump:
+    - Never bumped and older than 24h, OR
+    - Last bumped more than 24h ago :)
+    """
+    try:
+        with get_db() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT * FROM tickets
+                    WHERE status = 'open'
+                      AND (
+                        (last_bumped_at IS NULL     AND created_at    <= NOW() - INTERVAL '1 day')
+                        OR
+                        (last_bumped_at IS NOT NULL AND last_bumped_at <= NOW() - INTERVAL '1 day')
+                      )
+                    """
+                )
+                return [dict(r) for r in cur.fetchall()]
+    except psycopg2.Error as e:
+        logging.error(f"get_tickets_due_for_bump failed: {e}")
+        return []
+
+
+def mark_ticket_bumped(ticket_id: int) -> bool:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE tickets SET last_bumped_at = NOW() WHERE id = %s",
+                    (ticket_id,),
+                )
+                return cur.rowcount > 0
+    except psycopg2.Error as e:
+        logging.error(f"mark_ticket_bumped failed: {e}")
+        return False
+
+
 def get_daily_ticket_stats():
     try:
         with get_db() as conn:
