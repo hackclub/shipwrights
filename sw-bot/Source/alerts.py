@@ -1,11 +1,11 @@
 import logging, time
-from datetime import datetime, timezone
 import pytz
 import schedule
 import blocks, db
 from globals import REMINDERS_CHANNEL, STAFF_CHANNEL, client
 
 scheduler = schedule.Scheduler()
+
 
 
 def check_unresolved_tickets():
@@ -22,34 +22,36 @@ def check_unresolved_tickets():
         except Exception as e:
             logging.error(f"check_unresolved_tickets failed: {e}")
 
+
+def bump_stale_tickets():
     try:
-        unresolved_tickets = db.get_unresolved_tickets_past_24h()
-        now = datetime.now(timezone.utc)
-        for ticket in unresolved_tickets:
+        tickets = db.get_tickets_due_for_bump()
+        for ticket in tickets:
             try:
                 created_at = ticket["created_at"]
-                if created_at and ticket.get("staff_thread_ts"):
-                    if created_at.tzinfo is None:
-                        created_at = pytz.utc.localize(created_at)
-                    num_days = (now - created_at).days
-                    if num_days < 1:
-                        num_days = 1
+                if not created_at or not ticket.get("staff_thread_ts"):
+                    continue
 
-                    client.chat_postMessage(
-                        channel=STAFF_CHANNEL,
-                        thread_ts=ticket["staff_thread_ts"],
-                        text=f"Bump, this ticket isn't resolved yet, it's been over {num_days} day{'s' if num_days > 1 else ''}.",
-                        reply_broadcast=True,
-                    )
-                    time.sleep(1) # slack rate limiting
+                if created_at.tzinfo is None:
+                    created_at = pytz.utc.localize(created_at)
+
+                client.chat_postMessage(
+                    channel=STAFF_CHANNEL,
+                    thread_ts=ticket["staff_thread_ts"],
+                    text="Bump, this ticket hasn't been resolved yet and it's been over 24 hours.",
+                    reply_broadcast=True,
+                )
+                db.mark_ticket_bumped(ticket["id"])
+                time.sleep(1)  # slack rate limiting
             except Exception as e:
                 logging.error(f"Bump failed for ticket {ticket.get('id')}: {e}")
     except Exception as e:
-        logging.error(f"check_unresolved_tickets bump loop failed: {e}")
+        logging.error(f"bump_stale_tickets failed: {e}")
 
 
 def alerts_loop():
     scheduler.every().day.at("11:00", "UTC").do(check_unresolved_tickets)
+    scheduler.every().hour.do(bump_stale_tickets)
     while True:
         scheduler.run_pending()
         time.sleep(30)
