@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from threading import Lock
 from time import monotonic
 import views
-from cache import cache
 from globals import APP_ID
 
 rate_limits: defaultdict = defaultdict(list)
@@ -62,6 +61,7 @@ def get_user_info(client, user_id):
 
 
 def is_shipwright(user_id) -> bool:
+    from cache import cache
     return user_id in cache.get_shipwrights()
 
 
