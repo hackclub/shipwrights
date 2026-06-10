@@ -118,7 +118,8 @@ class Worker:
                         # if task == "update_sticky_message":  # user sticky
                         #     self.update_sticky_message()
                         if task == "update_meta_sticky":
-                            self.update_meta_sticky()
+                            pass
+                            #self.update_meta_sticky()
                     except Exception as e:
                         logger.exception(f"Unhandled error in task={task}: {e}")
 
