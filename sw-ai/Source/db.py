@@ -1,211 +1,169 @@
-import os, json
-from helpers import format_messages
+import logging
+import os
+from contextlib import contextmanager
+
+import psycopg2
 from dotenv import load_dotenv
-from mysql.connector import pooling
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+
+from helpers import format_messages
 
 load_dotenv()
 
-db_pool = pooling.MySQLConnectionPool(
-    pool_name="bot_pool",
-    pool_size=5,
-    host=os.getenv("DB_HOST"),
-    port=int(os.getenv("DB_PORT", 3306)),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    database=os.getenv("DB_NAME"),
-)
+_pool: pool.ThreadedConnectionPool | None = None
+
+
+def _init_pool():
+    global _pool
+    _pool = pool.ThreadedConnectionPool(
+        minconn=2,
+        maxconn=10,
+        host=os.getenv("DB_HOST", "localhost"),
+        port=int(os.getenv("DB_PORT", 5432)),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        dbname=os.getenv("DB_NAME"),
+        keepalives=1,
+        keepalives_idle=60,
+        keepalives_interval=10,
+        keepalives_count=5,
+    )
+
+
+def _acquire_conn():
+    global _pool
+    if _pool is None:
+        _init_pool()
+    for attempt in range(3):
+        conn = _pool.getconn()
+        if conn.closed:
+            _pool.putconn(conn, close=True)
+            continue
+        try:
+            conn.cursor().execute("SELECT 1")
+            return conn
+        except Exception as e:
+            logging.error(f"DB connection validation failed (attempt {attempt + 1}): {e}")
+            _pool.putconn(conn, close=True)
+            try:
+                _pool.closeall()
+            except Exception:
+                pass
+            _init_pool()
+    raise psycopg2.OperationalError("DB connection unavailable after 3 attempts")
+
+
+def _release_conn(conn, *, success: bool):
+    bad = bool(conn.closed)
+    if not bad:
+        try:
+            conn.commit() if success else conn.rollback()
+        except Exception as e:
+            logging.error(f"DB {'commit' if success else 'rollback'} failed: {e}")
+            bad = True
+    _pool.putconn(conn, close=bad)
+
+
+@contextmanager
+def get_db():
+    conn = _acquire_conn()
+    try:
+        yield conn
+        _release_conn(conn, success=True)
+    except Exception as e:
+        logging.error(f"DB query failed: {e}")
+        _release_conn(conn, success=False)
+        raise
+
 
 def get_ticket_ts(ticket_id):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            """
-            SELECT userThreadTs FROM tickets WHERE id = %s
-            """, (ticket_id,)
-        )
-        result = cursor.fetchone()
-        return result['userThreadTs'] if result else None
-    finally:
-        cursor.close()
-        conn.close()
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT user_thread_ts FROM tickets WHERE id = %s", (ticket_id,))
+            result = cur.fetchone()
+            return result["user_thread_ts"] if result else None
+
 
 def get_ticket_messages(ticket_id):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            """
-            SELECT msg, isStaff
-            FROM ticket_msgs
-            WHERE ticketId = %s
-            ORDER BY createdAt ASC
-            """,
-            (ticket_id,)
-        )
-        return cursor.fetchall()
-    finally:
-        cursor.close()
-        conn.close()
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT msg, is_staff
+                FROM ticket_msgs
+                WHERE ticket_id = %s
+                ORDER BY created_at ASC
+                """,
+                (ticket_id,),
+            )
+            return [{"msg": r["msg"], "isStaff": r["is_staff"]} for r in cur.fetchall()]
+
 
 def get_ticket_question(ticket_id):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            """
-            SELECT question FROM tickets WHERE id = %s
-            """, (ticket_id,)
-        )
-        result = cursor.fetchone()
-        return result['question'] if result else None
-    finally:
-        cursor.close()
-        conn.close()
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT question FROM tickets WHERE id = %s", (ticket_id,))
+            result = cur.fetchone()
+            return result["question"] if result else None
 
-def get_cert_rejection_info(cert_id):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            "SELECT reviewFeedback, description FROM ship_certs WHERE id = %s",
-            (cert_id,)
-        )
-        return cursor.fetchone()
-    except Exception as e:
-        print(f"[get_cert_rejection_info] DB error for cert_id={cert_id!r}: {e}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
-
-def get_cert(cert_id):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            "SELECT * FROM ship_certs WHERE id = %s",
-            (cert_id,)
-        )
-        return cursor.fetchone()
-    except Exception as e:
-        print(f"[get_cert_rejection_info] DB error for cert_id={cert_id!r}: {e}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
 
 def get_recent_tickets():
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("""
-            SELECT id, question FROM tickets
-            WHERE createdAt >= NOW() - INTERVAL 24 HOUR
-        """)
-        tickets = cursor.fetchall()
-        result = []
-        for ticket in tickets:
-            cursor.execute(
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
                 """
-                SELECT msg, isStaff
-                FROM ticket_msgs
-                WHERE ticketId = %s
-                ORDER BY createdAt ASC
-                """,
-                (ticket['id'],)
+                SELECT id, question FROM tickets
+                WHERE created_at >= NOW() - INTERVAL '24 hours'
+                """
             )
-            messages = cursor.fetchall()
+            tickets = cur.fetchall()
+            result = []
+            for ticket in tickets:
+                cur.execute(
+                    """
+                    SELECT msg, is_staff
+                    FROM ticket_msgs
+                    WHERE ticket_id = %s
+                    ORDER BY created_at ASC
+                    """,
+                    (ticket["id"],),
+                )
+                messages = [{"msg": r["msg"], "isStaff": r["is_staff"]} for r in cur.fetchall()]
+                result.append({
+                    "id": ticket["id"],
+                    "question": ticket["question"],
+                    "messages": format_messages(messages, False),
+                })
+            return result
 
-            result.append({
-                'id': ticket['id'],
-                'question': ticket['question'],
-                'messages': format_messages(messages, False)
-            })
-
-        return result
-    finally:
-        cursor.close()
-        conn.close()
 
 def get_context_tickets():
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("""
-            SELECT id, question FROM tickets
-            WHERE createdAt < NOW() - INTERVAL 24 HOUR and createdAt >= NOW() - INTERVAL 96 HOUR
-        """)
-        tickets = cursor.fetchall()
-        result = []
-        for ticket in tickets:
-            cursor.execute(
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
                 """
-                SELECT msg, isStaff
-                FROM ticket_msgs
-                WHERE ticketId = %s
-                ORDER BY createdAt ASC
-                """,
-                (ticket['id'],)
+                SELECT id, question FROM tickets
+                WHERE created_at < NOW() - INTERVAL '24 hours'
+                  AND created_at >= NOW() - INTERVAL '96 hours'
+                """
             )
-            messages = cursor.fetchall()
-
-            result.append({
-                'id': ticket['id'],
-                'question': ticket['question'],
-                'messages': format_messages(messages, False)
-            })
-
-        return result
-    finally:
-        cursor.close()
-        conn.close()
-
-
-def save_rejection_reason(cert_id, reason, explanation):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            """
-            UPDATE ship_certs SET rejectionReason = %s, rejectionExplanation = %s WHERE id = %s
-            """, (reason, explanation, cert_id)
-        )
-        conn.commit()
-        return cursor.rowcount > 0
-    except Exception as e:
-        print(f"Error saving rejection reason for cert {cert_id}: {e}")
-        try:
-            conn.rollback()
-        except Exception:
-            pass
-        return False
-    finally:
-        cursor.close()
-        conn.close()
-
-def save_metrics_history(data, created_at=None):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        payload = json.dumps(data, ensure_ascii=False)
-        if created_at:
-            cursor.execute(
-                "INSERT INTO metrics_history (createdAt, output) VALUES (%s, %s)",
-                (created_at, payload),
-            )
-        else:
-            cursor.execute("INSERT INTO metrics_history (output) VALUES (%s)", (payload,))
-        conn.commit()
-        return cursor.lastrowid
-    except Exception as e:
-        print(f"Error saving metrics: {e}")
-        try:
-            conn.rollback()
-        except Exception as e:
-            print(f"Rolling back transaction: {e}")
-            pass
-        return None
-    finally:
-        cursor.close()
-        conn.close()
+            tickets = cur.fetchall()
+            result = []
+            for ticket in tickets:
+                cur.execute(
+                    """
+                    SELECT msg, is_staff
+                    FROM ticket_msgs
+                    WHERE ticket_id = %s
+                    ORDER BY created_at ASC
+                    """,
+                    (ticket["id"],),
+                )
+                messages = [{"msg": r["msg"], "isStaff": r["is_staff"]} for r in cur.fetchall()]
+                result.append({
+                    "id": ticket["id"],
+                    "question": ticket["question"],
+                    "messages": format_messages(messages, False),
+                })
+            return result

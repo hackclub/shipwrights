@@ -1,6 +1,6 @@
 dotenv~=0.9.9
 python-dotenv~=1.2.2
-mysql-connector-python~=9.7.0
+psycopg2-binary~=2.9.10
 requests~=2.34.2
 schedule~=1.2.2
 Flask~=3.1.3

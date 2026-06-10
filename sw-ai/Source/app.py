@@ -135,21 +135,6 @@ def get_vibes():
     VIBES_CACHE["created_at"] = datetime.now()
     return jsonify(ai_response), 200
 
-@app.post("/analysis/rejection")
-def analyze_rejection_reason_post():
-    cert_id = get_rejection_cert_id_from_request(request)
-    if cert_id is None:
-        return jsonify({"error": "invalid or missing cert_id"}), 400
-
-    error_body, error_status = process_rejection_analysis(
-        cert_id,
-        get_cert_rejection_info,
-        save_rejection_reason
-    )
-    if error_body is not None:
-        return jsonify(error_body), error_status
-
-    return "ok", 200
 
 @app.get("/projects/check")
 def check_project():
@@ -182,8 +167,8 @@ def check_project():
 
 if __name__ == "__main__":
     try:
-        reminder_thread = threading.Thread(target=history_loop, daemon=True)
-        reminder_thread.start()
+        #reminder_thread = threading.Thread(target=history_loop, daemon=True)
+        #reminder_thread.start()
         print("Services up and running!")
         app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
     except Exception as e:

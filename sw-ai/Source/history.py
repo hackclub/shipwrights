@@ -1,7 +1,7 @@
 import schedule, time, requests, json
 from helpers import OPENROUTER_KEY
 from helpers import format_vibes_message, clean_json_response, logger
-from db import save_metrics_history, get_recent_tickets, get_context_tickets
+from db import get_recent_tickets, get_context_tickets
 from datetime import datetime
 
 
@@ -64,13 +64,7 @@ def save_metrics():
         'output': ai_response,
     }
 
-    try:
-        saved = save_metrics_history(payload, created_at=today)
-        logger.info(f"Saved metrics for {for_date} #SW-HISTORY: {saved}")
-        return saved
-    except Exception as e:
-        print(f"Error saving metrics: {e}")
-        return None
+    return payload
 
 
 def history_loop():
