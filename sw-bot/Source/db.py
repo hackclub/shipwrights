@@ -49,8 +49,8 @@ def _acquire_conn() -> psycopg2.extensions.connection:
             connection_pool.putconn(conn, close=True)
             try:
                 connection_pool.closeall()
-            except Exception:
-                pass
+            except Exception as ce:
+                logging.warning(f"DB pool closeall failed: {ce}")
             init_pool()
     raise psycopg2.OperationalError("DB connection unavailable after 3 attempts")
 
@@ -119,17 +119,17 @@ def period_filter(period):
     return None
 
 
-def save_ticket(user_id, user_name, user_avatar, question, user_thread, staff_thread):
+def save_ticket(user_id, user_name, user_avatar, question, user_thread, staff_thread, open_ticket_message_ts=None):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO tickets (user_id, user_name, user_avatar, question, user_thread_ts, staff_thread_ts, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'open')
+                    INSERT INTO tickets (user_id, user_name, user_avatar, question, user_thread_ts, staff_thread_ts, status, open_ticket_message_ts)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'open', %s)
                     RETURNING id
                     """,
-                    (user_id, user_name, user_avatar, question, user_thread, staff_thread),
+                    (user_id, user_name, user_avatar, question, user_thread, staff_thread, open_ticket_message_ts),
                 )
                 return cur.fetchone()[0]
     except psycopg2.Error as e:
@@ -209,7 +209,7 @@ def close_ticket(ticket_id):
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE tickets SET status = 'closed', closed_at = NOW() WHERE id = %s",
+                    "UPDATE tickets SET status = 'closed', closed_at = NOW(), open_ticket_message_ts = NULL WHERE id = %s",
                     (ticket_id,),
                 )
                 return cur.rowcount > 0
@@ -218,13 +218,13 @@ def close_ticket(ticket_id):
         return False
 
 
-def open_ticket(ticket_id):
+def open_ticket(ticket_id, open_ticket_message_ts=None):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE tickets SET status = 'open', closed_at = NULL WHERE id = %s",
-                    (ticket_id,),
+                    "UPDATE tickets SET status = 'open', closed_at = NULL, open_ticket_message_ts = %s WHERE id = %s",
+                    (open_ticket_message_ts, ticket_id),
                 )
                 return cur.rowcount > 0
     except psycopg2.Error as e:

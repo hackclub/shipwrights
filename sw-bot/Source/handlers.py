@@ -4,7 +4,7 @@ import ai, blocks, db, errors, relay, views, worker
 from slack_sdk.errors import SlackApiError
 from cache import cache
 from globals import (
-    ADMINS, CANNOT_CLOSE_OWN, ALREADY_CLAIMED, ERROR_DM_USER, MESSAGE_NOT_RECEIVED, META_CHANNEL,
+    ADMINS, CANNOT_CLOSE_OWN, ALREADY_CLAIMED, ERROR_DM_USER, META_CHANNEL,
     OPEN_TICKET_REACTION, STAFF_CHANNEL, TICKET_CLAIMED, USER_CHANNEL, client,
 )
 from helpers import (
@@ -140,6 +140,7 @@ def handle_resolve_detected(payload: dict) -> None:
     if ticket["status"] != "open":
         show_unauthorized_close(client, payload, "closing")
         return
+    relay.delete_open_ticket_message(ticket)
     cache.close_ticket(ticket_id)
     cache.claim_ticket(ticket_id, user_id)
     reply_resp = client.chat_postMessage(channel=USER_CHANNEL, thread_ts=ticket["user_thread_ts"], text=reply, username=f"{user_info['username']} | Shipwrights Team", icon_url=user_info["pfp"])
@@ -166,6 +167,7 @@ def handle_resolve_ticket(payload: dict) -> None:
         client.chat_postEphemeral(channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"], user=user_id, text=CANNOT_CLOSE_OWN)
         return
     if is_sw and not is_owner:
+        relay.delete_open_ticket_message(ticket)
         cache.close_ticket(ticket_id)
         cache.claim_ticket(ticket_id, user_id)
         relay.post_resolve_messages(client, ticket, ticket_id, user_id)
@@ -174,6 +176,7 @@ def handle_resolve_ticket(payload: dict) -> None:
             ai.summarize_ticket(ticket_id)
         return
     if is_owner and not is_sw:
+        relay.delete_open_ticket_message(ticket)
         cache.close_ticket(ticket_id)
         relay.post_resolve_messages(client, ticket, ticket_id, user_id)
         relay.swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
@@ -255,7 +258,8 @@ def handle_reopen_ticket(payload: dict) -> None:
     user_id = payload["user"]["id"]
     if user_id != ticket["user_id"] or ticket.get("status") != "closed":
         return
-    cache.open_ticket(ticket_id)
+    ts = relay.post_reopen_open_channel(ticket)
+    cache.open_ticket(ticket_id, ts)
     resolve_ts = db.get_resolve_message_ts(ticket_id)
     if resolve_ts and not cache.get_feedback(ticket_id):
         try:

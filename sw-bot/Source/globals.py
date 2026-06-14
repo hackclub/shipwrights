@@ -1,10 +1,12 @@
 import os
+import sys
 from slack_sdk import WebClient
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET")
 
 client = WebClient(token=BOT_TOKEN)
 REMINDERS_CHANNEL = os.getenv("REMINDER_CHANNEL_ID", "C09TTRZH94Z")
@@ -12,6 +14,7 @@ APP_ID = os.getenv("APP_ID")
 ANNOUNCE_META = os.getenv("ANNOUNCE_META", "false").lower() == "true"
 META_CHANNEL = os.getenv("META_CHANNEL_ID")
 USER_CHANNEL = os.getenv("USER_CHANNEL_ID")
+OPEN_TICKETS_CHANNEL = os.getenv("OPEN_TICKETS_CHANNEL_ID", "").strip() or None
 ADMINS = os.getenv("ADMINS", "").split(",")
 STAFF_CHANNEL = os.getenv("STAFF_CHANNEL_ID")
 SWAI_KEY = os.getenv("SW_AI")
@@ -44,7 +47,30 @@ USER_CLOSED_MESSAGE = "Hey! So it looks the user closed this ticket. Please clai
 ALREADY_CLAIMED = "*This ticket is already claimed by <@(user_id)>!*"
 TICKET_CLAIMED = "*This ticket has been claimed by <@(user_id)>!*"
 CANNOT_CLOSE_OWN = "You cannot close your own ticket as a shipwright."
-MESSAGE_NOT_RECEIVED = "Hey! Looks like this ticket was resolved. Shipwrights did not receive your response."
 FEEDBACK_MESSAGE = "If you could give us 20 seconds of your time, we would love to know how we did in this ticket!\n3 random fillers get picked each month to earn 10 stardust each!"
 
 TICKET_PAY = 0.3
+
+
+def _validate_env():
+    required = {
+        "SLACK_BOT_TOKEN": BOT_TOKEN,
+        "SLACK_SIGNING_SECRET": SIGNING_SECRET,
+        "APP_ID": APP_ID,
+        "USER_CHANNEL_ID": USER_CHANNEL,
+        "STAFF_CHANNEL_ID": STAFF_CHANNEL,
+        "META_CHANNEL_ID": META_CHANNEL,
+        "DB_NAME": DB_NAME,
+        "DB_USER": DB_USER,
+        "DB_PASSWORD": DB_PASSWORD,
+    }
+    missing = [key for key, val in required.items() if not val]
+    if missing:
+        print(
+            "Missing required environment variables:\n" + "\n".join(f"  - {k}" for k in missing),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+_validate_env()

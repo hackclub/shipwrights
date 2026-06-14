@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from slack_sdk.signature import SignatureVerifier
 import alerts, cache_store, errors, raffle, summary, worker
 from cache import cache
-from globals import ENVIRONMENT, ERROR_DM_USER, PORT, client
+from globals import ENVIRONMENT, ERROR_DM_USER, PORT, SIGNING_SECRET, client
 from handlers import (
     handle_cache_dump_view, handle_claim_ticket, handle_create_meta, handle_delete_message,
     handle_delete_meta, handle_edit_message, handle_edited_message, handle_message,
@@ -25,7 +25,7 @@ dm_handler = errors.SlackDMErrorHandler(level=logging.ERROR)
 dm_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s: %(message)s"))
 logging.getLogger().addHandler(dm_handler)
 
-verifier = SignatureVerifier(os.getenv("SLACK_SIGNING_SECRET", ""))
+verifier = SignatureVerifier(SIGNING_SECRET)
 
 COMMAND_HANDLERS = {
     "/metasw" if ENVIRONMENT == "PRODUCTION" else "/metastaging": handle_meta_command,

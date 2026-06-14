@@ -2,7 +2,7 @@ import logging, uuid, queue
 from typing import Callable
 from slack_sdk.errors import SlackApiError
 import blocks, cache, db, task_journal
-from globals import META_CHANNEL, USER_CHANNEL, client
+from globals import META_CHANNEL, client
 from helpers import find_meta_sticky_from_history
 # from helpers import find_sticky_from_history  # user sticky
 

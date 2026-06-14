@@ -1,6 +1,5 @@
 import json
 import re
-
 from globals import ANNOUNCE_META, FEEDBACK_MESSAGE, RESOLVE_MESSAGES, USER_CLOSED_MESSAGE
 
 
@@ -60,7 +59,7 @@ def ticket_staff_header(text, user_id, user_thread_link):
     ]
 
 
-def ticket_staff_controls(ticket_id, user_id):
+def ticket_staff_controls(ticket_id):
     return [
         {
             "type": "section",
@@ -99,7 +98,9 @@ def ticket_user_ack(ticket_id, staff_link):
         },
         {
             "type": "context",
-            "elements": [{"type": "plain_text", "text": "AI is used to enhance your ticket experience. Please don't share any personal identifying information to ensure your privacy.", "emoji": True}],
+            "elements": [{"type": "plain_text",
+                          "text": "AI is used to enhance your ticket experience. Please don't share any personal identifying information to ensure your privacy.",
+                          "emoji": True}],
         },
     ]
 
@@ -412,7 +413,8 @@ def ai_detection(macro_text, ticket_id):
         {"type": "divider"},
         {
             "type": "context",
-            "elements": [{"type": "plain_text", "text": "This detection was generated via AI. Please read through the ticket before resolving.", "emoji": True}],
+            "elements": [
+                {"type": "plain_text", "text": "This detection was generated via AI. Please read through the ticket before resolving.", "emoji": True}],
         },
     ]
 
@@ -471,7 +473,8 @@ def daily_ticket_alert(stats, staff_channel):
         {"type": "divider"},
         {
             "type": "section",
-            "text": {"type": "mrkdwn", "text": f"*tickets that could use some attention* :eyes:\nthese have been open for a while and might need a response\n\n{tickets_text}"},
+            "text": {"type": "mrkdwn",
+                     "text": f"*tickets that could use some attention* :eyes:\nthese have been open for a while and might need a response\n\n{tickets_text}"},
         },
         {"type": "divider"},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": ":ship: <!subteam^S09TJU4TT36>"}]},
@@ -565,3 +568,31 @@ def error_modal(full: str) -> dict:
             {"type": "section", "text": {"type": "mrkdwn", "text": f"```{full[:2900]}```"}},
         ],
     }
+
+
+def open_ticket_message_blocks(ticket_text: str, ticket_user_thread_link: str, ticket_staff_thread_link: str) -> list:
+    return [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*{ticket_text[:2900]}{'…' if len(ticket_text) > 2900 else ''}*"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"<{ticket_user_thread_link}|User Thread>"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"<{ticket_staff_thread_link}|Staff Thread>"
+                }
+            ]
+        }
+    ]

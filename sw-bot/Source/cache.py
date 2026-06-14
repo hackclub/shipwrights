@@ -75,6 +75,7 @@ class Cache:
             "staff_thread_ts": ticket_data["staff_thread_ts"],
             "status": ticket_data["status"],
             "closed_by": ticket_data["closed_by"],
+            "open_ticket_message_ts": ticket_data.get("open_ticket_message_ts"),
         }
 
     def get_ticket_by_id(self, ticket_id):
@@ -105,18 +106,21 @@ class Cache:
         logging.critical(f"ticket {ticket_id} not found in cache or db")
         return False
 
-    def open_ticket(self, ticket_id):
+    def open_ticket(self, ticket_id, open_ticket_message_ts=None):
         with self._lock:
             if ticket_id not in self.tickets and not self._load_ticket(ticket_id):
                 return
             self.tickets[ticket_id]["status"] = "open"
-        worker.enqueue(db.open_ticket, ticket_id)
+            if open_ticket_message_ts:
+                self.tickets[ticket_id]["open_ticket_message_ts"] = open_ticket_message_ts
+        worker.enqueue(db.open_ticket, ticket_id, open_ticket_message_ts)
 
     def close_ticket(self, ticket_id):
         with self._lock:
             if ticket_id not in self.tickets and not self._load_ticket(ticket_id):
                 return
             self.tickets[ticket_id]["status"] = "closed"
+            self.tickets[ticket_id]["open_ticket_message_ts"] = None
         worker.enqueue(db.close_ticket, ticket_id)
 
     def is_ticket_claimed(self, ticket_id):

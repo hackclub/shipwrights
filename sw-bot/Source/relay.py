@@ -1,4 +1,4 @@
-import json, logging, os, tempfile, time
+import logging, os, tempfile, time
 import requests
 from slack_sdk.errors import SlackApiError
 import ai, blocks, db, worker
@@ -6,6 +6,7 @@ from cache import cache
 from globals import (
     ADMINS, BOT_TOKEN, MACROS, OPEN_TICKET_REACTION,
     RESOLVE_MESSAGES, STAFF_CHANNEL, USER_CHANNEL, client,
+    OPEN_TICKETS_CHANNEL
 )
 # from helpers import get_stardance_project  # ship_certs
 from helpers import is_shipwright, parse_slack_link
@@ -199,6 +200,7 @@ def _handle_macro(event, ticket, user_id, staff_name, staff_avatar, thread, macr
         text="Message sent.", blocks=blocks.sent_message_controls(dest_ts),
     )
     worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    delete_open_ticket_message(ticket)
     cache.close_ticket(ticket["id"])
     cache.claim_ticket(ticket["id"], user_id)
     close_resp = client.chat_postMessage(
@@ -245,8 +247,45 @@ def _handle_ai(event, ticket, user_id, staff_name, staff_avatar, text):
     ai.paraphrase_message(ticket["id"], clean_text)
 
 
+def delete_open_ticket_message(ticket):
+    if not OPEN_TICKETS_CHANNEL:
+        return
+    ts = ticket.get("open_ticket_message_ts")
+    if not ts:
+        return
+    try:
+        client.chat_delete(channel=OPEN_TICKETS_CHANNEL, ts=ts)
+    except SlackApiError as e:
+        if e.response.get("error") != "message_not_found":
+            logging.warning(f"delete_open_ticket_message failed: {e}")
+
+
+def post_reopen_open_channel(ticket):
+    if not OPEN_TICKETS_CHANNEL:
+        return None
+    try:
+        user_thread_link = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=ticket["user_thread_ts"])["permalink"]
+        staff_thread_link = client.chat_getPermalink(channel=STAFF_CHANNEL, message_ts=ticket["staff_thread_ts"])["permalink"]
+        resp = client.chat_postMessage(
+            channel=OPEN_TICKETS_CHANNEL,
+            text=ticket.get("question", ""),
+            blocks=blocks.open_ticket_message_blocks(
+                ticket_text=ticket.get("question", ""),
+                ticket_user_thread_link=user_thread_link,
+                ticket_staff_thread_link=staff_thread_link,
+            ),
+        )
+        return resp["ts"]
+    except SlackApiError as e:
+        logging.warning(f"post_reopen_open_channel failed: {e}")
+        return None
+
+
 def _handle_reopen(event, ticket, user_id):
-    cache.open_ticket(ticket["id"])
+    if ticket["status"] != "closed":
+        return
+    ts = post_reopen_open_channel(ticket)
+    cache.open_ticket(ticket["id"], ts)
     client.chat_postMessage(
         channel=USER_CHANNEL,
         thread_ts=ticket["user_thread_ts"],
@@ -265,6 +304,7 @@ def _handle_reopen(event, ticket, user_id):
 def _handle_resolve(event, ticket, user_id):
     if ticket["status"] != "open":
         return
+    delete_open_ticket_message(ticket)
     cache.close_ticket(ticket["id"])
     cache.claim_ticket(ticket["id"], user_id)
     swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
@@ -304,6 +344,7 @@ def _handle_purge(event, ticket, user_id):
         cursor = result.get("response_metadata", {}).get("next_cursor")
         if not cursor:
             break
+    delete_open_ticket_message(ticket)
     cache.close_ticket(ticket["id"])
     cache.claim_ticket(ticket["id"], user_id)
     clear_reactions(ticket)
@@ -497,9 +538,25 @@ def create_ticket(event):
         send_files(event, STAFF_CHANNEL, staff_msg["ts"])
 
     staff_link = client.chat_getPermalink(channel=STAFF_CHANNEL, message_ts=staff_msg["ts"])["permalink"]
-    ticket_id = db.save_ticket(user_id, user_name, user_avatar, text or "📎 attachment", event["ts"], staff_msg["ts"])
+
+    open_ticket_ts = None
+    if OPEN_TICKETS_CHANNEL:
+        try:
+            open_ticket_message = client.chat_postMessage(
+                channel=OPEN_TICKETS_CHANNEL,
+                text=text,
+                blocks=blocks.open_ticket_message_blocks(ticket_text=text, ticket_user_thread_link=user_thread_link, ticket_staff_thread_link=staff_link)
+            )
+            open_ticket_ts = open_ticket_message["ts"]
+        except SlackApiError as e:
+            logging.warning(f"create_ticket: failed to post to open tickets channel: {e}")
+
+    ticket_id = db.save_ticket(user_id, user_name, user_avatar, text or "📎 attachment", event["ts"], staff_msg["ts"], open_ticket_ts)
 
     if not ticket_id:
+        client.chat_delete(channel=STAFF_CHANNEL, ts=staff_msg["ts"])
+        if open_ticket_ts:
+            client.chat_delete(channel=OPEN_TICKETS_CHANNEL, ts=open_ticket_ts)
         return
 
     cache.ticket_data_saver({
@@ -511,13 +568,14 @@ def create_ticket(event):
         "staff_thread_ts": staff_msg["ts"],
         "status": "open",
         "closed_by": None,
+        "open_ticket_message_ts": open_ticket_ts,
     })
 
     client.chat_postMessage(
         channel=STAFF_CHANNEL,
         thread_ts=staff_msg["ts"],
         text="New ticket!",
-        blocks=blocks.ticket_staff_controls(ticket_id, user_id),
+        blocks=blocks.ticket_staff_controls(ticket_id),
     )
 
     client.chat_postMessage(
