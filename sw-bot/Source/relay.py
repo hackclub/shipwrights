@@ -269,6 +269,10 @@ def post_reopen_open_channel(ticket):
         resp = client.chat_postMessage(
             channel=OPEN_TICKETS_CHANNEL,
             text=ticket.get("question", ""),
+            username=ticket.get("user_name"),
+            icon_url=ticket.get("user_avatar"),
+            unfurl_links=False,
+            unfurl_media=False,
             blocks=blocks.open_ticket_message_blocks(
                 ticket_text=ticket.get("question", ""),
                 ticket_user_thread_link=user_thread_link,
@@ -545,6 +549,10 @@ def create_ticket(event):
             open_ticket_message = client.chat_postMessage(
                 channel=OPEN_TICKETS_CHANNEL,
                 text=text,
+                username=user_name,
+                icon_url=user_avatar,
+                unfurl_links=False,
+                unfurl_media=False,
                 blocks=blocks.open_ticket_message_blocks(ticket_text=text, ticket_user_thread_link=user_thread_link, ticket_staff_thread_link=staff_link)
             )
             open_ticket_ts = open_ticket_message["ts"]
@@ -563,6 +571,7 @@ def create_ticket(event):
         "id": ticket_id,
         "user_id": user_id,
         "user_name": user_name,
+        "user_avatar": user_avatar,
         "question": text or "📎 attachment",
         "user_thread_ts": event["ts"],
         "staff_thread_ts": staff_msg["ts"],

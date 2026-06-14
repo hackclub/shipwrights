@@ -70,6 +70,7 @@ class Cache:
             "id": ticket_data["id"],
             "user_id": ticket_data["user_id"],
             "user_name": ticket_data["user_name"],
+            "user_avatar": ticket_data.get("user_avatar"),
             "question": ticket_data["question"],
             "user_thread_ts": ticket_data["user_thread_ts"],
             "staff_thread_ts": ticket_data["staff_thread_ts"],

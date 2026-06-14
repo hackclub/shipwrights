@@ -1,4 +1,5 @@
 import json
+import logging
 from time import monotonic
 import ai, blocks, db, errors, relay, views, worker
 from slack_sdk.errors import SlackApiError
@@ -264,8 +265,9 @@ def handle_reopen_ticket(payload: dict) -> None:
     if resolve_ts and not cache.get_feedback(ticket_id):
         try:
             client.chat_delete(channel=USER_CHANNEL, ts=resolve_ts)
-        except SlackApiError:
-            pass
+        except SlackApiError as e:
+            if e.response.get("error") != "message_not_found":
+                logging.warning(f"handle_reopen_ticket: delete resolve msg failed — {e.response.get('error')}")
     client.chat_postMessage(
         channel=USER_CHANNEL,
         thread_ts=ticket["user_thread_ts"],
