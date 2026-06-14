@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Cookie } from '@/components/cookie'
 
 export const metadata: Metadata = {
   title: 'Official Shipwrights Crew',
@@ -8,7 +9,10 @@ export const metadata: Metadata = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body style={{ overflow: 'hidden' }}>
+        {children}
+        <Cookie />
+      </body>
     </html>
   )
 }
