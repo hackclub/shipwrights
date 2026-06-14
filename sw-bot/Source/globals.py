@@ -34,7 +34,7 @@ MACROS = {
     "fraud": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward any related questions to <@U091HC53CE8>.",
     "sdhelp": "Hey there!\nThe shipwrights team cannot help you with this query. Please forward related questions to <#C0AP0NMSP3P>.",
     "faq": "Hey there!\nPlease have a look at our FAQ <https://us.review.hackclub.com/faq | here>",
-    "queue": "Hey there!\nWe currently have a backlog of projects waiting to be certified. Please be patient.\n\n*You can keep track of the queue <https://us.review.hackclub.com/queue | here>!*",
+    "queue": "Hey there!\nWe currently have a backlog of projects waiting to be certified. Please be patient.",
     "declare": "Hey there! We have noticed patterns of AI usage in your project. Please declare AI usage on your project. If you think this is a mistake please let us know!",
 }
 
