@@ -44,7 +44,8 @@ def _acquire_conn() -> psycopg2.extensions.connection:
             conn.cursor().execute("SELECT 1")
             return conn
         except Exception as e:
-            logging.error(f"DB connection validation failed (attempt {attempt + 1}): {e}")
+            if attempt > 0:
+                logging.error(f"DB connection validation failed (attempt {attempt + 1}): {e}")
             connection_pool.putconn(conn, close=True)
             try:
                 connection_pool.closeall()
