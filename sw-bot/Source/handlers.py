@@ -120,7 +120,7 @@ def handle_edit_message(payload: dict) -> None:
 def handle_modify_opt(payload: dict) -> None:
     action_value = json.loads(payload["actions"][0]["value"])
     user_id = payload["user"]["id"]
-    cache.modify_user_opt(user_id, int(action_value["opt"]))
+    cache.modify_user_opt(user_id, action_value["opt"] == "1")
     client.chat_postEphemeral(
         text=f"Successfully {'opted in!' if action_value['opt'] == '1' else 'opted out!'}",
         thread_ts=action_value["thread_ts"],
