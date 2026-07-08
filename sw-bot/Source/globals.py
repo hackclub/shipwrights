@@ -36,6 +36,7 @@ MACROS = {
     "faq": "Hey there!\nPlease have a look at our FAQ <https://us.review.hackclub.com/faq | here>",
     "queue": "Hey there!\nWe currently have a backlog of projects waiting to be certified. Please be patient.",
     "declare": "Hey there! We have noticed patterns of AI usage in your project. Please declare AI usage on your project. If you think this is a mistake please let us know!",
+    "hardware": "Hey there!\nThe shipwrights team unfortunately cannot assist with hardware related queries. Please forward any hardware related questions to <#C0BDYK5QQEM>.",
 }
 
 RESOLVE_MESSAGES = {
