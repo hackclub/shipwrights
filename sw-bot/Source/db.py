@@ -41,17 +41,12 @@ def _acquire_conn() -> psycopg2.extensions.connection:
             connection_pool.putconn(conn, close=True)
             continue
         try:
-            conn.cursor().execute("SELECT 1")
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
             return conn
         except Exception as e:
-            if attempt > 0:
-                logging.error(f"DB connection validation failed (attempt {attempt + 1}): {e}")
+            logging.warning(f"DB connection validation failed (attempt {attempt + 1}): {e}")
             connection_pool.putconn(conn, close=True)
-            try:
-                connection_pool.closeall()
-            except Exception as ce:
-                logging.warning(f"DB pool closeall failed: {ce}")
-            init_pool()
     raise psycopg2.OperationalError("DB connection unavailable after 3 attempts")
 
 
