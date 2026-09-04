@@ -617,7 +617,7 @@ def format_submission_validation_message(readme, readme_link, demo_link, repo_ur
         5. Demo link uses a disallowed host: ngrok, cloudflared, DuckDNS, Render, Hugging Face, or Railway
         6. Demo link is only localhost or local hosting instructions with no live URL
         7. Demo link points to a raw file or blob inside a GitHub repository (e.g. github.com/.../blob/... or raw.githubusercontent.com/...) -- release assets must be hosted in GitHub Releases, not linked directly as repo blobs
-        8. First commit date is before December 25, 2024 AND the project is NOT marked as updated (December 25, 2024 is when Flavortown started)
+        8. First commit date is before December 25, 2025 AND the project is NOT marked as updated (December 25, 2025 is when Flavortown started)
         9. Project is a school or college assignment
         10. Project was submitted to another competition, game jam, or hackathon AND time was not tracked after the current program started
         11. Project requires login but only provides premade/shipwright-supplied test accounts -- users must be able to create their own account
