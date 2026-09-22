@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+.env
+.env*.local
+.DS_Store
+*.pem
+npm-debug.log*
+next-env.d.ts
+.impeccable/hook.cache.json

@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  PENDING
+  ANSWERED
+  HIDDEN
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  seq       Int      @default(autoincrement())
+  body      String
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
+  answer    Answer?
+
+  @@index([status, createdAt])
+}
+
+model Answer {
+  id           String   @id @default(cuid())
+  body         String
+  createdAt    DateTime @default(now())
+  question     Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId   String   @unique
+  answeredBy   Admin?   @relation(fields: [answeredById], references: [id], onDelete: SetNull)
+  answeredById String?
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  answers      Answer[]
+}

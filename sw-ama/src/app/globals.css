@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    @apply border-ink/10;
+  }
+}
+
+@layer components {
+  .blueprint-grid {
+    background-color: theme("colors.blueprint.DEFAULT");
+    background-image:
+      linear-gradient(rgba(191, 224, 255, 0.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(191, 224, 255, 0.16) 1px, transparent 1px),
+      linear-gradient(rgba(191, 224, 255, 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(191, 224, 255, 0.3) 1px, transparent 1px);
+    background-size: 28px 28px, 28px 28px, 140px 140px, 140px 140px;
+    background-position: -1px -1px;
+  }
+
+  .paper-card {
+    background: theme("colors.paper");
+    box-shadow: theme("boxShadow.paper");
+    position: relative;
+  }
+
+  .stamp {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.15;
+    border: 2px solid currentColor;
+    padding: 0.35rem 0.6rem;
+    border-radius: 3px;
+    transform: rotate(-3deg);
+  }
+
+  .stamp::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

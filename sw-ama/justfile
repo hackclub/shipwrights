@@ -1,0 +1,67 @@
+set dotenv-load := true
+
+db_container := "shipwrights-pg"
+db_port := "5442"
+
+# List available commands
+default:
+    @just --list
+
+# Install dependencies
+install:
+    npm install
+
+# Start local Postgres in Docker (safe to run repeatedly)
+db-up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if docker inspect {{db_container}} >/dev/null 2>&1; then
+        docker start {{db_container}} >/dev/null
+        echo "{{db_container}} is up"
+    else
+        docker run -d --name {{db_container}} \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=shipwrights_ama \
+            -p {{db_port}}:5432 \
+            postgres:16-alpine
+        echo "created {{db_container}} container"
+    fi
+
+# Stop the local Postgres container (data is preserved)
+db-down:
+    docker stop {{db_container}}
+
+# Wipe local Postgres entirely and start fresh
+db-reset:
+    docker rm -f {{db_container}} 2>/dev/null || true
+    just db-up
+
+# Open Prisma Studio to browse the database
+studio:
+    npx prisma studio
+
+# Apply schema changes as a new migration (local dev)
+migrate name="update":
+    npx prisma migrate dev --name {{name}}
+
+# Apply committed migrations without prompting (production/CI)
+migrate-deploy:
+    npx prisma migrate deploy
+
+# Start Postgres, apply migrations, and run the dev server
+dev: db-up
+    npx prisma migrate dev
+    npm run dev
+
+# Production build
+build:
+    npm run build
+
+# Run the production build
+start:
+    npm start
+
+# Format-check + type-check + build
+check:
+    npx tsc --noEmit
+    npm run build
