@@ -30,6 +30,17 @@ export function Cookie() {
           opacity: 1;
           transform: translateY(-2px);
         }
+        ._cu_link {
+          color: #f4f4f5;
+          text-decoration: underline;
+          text-decoration-color: rgba(103,232,249,0.45);
+          text-underline-offset: 4px;
+          transition: color 0.15s ease, text-decoration-color 0.15s ease;
+        }
+        ._cu_link:hover {
+          color: #67e8f9;
+          text-decoration-color: #67e8f9;
+        }
       `}</style>
 
       <div
@@ -71,34 +82,37 @@ export function Cookie() {
             weighing anchor.
           </h1>
 
-          <p className="_cu_a1" style={{ marginBottom: '2.75rem', lineHeight: 1 }}>
+          <p className="_cu_a1" style={{ marginBottom: '2rem', lineHeight: 1.3 }}>
             <span style={{
               display: 'block',
-              fontSize: 'clamp(0.65rem, 1.3vw, 0.75rem)',
-              letterSpacing: '0.1em',
+              fontSize: 'clamp(0.75rem, 1.6vw, 0.85rem)',
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              color: '#71717a',
-              marginBottom: '0.7em',
+              color: '#a1a1aa',
+              marginBottom: '0.6rem',
             }}>
-              We shipped Flavortown.
+              Flavortown has wrapped up
             </span>
             <span style={{
               display: 'block',
-              fontSize: 'clamp(1rem, 2.4vw, 1.2rem)',
+              fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
               letterSpacing: '-0.01em',
-              color: '#d4d4d8',
+              color: '#f4f4f5',
             }}>
               The crew&apos;s on Stardance now.
             </span>
           </p>
 
           <p className="_cu_a2" style={{
-            fontSize: 'clamp(0.65rem, 1.3vw, 0.75rem)',
-            letterSpacing: '0.06em',
-            color: '#52525b',
-            marginBottom: '2.5rem',
+            fontSize: 'clamp(0.9rem, 2vw, 1rem)',
+            lineHeight: 1.4,
+            color: '#a1a1aa',
+            marginBottom: '2.75rem',
           }}>
-            we&apos;re upgrading our systems &mdash; back up in no time.
+            Queue stats moved to{' '}
+            <a href="https://queue.shipwrights.dev/stardance" className="_cu_link">
+              queue.shipwrights.dev/stardance
+            </a>
           </p>
 
           <div className="_cu_a2 text-center">
