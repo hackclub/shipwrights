@@ -218,7 +218,7 @@ def open_ticket(ticket_id, open_ticket_message_ts=None):
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE tickets SET status = 'open', closed_at = NULL, open_ticket_message_ts = %s WHERE id = %s",
+                    "UPDATE tickets SET status = 'open', closed_at = NULL, closed_by = NULL, open_ticket_message_ts = %s WHERE id = %s",
                     (open_ticket_message_ts, ticket_id),
                 )
                 return cur.rowcount > 0

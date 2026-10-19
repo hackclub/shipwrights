@@ -112,6 +112,7 @@ class Cache:
             if ticket_id not in self.tickets and not self._load_ticket(ticket_id):
                 return
             self.tickets[ticket_id]["status"] = "open"
+            self.tickets[ticket_id]["closed_by"] = None
             if open_ticket_message_ts:
                 self.tickets[ticket_id]["open_ticket_message_ts"] = open_ticket_message_ts
         worker.enqueue(db.open_ticket, ticket_id, open_ticket_message_ts)
