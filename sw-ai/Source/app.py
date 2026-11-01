@@ -52,7 +52,7 @@ def auto_complete():
     ticket_question = get_ticket_question(ticket_id)
 
     completion_message = format_completion_prompt(ticket_messages=ticket_messages, ticket_question=ticket_question, message=message)
-    response = get_ai_response(content=completion_message, keys=['paraphrased'])
+    response = get_ai_response(content=completion_message, ai_model="anthropic/claude-haiku-4.5", keys=['paraphrased'])
     if response["error"]:
         return jsonify(response), 500
     ai_response = response["content"]
