@@ -322,6 +322,60 @@ def add_stardust(slack_id, ticket_id=None, amount=TICKET_PAY):
         return None
 
 
+def remove_stardust(slack_id, ticket_id=None, amount=TICKET_PAY):
+    if not slack_id:
+        return None
+    try:
+        decrement = float(amount)
+    except (TypeError, ValueError):
+        return None
+    if decrement <= 0:
+        return None
+
+    try:
+        with get_db() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET cookie_balance = cookie_balance - %s,
+                        cookies_earned = cookies_earned - %s
+                    WHERE slack_id = %s
+                    RETURNING id, username, role, avatar, cookie_balance
+                    """,
+                    (decrement, decrement, slack_id),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+
+                cur.execute(
+                    """
+                    INSERT INTO sys_logs
+                        (user_id, slack_id, username, role, action, context, status_code,
+                         avatar, target_id, target_type, metadata)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        row["id"],
+                        slack_id,
+                        row.get("username"),
+                        row.get("role"),
+                        "ticket_stardust_reversal",
+                        f"Reversed {decrement:.2f} stardust after claim transfer",
+                        200,
+                        row.get("avatar"),
+                        str(ticket_id) if ticket_id else None,
+                        "ticket" if ticket_id else "user",
+                        json.dumps({"source": "sw-bot", "amount": -decrement, "ticketId": ticket_id}),
+                    ),
+                )
+                return float(row["cookie_balance"]) if row.get("cookie_balance") is not None else 0.0
+    except psycopg2.Error as e:
+        logging.error(f"remove_stardust failed: {e}")
+        return None
+
+
 def edit_message(message_ts, new_text):
     try:
         with get_db() as conn:

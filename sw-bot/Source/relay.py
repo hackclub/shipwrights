@@ -1,4 +1,4 @@
-import logging, os, tempfile, time
+import logging, os, re, tempfile, time
 import requests
 from slack_sdk.errors import SlackApiError
 import ai, blocks, db, worker
@@ -220,7 +220,7 @@ def _handle_help(ticket, user_id):
         "*Sending messages*\n"
         "  `?<text>` — relay a message to the user\n\n"
         "*Ticket actions*\n"
-        "  `!resolve` — close this ticket\n"
+        "  `!resolve [@person]` — close this ticket; claim it for `@person` (or transfer the claim if already resolved)\n"
         "  `!reopen` — reopen a closed ticket\n"
         "  `!delete <link>` — delete a message from both sides\n"
         "  `!purge` _(admin)_ — delete all user-side messages and close ticket\n\n"
@@ -305,19 +305,63 @@ def _handle_reopen(event, ticket, user_id):
     swap_reactions(client, ticket, OPEN_TICKET_REACTION, "checks-passed-octicon")
 
 
-def _handle_resolve(event, ticket, user_id):
-    if ticket["status"] != "open":
+def _parse_mention(text):
+    match = re.search(r"<@(\w+)(?:\|[^>]*)?>", text or "")
+    return match.group(1) if match else None
+
+
+def _handle_resolve(event, ticket, user_id, text):
+    mentioned = _parse_mention(text)
+    if mentioned and not is_shipwright(mentioned):
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text=f"<@{mentioned}> is not a shipwright, so this ticket can't be claimed for them.",
+        )
         return
+    claimer = mentioned or user_id
+
+    # Ticket already resolved: transfer the claim to the mentioned shipwright.
+    if ticket["status"] != "open":
+        previous = cache.is_ticket_claimed(ticket["id"])
+        if not mentioned or not previous:
+            return
+        if user_id != previous and user_id not in ADMINS:
+            client.chat_postEphemeral(
+                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+                user=user_id, text=f"Only the current claimer (<@{previous}>) or an admin can transfer this claim.",
+            )
+            return
+        if claimer == previous:
+            client.chat_postEphemeral(
+                channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+                user=user_id, text=f"This ticket is already claimed by <@{claimer}>.",
+            )
+            return
+        worker.enqueue(db.remove_stardust, previous, ticket["id"])
+        cache.claim_ticket(ticket["id"], claimer)
+        resp = client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staff_thread_ts"],
+            text=f"Claim transferred from <@{previous}> to <@{claimer}>.",
+        )
+        worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"claim transferred from <@{previous}> to <@{claimer}>", True, None, resp["ts"])
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+        return
+
     delete_open_ticket_message(ticket)
     cache.close_ticket(ticket["id"])
-    cache.claim_ticket(ticket["id"], user_id)
+    cache.claim_ticket(ticket["id"], claimer)
     swap_reactions(client, ticket, "checks-passed-octicon", OPEN_TICKET_REACTION)
+    if claimer == user_id:
+        resolved_text = f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!"
+    else:
+        resolved_text = f"Hey! This ticket was marked as resolved by <@{user_id}> and claimed for <@{claimer}>!"
     resp = client.chat_postMessage(
         channel=STAFF_CHANNEL,
         thread_ts=ticket["staff_thread_ts"],
-        text=f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
+        text=resolved_text,
     )
-    worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket closed by <@{user_id}>", True, None, resp["ts"])
+    worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket closed, claimed by <@{claimer}>", True, None, resp["ts"])
     worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
     _send_resolve_feedback(ticket)
 
@@ -458,7 +502,7 @@ def handle_staff_reply(event):
         "!tldr":    lambda: _handle_tldr(event, ticket),
         "!ai":      lambda: _handle_ai(event, ticket, user_id, staff_name, staff_avatar, text),
         "!reopen":  lambda: _handle_reopen(event, ticket, user_id),
-        "!resolve": lambda: _handle_resolve(event, ticket, user_id),
+        "!resolve": lambda: _handle_resolve(event, ticket, user_id, text),
         "!purge":   lambda: _handle_purge(event, ticket, user_id),
         "!delete":  lambda: _handle_delete(event, ticket, user_id, text),
     }
