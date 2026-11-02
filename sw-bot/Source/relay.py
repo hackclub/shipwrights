@@ -218,7 +218,8 @@ def _handle_help(ticket, user_id):
     help_text = (
         "*Shipwrights Bot Commands*\n\n"
         "*Sending messages*\n"
-        "  `?<text>` — relay a message to the user\n\n"
+        "  `?<text>` — relay a message to the user\n"
+        "  `!thread <text>` — send link to user thread\n\n"
         "*Ticket actions*\n"
         "  `!resolve [@person]` — close this ticket; claim it for `@person` (or transfer the claim if already resolved)\n"
         "  `!reopen` — reopen a closed ticket\n"
@@ -403,6 +404,57 @@ def _handle_purge(event, ticket, user_id):
     )
 
 
+def _handle_thread(event, ticket, user_id, text):
+    clean_text = text.strip()[len("!thread"):].strip()
+    if not clean_text:
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Usage: !thread <text>",
+        )
+        return
+    try:
+        client.chat_postEphemeral(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["user_thread_ts"],
+            user=ticket["user_id"],
+            text=clean_text,
+        )
+    except SlackApiError as e:
+        logging.warning(f"_handle_thread postEphemeral failed: {e}")
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="Could not send ephemeral message to the user thread.",
+        )
+        return
+    client.chat_postEphemeral(
+        channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+        user=user_id, text="Ephemeral message sent to the user thread.",
+    )
+    worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+
+
+def _force_delete(event, ticket, user_id, link_channel, link_ts):
+    linked_ts = db.get_linked_message_ts(link_ts)
+    candidates = [(link_channel, link_ts)]
+    if linked_ts:
+        other_channel = STAFF_CHANNEL if link_channel == USER_CHANNEL else USER_CHANNEL
+        candidates.append((other_channel, linked_ts))
+    deleted = []
+    for ch, ts in candidates:
+        try:
+            client.chat_delete(channel=ch, ts=ts)
+            deleted.append("user" if ch == USER_CHANNEL else "staff")
+        except SlackApiError as e:
+            logging.warning(f"_force_delete failed for {ch}/{ts}: {e}")
+    if deleted:
+        worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
+    client.chat_postEphemeral(
+        channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+        user=user_id,
+        text=f"Force deleted from: {', '.join(deleted)}." if deleted else "Nothing could be deleted (already gone?).",
+    )
+
+
 def _handle_delete(event, ticket, user_id, text):
     if not is_shipwright(user_id) and user_id not in ADMINS:
         client.chat_postEphemeral(
@@ -425,6 +477,11 @@ def _handle_delete(event, ticket, user_id, text):
         )
         return
     link_channel, link_ts = parsed
+
+    if user_id in ADMINS:
+        _force_delete(event, ticket, user_id, link_channel, link_ts)
+        return
+
     if link_channel not in (USER_CHANNEL, STAFF_CHANNEL):
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
@@ -505,6 +562,7 @@ def handle_staff_reply(event):
         "!resolve": lambda: _handle_resolve(event, ticket, user_id, text),
         "!purge":   lambda: _handle_purge(event, ticket, user_id),
         "!delete":  lambda: _handle_delete(event, ticket, user_id, text),
+        "!thread":  lambda: _handle_thread(event, ticket, user_id, text),
     }
     if cmd in handlers:
         handlers[cmd]()
