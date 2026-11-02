@@ -173,9 +173,15 @@ def _handle_question(event, ticket, user_id, staff_name, staff_avatar, text, fil
         dest_ts = resp["ts"]
     worker.enqueue(db.save_message, ticket["id"], user_id, staff_name, staff_avatar, text, True, None, dest_ts, event["ts"])
     if not files:
+        permalink = None
+        try:
+            permalink = client.chat_getPermalink(channel=USER_CHANNEL, message_ts=dest_ts)["permalink"]
+        except SlackApiError as e:
+            logging.warning(f"_handle_question getPermalink failed: {e}")
         client.chat_postEphemeral(
             channel=STAFF_CHANNEL, user=user_id, thread_ts=thread,
-            text="Message sent.", blocks=blocks.sent_message_controls(dest_ts),
+            text="Message sent.", blocks=blocks.sent_message_controls(dest_ts, permalink),
+            unfurl_links=False, unfurl_media=False,
         )
     else:
         client.chat_postEphemeral(

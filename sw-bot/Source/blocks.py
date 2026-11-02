@@ -151,9 +151,10 @@ def ai_opt_notice(user_opt_in, thread_ts):
 #     ]
 
 
-def sent_message_controls(dest_ts):
+def sent_message_controls(dest_ts, permalink=None):
+    sent_text = f"Message sent. <{permalink}|View message>" if permalink else "Message sent."
     return [
-        {"type": "section", "text": {"type": "mrkdwn", "text": "Message sent."}},
+        {"type": "section", "text": {"type": "mrkdwn", "text": sent_text}},
         {
             "type": "actions",
             "elements": [
