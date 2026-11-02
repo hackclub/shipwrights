@@ -39,6 +39,7 @@ TYPES = [
   "CLI",
   "Cargo",
   "Web App",
+  "Game",
   "Chat Bot",
   "Extension",
   "Desktop App (Windows)",
@@ -519,7 +520,7 @@ def check_type(data: dict) -> dict:
         "messages": [
             {
                 "role": "system",
-                "content": f"You are a project classifier. Classify projects into EXACTLY one of these categories: {', '.join(TYPES)}. Respond with ONLY valid JSON: {{\"type\": \"category\", \"confidence\": 0.0-1.0}}. No markdown, no explanation, no thinking tags.",
+                "content": f"You are a project classifier. Classify projects into EXACTLY one of these categories: {', '.join(TYPES)}. Prefer \"Game\" for anything primarily played as a game, regardless of platform (a browser game is a Game, not a Web App; a downloadable game is a Game, not a Desktop App). Respond with ONLY valid JSON: {{\"type\": \"category\", \"confidence\": 0.0-1.0}}. No markdown, no explanation, no thinking tags.",
             },
             {
                 "role": "user",
