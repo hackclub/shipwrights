@@ -40,7 +40,8 @@ class Cache:
         return True
 
     def is_stale(self, key: str, ttl: float) -> bool:
-        return monotonic() - self.fetch_times.get(key, 0.0) > ttl
+        age = monotonic() - self.fetch_times.get(key, 0.0)
+        return age < 0 or age > ttl
 
     def mark_fresh(self, key: str):
         self.fetch_times[key] = monotonic()
@@ -246,7 +247,8 @@ class Cache:
                 "metrics": dict(self.metrics),
                 "sticky_message_ts": self.sticky_message_ts,
                 "meta_sticky_ts": self.meta_sticky_ts,
-                "fetch_times": dict(self.fetch_times),
+                # fetch_times holds monotonic() values that are only meaningful
+                # within this process, so they are intentionally NOT persisted.
             }
 
     def restore(self, data: dict) -> None:
@@ -262,7 +264,11 @@ class Cache:
             self.metrics.update(data.get("metrics", {}))
             self.sticky_message_ts = data.get("sticky_message_ts")
             self.meta_sticky_ts = data.get("meta_sticky_ts")
-            self.fetch_times = data.get("fetch_times", {})
+            # Start with an empty fetch_times: any restored cache entry is
+            # treated as stale in this fresh process and refetched on demand.
+            # (monotonic() timestamps from the previous process are meaningless
+            # here — persisting them is what made entries "never expire".)
+            self.fetch_times = {}
 
 
 cache = Cache()
