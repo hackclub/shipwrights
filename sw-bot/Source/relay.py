@@ -330,7 +330,17 @@ def _handle_resolve(event, ticket, user_id, text):
     # Ticket already resolved: transfer the claim to the mentioned shipwright.
     if ticket["status"] != "open":
         previous = cache.is_ticket_claimed(ticket["id"])
-        if not mentioned or not previous:
+        if not mentioned:
+            return
+        if not previous:
+            cache.claim_ticket(ticket["id"], claimer)
+            resp = client.chat_postMessage(
+                channel=STAFF_CHANNEL,
+                thread_ts=ticket["staff_thread_ts"],
+                text=f"This ticket was claimed for <@{claimer}> by <@{user_id}>.",
+            )
+            worker.enqueue(db.save_message, ticket["id"], "BOT", "Shipwrighter", None, f"ticket claimed for <@{claimer}> by <@{user_id}>", True, None, resp["ts"])
+            worker.enqueue(client.reactions_add, channel=STAFF_CHANNEL, timestamp=event["ts"], name="white_check_mark")
             return
         if user_id != previous and user_id not in ADMINS:
             client.chat_postEphemeral(
