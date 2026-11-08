@@ -89,6 +89,13 @@ class Cache:
                 self.ticket_data_saver(ticket_data)
             return self.tickets.get(ticket_id)
 
+    def refresh_ticket(self, ticket_id):
+        with self._lock:
+            ticket_data = db.get_ticket(ticket_id)
+            if ticket_data:
+                self.ticket_data_saver(ticket_data)
+            return self.tickets.get(ticket_id)
+
     def find_ticket_by_ts(self, ts):
         with self._lock:
             for ticket in self.tickets.values():

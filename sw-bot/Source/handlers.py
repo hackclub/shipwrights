@@ -270,8 +270,12 @@ def handle_reopen_ticket(payload: dict) -> None:
     if not ticket:
         return
     user_id = payload["user"]["id"]
-    if user_id != ticket["user_id"] or ticket.get("status") != "closed":
+    if user_id != ticket["user_id"]:
         return
+    if ticket.get("status") != "closed":
+        ticket = cache.refresh_ticket(ticket_id) or ticket
+        if ticket.get("status") != "closed":
+            return
     ts = relay.post_reopen_open_channel(ticket)
     cache.open_ticket(ticket_id, ts)
     resolve_ts = db.get_resolve_message_ts(ticket_id)

@@ -294,6 +294,12 @@ def post_reopen_open_channel(ticket):
 
 def _handle_reopen(event, ticket, user_id):
     if ticket["status"] != "closed":
+        ticket = cache.refresh_ticket(ticket["id"]) or ticket
+    if ticket["status"] != "closed":
+        client.chat_postEphemeral(
+            channel=STAFF_CHANNEL, thread_ts=ticket["staff_thread_ts"],
+            user=user_id, text="This ticket is already open, so it can't be reopened.",
+        )
         return
     ts = post_reopen_open_channel(ticket)
     cache.open_ticket(ticket["id"], ts)
