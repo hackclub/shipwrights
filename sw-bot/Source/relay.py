@@ -560,7 +560,7 @@ def handle_staff_reply(event):
         return
 
     cmd = text.strip().lower().split()[0] if text.strip() else ""
-    macro_key = cmd.lstrip("!")
+    macro_key = cmd[1:] if cmd.startswith("!") else None
 
     if macro_key in MACROS:
         _handle_macro(event, ticket, user_id, staff_name, staff_avatar, thread, macro_key)
