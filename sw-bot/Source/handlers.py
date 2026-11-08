@@ -26,9 +26,9 @@ def _handle_admin_dm(event: dict) -> None:
         )
 
 
-def handle_cache_dump_view(payload: dict) -> None:
+def _cache_dump_data() -> dict:
     now = monotonic()
-    data = {
+    return {
         "bot_user_id": cache.bot_user_id,
         "sticky_message_ts": cache.sticky_message_ts,
         "meta_sticky_ts": cache.meta_sticky_ts,
@@ -43,7 +43,20 @@ def handle_cache_dump_view(payload: dict) -> None:
         "metrics": dict(cache.metrics),
         "fetch_ages": {k: int(now - t) for k, t in cache.fetch_times.items()},
     }
-    client.views_open(trigger_id=payload["trigger_id"], view=views.cache_dump(data))
+
+
+def handle_cache_dump_view(payload: dict) -> None:
+    client.views_open(trigger_id=payload["trigger_id"], view=views.cache_dump(_cache_dump_data()))
+
+
+def handle_clear_cache(payload: dict) -> None:
+    if payload["user"]["id"] not in ADMINS:
+        return
+    counts = cache.clear()
+    logging.info(f"Cache cleared by {payload['user']['id']}: {counts}")
+    view = payload.get("view")
+    if view and view.get("id"):
+        client.views_update(view_id=view["id"], view=views.cache_dump(_cache_dump_data()))
 
 
 def handle_message(event: dict) -> None:

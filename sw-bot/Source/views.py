@@ -108,6 +108,24 @@ def cache_dump(data: dict) -> dict:
     divider = {"type": "divider"}
     b = []
 
+    b.append({
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "🗑️ Clear Cache", "emoji": True},
+                "style": "danger",
+                "action_id": "clear_cache",
+                "confirm": {
+                    "title": {"type": "plain_text", "text": "Wipe the cache?"},
+                    "text": {"type": "mrkdwn", "text": "This clears all in-memory caches (tickets, users, feedback, metas, shipwrights, freshness). Data is refetched from the DB on demand. Runtime state like paused/sticky is preserved."},
+                    "confirm": {"type": "plain_text", "text": "Wipe it all"},
+                    "deny": {"type": "plain_text", "text": "Cancel"},
+                },
+            }
+        ],
+    })
+
     b += [header("System"), section(
         f"*Bot:* `{data['bot_user_id'] or 'unknown'}`\n"
         f"*Paused:* `{data['metrics'].get('paused', False)}`\n"

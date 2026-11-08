@@ -236,6 +236,28 @@ class Cache:
             self._bump_candidates = []
             self.fetch_times.pop("bump_candidates", None)
 
+    def clear(self) -> dict:
+        with self._lock:
+            counts = {
+                "tickets": len(self.tickets),
+                "ticket_users": len(self.ticket_users),
+                "feedback": len(self.feedback),
+                "metas": len(self.metas),
+                "shipwrights": len(self.shipwrights),
+                "fetch_times": len(self.fetch_times),
+            }
+            self.tickets = {}
+            self.ticket_users = {}
+            self.feedback = {}
+            self.metas = {}
+            self.shipwrights = []
+            self.ignorable = []
+            self.deleted_headers = set()
+            self.closed_notified = {}
+            self._bump_candidates = []
+            self.fetch_times = {}
+        return counts
+
     def snapshot(self) -> dict:
         with self._lock:
             return {
