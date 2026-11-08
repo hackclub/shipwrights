@@ -62,6 +62,27 @@ def post_resolve_messages(client_inst, ticket, ticket_id, user_id):
         )
 
 
+def _download_file(url, tmp_path, attempts=3):
+    last_err = None
+    for i in range(attempts):
+        try:
+            with requests.get(
+                url, headers={"Authorization": f"Bearer {BOT_TOKEN}"},
+                stream=True, timeout=30,
+            ) as r:
+                r.raise_for_status()
+                with open(tmp_path, "wb") as fout:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        fout.write(chunk)
+            return True
+        except requests.RequestException as e:
+            last_err = e
+            if i < attempts - 1:
+                time.sleep(2 ** i)
+    logging.error(f"send_files download failed after {attempts} attempts: {last_err}")
+    return False
+
+
 def send_files(event, dest_channel, dest_ts):
     results = []
     for f in event.get("files") or []:
@@ -73,11 +94,9 @@ def send_files(event, dest_channel, dest_ts):
         tmp_path = None
         try:
             fd, tmp_path = tempfile.mkstemp(suffix=suffix)
-            with requests.get(url, headers={"Authorization": f"Bearer {BOT_TOKEN}"}, stream=True) as r:
-                r.raise_for_status()
-                with os.fdopen(fd, "wb") as fout:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        fout.write(chunk)
+            os.close(fd)
+            if not _download_file(url, tmp_path):
+                continue
             up = client.files_upload_v2(channel=dest_channel, thread_ts=dest_ts, filename=name, file=tmp_path)
             new_ts = None
             file_id = up.get("file", {}).get("id")
