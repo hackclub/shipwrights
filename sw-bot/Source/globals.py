@@ -38,7 +38,7 @@ MACROS = {
     "faq": "Hey there!\nPlease have a look at our FAQ <https://us.review.hackclub.com/faq | here>",
     "queue": "Hey there!\nWe currently have a backlog of projects waiting to be certified. Please be patient.",
     "declare": "Hey there! We have noticed patterns of AI usage in your project. Please declare AI usage on your project. If you think this is a mistake please let us know!",
-    "appeal": "Hey, we are sorry, but we can't help you with this request.\nIf you think your project was mistakenly rejected, feel free to fill out this form starting on November 3rd: https://forms.hackclub.com/stardance-project-appeal\nWe will then consider approving it again! For now, this ticket will be closed"
+    "appeal": "Apologies but appeal is closed as we are trying to close down the review, which therefore we cannot offer further appeal at the moment. We would have to unfortunately recommend you to submit to other YSWS, but however note that they might have different project submission guideline. Apologies for the inconvenience."
 }
 
 RESOLVE_MESSAGES = {
