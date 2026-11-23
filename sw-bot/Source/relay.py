@@ -1,4 +1,5 @@
 import logging, os, re, tempfile, time
+from urllib.parse import urlparse
 import requests
 from slack_sdk.errors import SlackApiError
 import ai, blocks, db, worker
@@ -62,12 +63,18 @@ def post_resolve_messages(client_inst, ticket, ticket_id, user_id):
         )
 
 
+def _is_hackclub_slack_file(url):
+    host = urlparse(url).hostname or ""
+    return host == "files.slack.com" or host.endswith(".slack.com")
+
+
 def _download_file(url, tmp_path, attempts=3):
+    headers = {"Authorization": f"Bearer {BOT_TOKEN}"} if _is_hackclub_slack_file(url) else None
     last_err = None
     for i in range(attempts):
         try:
             with requests.get(
-                url, headers={"Authorization": f"Bearer {BOT_TOKEN}"},
+                url, headers=headers,
                 stream=True, timeout=30,
             ) as r:
                 r.raise_for_status()
