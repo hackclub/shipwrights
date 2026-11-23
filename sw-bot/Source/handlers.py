@@ -46,6 +46,8 @@ def _cache_dump_data() -> dict:
 
 
 def handle_cache_dump_view(payload: dict) -> None:
+    if payload["user"]["id"] not in ADMINS:
+        return
     client.views_open(trigger_id=payload["trigger_id"], view=views.cache_dump(_cache_dump_data()))
 
 
@@ -352,6 +354,8 @@ def handle_meta_command(data: dict) -> None:
 
 
 def handle_view_error(payload: dict) -> None:
+    if payload["user"]["id"] not in ADMINS:
+        return
     error_id = payload["actions"][0]["value"]
     full = errors.error_store.get(error_id, "Error details not found (may have been cleared on restart).")
     client.views_open(trigger_id=payload["trigger_id"], view=blocks.error_modal(full))
