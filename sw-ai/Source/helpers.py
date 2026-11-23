@@ -1,4 +1,5 @@
-import requests, re, json, os, logging
+import requests, re, json, os, logging, socket, ipaddress
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -382,12 +383,40 @@ def clean_json_response(content: str) -> str:
     return content.strip()
 
 
+def is_public_url(url):
+    try:
+        parsed = urlparse(url or "")
+    except Exception:
+        return False
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return False
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, port, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, UnicodeError, ValueError):
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                or ip.is_multicast or ip.is_unspecified):
+            return False
+    return True
+
+
 def get_readme(url):
     if not url:
         return ""
     try:
         raw = url.replace('github.com', 'raw.githubusercontent.com').replace("/blob/", "/")
-        result = requests.get(raw, timeout=10)
+        if not is_public_url(raw):
+            logger.warning(f"get_readme: blocked non-public URL {url!r}")
+            return ""
+        result = requests.get(raw, timeout=10, allow_redirects=False)
         if result.ok:
             return result.text
         if result.status_code == 404:
@@ -605,8 +634,10 @@ def format_submission_validation_message(readme, readme_link, demo_link, repo_ur
     project_releases = get_releases(repo_url)
 
     try:
-        demo_status = requests.get(url=demo_link, headers=HEADERS, timeout=10, allow_redirects=True).status_code
-        logger.error(f"[demo check] {demo_link} -> {demo_status}")
+        if not is_public_url(demo_link):
+            raise ValueError("demo URL is not a public http(s) address")
+        demo_status = requests.get(url=demo_link, headers=HEADERS, timeout=10, allow_redirects=False).status_code
+        logger.info(f"[demo check] {demo_link} -> {demo_status}")
         if demo_status < 400:
             return_code = "Reachable"
         elif demo_status in (401, 403, 406, 429):

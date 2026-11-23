@@ -1,4 +1,4 @@
-import threading
+import threading, hmac
 from datetime import datetime, timedelta
 from helpers import *
 from db import *
@@ -8,11 +8,17 @@ from history import history_loop
 
 load_dotenv()
 
+if not SW_API_KEY:
+    raise RuntimeError("SW_API_KEY is not set.")
+
 app = Flask(__name__)
 
 @app.before_request
 def require_api_key():
-    if request.headers.get("X-API-Key") != SW_API_KEY and request.path != "/health":
+    if request.path == "/health":
+        return
+    provided = request.headers.get("X-API-Key") or ""
+    if not hmac.compare_digest(provided, SW_API_KEY):
         return jsonify({"error": "unauthorized please check your swai key"}), 401
 
 @app.get("/health")
