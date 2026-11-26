@@ -52,7 +52,7 @@ def bump_stale_tickets():
 
 
 def alerts_loop():
-    scheduler.every().day.at("11:00", "UTC").do(check_unresolved_tickets)
+    # scheduler.every().day.at("11:00", "UTC").do(check_unresolved_tickets)
     scheduler.every().hour.do(bump_stale_tickets)
     while True:
         scheduler.run_pending()
